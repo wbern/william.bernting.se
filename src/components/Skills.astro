@@ -1,0 +1,63 @@
+---
+---
+
+<div class="section-inner" style="text-align: center;">
+    <div class="section-label reveal">Tools of the trade</div>
+    <h2 class="section-heading reveal reveal-delay-1">
+        The <span class="highlight">stack</span>.
+    </h2>
+
+    <div class="skills-cloud reveal reveal-delay-2">
+        <span class="skill-pill featured">Agentic AI</span>
+        <span class="skill-pill featured">Test-Driven Development</span>
+        <span class="skill-pill featured">Claude / LLMs</span>
+        <span class="skill-pill">Node.js</span>
+        <span class="skill-pill">TypeScript</span>
+        <span class="skill-pill">React</span>
+        <span class="skill-pill">Next.js</span>
+        <span class="skill-pill">C#</span>
+        <span class="skill-pill">Vue</span>
+        <span class="skill-pill">Angular</span>
+        <span class="skill-pill">DevOps / CI/CD</span>
+        <span class="skill-pill">AWS / Azure</span>
+        <span class="skill-pill">Servant Leadership</span>
+    </div>
+</div>
+
+<style>
+    .skills-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .skill-pill {
+        font-family: var(--mono);
+        font-size: 14px;
+        padding: 8px 18px;
+        border-radius: 100px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-dim);
+        transition: all 0.3s ease;
+    }
+
+    .skill-pill:hover {
+        border-color: var(--purple);
+        color: var(--purple);
+        box-shadow: 0 0 20px var(--purple-glow);
+    }
+
+    .skill-pill.featured {
+        border-color: var(--purple-dim);
+        color: var(--purple);
+        background: var(--purple-glow);
+    }
+
+    @media print {
+        .skills-cloud { gap: 3px; }
+        .skill-pill { font-size: 8px; padding: 2px 6px; }
+        .skill-pill:hover { box-shadow: none; }
+    }
+</style>

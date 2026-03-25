@@ -1,0 +1,17 @@
+---
+interface Props {
+    count: number;
+}
+
+const { count } = Astro.props;
+---
+
+<nav class="slide-dots" id="slide-dots">
+    {Array.from({ length: count }).map((_, i) => (
+        <button
+            class:list={['slide-dot', { active: i === 0 }]}
+            data-slide={i}
+            aria-label={`Go to slide ${i + 1}`}
+        />
+    ))}
+</nav>
