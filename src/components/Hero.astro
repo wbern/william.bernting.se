@@ -1,0 +1,122 @@
+---
+---
+
+<div class="hero-slide">
+    <div class="hero-greeting">Hi there.</div>
+    <h1>William Bernting</h1>
+    <p class="hero-tagline">
+        I build things with <strong>AI</strong>. Then I build more things. Then I ship them.
+    </p>
+    <div class="hero-contact-print" style="display: none;">
+        <a href="mailto:william@bernting.se">william@bernting.se</a>
+        <span>+46 706 67 60 47</span>
+        <a href="https://www.linkedin.com/in/williambernting">LinkedIn</a>
+        <a href="https://kendev.se">kendev.se</a>
+        <span>Gothenburg, Sweden</span>
+    </div>
+    <div class="hero-scroll-hint">scroll down</div>
+</div>
+
+<style>
+    .hero-slide {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        height: 100%;
+        width: 100%;
+        position: relative;
+    }
+
+    .hero-greeting {
+        font-family: var(--mono);
+        font-size: 18px;
+        color: var(--purple);
+        margin-bottom: 20px;
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid var(--purple);
+        width: 0;
+        animation: typewriter 1s steps(10) 0.5s forwards, blink 0.7s step-end infinite;
+    }
+
+    @keyframes typewriter {
+        to { width: 10ch; }
+    }
+
+    @keyframes blink {
+        50% { border-color: transparent; }
+    }
+
+    h1 {
+        font-size: clamp(48px, 8vw, 96px);
+        font-weight: 900;
+        letter-spacing: -2px;
+        line-height: 1;
+        margin-bottom: 16px;
+        opacity: 0;
+        animation: fadeUp 1s ease 1.8s forwards;
+    }
+
+    .hero-tagline {
+        font-size: clamp(16px, 2.5vw, 22px);
+        color: var(--text-dim);
+        font-weight: 400;
+        opacity: 0;
+        animation: fadeUp 1s ease 2.4s forwards;
+    }
+
+    .hero-tagline strong {
+        color: var(--purple);
+        font-weight: 600;
+    }
+
+    .hero-scroll-hint {
+        position: absolute;
+        bottom: 40px;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--text-muted);
+        opacity: 0;
+        animation: fadeUp 1s ease 3.2s forwards, float 3s ease-in-out infinite 3.2s;
+    }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    @media print {
+        .hero-slide {
+            text-align: center;
+            padding-bottom: 2px;
+        }
+        .hero-greeting {
+            animation: none;
+            width: auto;
+            border: none;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        h1 {
+            font-size: 24px;
+            animation: none;
+            opacity: 1;
+            margin-bottom: 2px;
+        }
+        .hero-tagline {
+            font-size: 11px;
+            animation: none;
+            opacity: 1;
+        }
+        .hero-scroll-hint {
+            display: none;
+        }
+    }
+</style>
