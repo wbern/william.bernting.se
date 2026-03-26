@@ -1,135 +1,379 @@
 ---
+const jobs = [
+    { date: '2025 —', role: 'Frontend Developer', company: 'Akka', color: '#00d4aa', w: 50 },
+    { date: '2025', role: 'Backend Dev (C#)', company: 'Hedin IT', color: '#f0a030', w: 35 },
+    { date: '2023 – 25', role: 'Dev → Tech Lead', company: 'Sembo', color: '#9b4dca', w: 80 },
+    { date: '2022 – 23', role: 'Dev → CTO', company: 'NetConsult', color: '#e84060', w: 55 },
+    { date: '2020 – 22', role: 'Senior → Lead', company: 'Telia', color: '#40a0e8', w: 95 },
+    { date: '2017 – 20', role: 'Systems Developer', company: 'KITS AB', color: '#50c040', w: 70 },
+    { date: '2011 – 16', role: 'Coord → Team Lead', company: 'HPE', color: '#e8e040', w: 100 },
+];
+// Reverse: index 0 = bottom (HPE), 6 = top (Akka)
+const blocks = [...jobs].reverse();
 ---
 
-<div class="section-inner">
+<div class="section-inner tower-section">
     <div class="section-label reveal">The journey so far</div>
     <h2 class="section-heading reveal reveal-delay-1">
         10 years of <span class="highlight">building</span>.
     </h2>
 
-    <div class="timeline">
-        <div class="timeline-item reveal reveal-delay-1">
-            <div class="timeline-date">2025 &mdash; present</div>
-            <div class="timeline-role">Frontend Developer</div>
-            <div class="timeline-company">Akka &middot; Gothenburg</div>
+    <div class="tower-stage reveal reveal-delay-2" data-testid="tower-stage">
+        <div class="tower-container">
+            {blocks.map((block, i) => (
+                <div
+                    class="tower-block"
+                    data-block-index={i}
+                    style={`--block-color: ${block.color}; width: ${block.w * 2}px`}
+                >
+                    <div class="tower-label">
+                        <span class="label-role">{block.role}</span>
+                        <span class="label-meta">{block.company} · {block.date}</span>
+                    </div>
+                </div>
+            ))}
         </div>
-        <div class="timeline-item reveal reveal-delay-1">
-            <div class="timeline-date">2025</div>
-            <div class="timeline-role">Backend Developer (C#)</div>
-            <div class="timeline-company">Hedin IT &middot; Gothenburg</div>
-            <div class="timeline-note">TDD in 90% of the work. Bug-free deliveries.</div>
-        </div>
-        <div class="timeline-item reveal reveal-delay-2">
-            <div class="timeline-date">2023 &mdash; 2025</div>
-            <div class="timeline-role">Software Developer &rarr; Tech Lead</div>
-            <div class="timeline-company">Sembo Group &middot; Remote</div>
-            <div class="timeline-note">31% of all commits in a team of 11. Headless CMS architecture.</div>
-        </div>
-        <div class="timeline-item reveal reveal-delay-2">
-            <div class="timeline-date">2022 &mdash; 2023</div>
-            <div class="timeline-role">Head of Dev &rarr; CTO</div>
-            <div class="timeline-company">NetConsult Sweden AB &middot; Gothenburg</div>
-            <div class="timeline-note">Recruited 6 devs/designers in 6 months. Led 7 client products.</div>
-        </div>
-        <div class="timeline-item reveal reveal-delay-3">
-            <div class="timeline-date">2020 &mdash; 2022</div>
-            <div class="timeline-role">Senior Engineer &rarr; Lead Developer</div>
-            <div class="timeline-company">Telia Sverige &middot; Gothenburg</div>
-            <div class="timeline-note">Knowledge sharing across 14 dev teams. Micro-frontend architecture for telia.se.</div>
-        </div>
-        <div class="timeline-item reveal reveal-delay-3">
-            <div class="timeline-date">2017 &mdash; 2020</div>
-            <div class="timeline-role">Systems Developer</div>
-            <div class="timeline-company">KITS AB &middot; Gothenburg</div>
-            <div class="timeline-note">React, Angular, Vue &mdash; deep dive across multiple clients.</div>
-        </div>
-        <div class="timeline-item reveal reveal-delay-4">
-            <div class="timeline-date">2011 &mdash; 2016</div>
-            <div class="timeline-role">Service Coordinator &rarr; Team Lead &amp; Tools Dev</div>
-            <div class="timeline-company">Hewlett Packard Enterprise &middot; Gothenburg</div>
-            <div class="timeline-note">Built 8 internal tools. Led 10 support agents. Presidential nomination.</div>
-        </div>
+        <div class="tower-floor"></div>
+    </div>
+</div>
+
+<!-- Print fallback -->
+<div class="timeline-print-fallback" style="display:none">
+    <div class="section-label">The journey so far</div>
+    <h2 class="section-heading">10 years of <span class="highlight">building</span>.</h2>
+    <div class="timeline-print-list">
+        {jobs.map((job) => (
+            <div class="timeline-print-item">
+                <div class="timeline-print-date">{job.date}</div>
+                <div class="timeline-print-role">{job.role}</div>
+                <div class="timeline-print-company">{job.company}</div>
+            </div>
+        ))}
     </div>
 </div>
 
 <style>
-    .timeline {
-        position: relative;
-        padding-left: 32px;
+    .tower-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
     }
 
-    .timeline::before {
+    .tower-stage {
+        position: relative;
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .tower-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 3px;
+        padding-bottom: 4px;
+    }
+
+    /* ===== BLOCK ===== */
+    .tower-block {
+        height: 30px;
+        border-radius: 4px;
+        position: relative;
+        opacity: 0;
+        transform: translateY(-300px);
+        will-change: transform;
+        transform-origin: center bottom;
+        background:
+            linear-gradient(135deg,
+                rgba(255,255,255,0.2) 0%,
+                rgba(255,255,255,0.06) 35%,
+                transparent 55%),
+            var(--block-color);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.3),
+            inset 0 -2px 0 rgba(0,0,0,0.2),
+            0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    /* Grid texture */
+    .tower-block::before {
         content: '';
         position: absolute;
-        left: 7px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: var(--border);
+        inset: 0;
+        background-image:
+            linear-gradient(90deg, rgba(0,0,0,0.07) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(0,0,0,0.07) 1px, transparent 1px);
+        background-size: 15px 15px;
+        border-radius: inherit;
+        pointer-events: none;
     }
 
-    .timeline-item {
-        position: relative;
-        margin-bottom: 10px;
-        padding-left: 20px;
-    }
-
-    .timeline-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .section-heading {
-        margin-bottom: 16px;
-    }
-
-    .timeline-item::before {
-        content: '';
+    /* ===== LABEL (desktop: right of block) ===== */
+    .tower-label {
         position: absolute;
-        left: -28px;
-        top: 5px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--purple);
-        border: 3px solid var(--bg);
+        left: calc(100% + 14px);
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
     }
 
-    .timeline-item:first-child::before {
-        box-shadow: 0 0 12px var(--purple);
+    .tower-block.settled .tower-label {
+        opacity: 1;
     }
 
-    .timeline-date {
-        font-family: var(--mono);
+    .label-role {
         font-size: 12px;
-        color: var(--purple);
-        margin-bottom: 1px;
-    }
-
-    .timeline-role {
-        font-size: 15px;
         font-weight: 700;
+        color: var(--text);
         line-height: 1.2;
     }
 
-    .timeline-company {
-        font-size: 13px;
+    .label-meta {
+        font-size: 10px;
         color: var(--text-dim);
+        line-height: 1.3;
+        font-family: var(--mono);
     }
 
-    .timeline-note {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 1px;
-        font-style: italic;
+    /* ===== FLOOR ===== */
+    .tower-floor {
+        width: 200px;
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        flex-shrink: 0;
     }
 
+    /* ===== MOBILE ===== */
+    @media (max-width: 600px) {
+        .tower-container { gap: 2px; }
+        .tower-block { height: 22px; }
+        .tower-label {
+            flex-direction: row;
+            gap: 6px;
+            align-items: baseline;
+        }
+        .label-role { font-size: 10px; }
+        .label-meta { font-size: 8px; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        .tower-block { opacity: 1; transform: none; }
+        .tower-label { opacity: 1; transition: none; }
+    }
+
+    /* Print */
+    .timeline-print-fallback { display: none; }
     @media print {
-        .timeline { padding-left: 24px; }
-        .timeline-item { margin-bottom: 5px; padding-left: 14px; }
-        .timeline-item::before { width: 8px; height: 8px; left: -22px; top: 5px; }
-        .timeline-date { font-size: 8px; margin-bottom: 0; }
-        .timeline-role { font-size: 10px; }
-        .timeline-company { font-size: 8px; }
-        .timeline-note { font-size: 8px; margin-top: 1px; }
+        .tower-section { display: none !important; }
+        .timeline-print-fallback { display: block !important; }
+        .timeline-print-list { position: relative; padding-left: 24px; }
+        .timeline-print-list::before {
+            content: ''; position: absolute; left: 5px; top: 0; bottom: 0;
+            width: 2px; background: var(--border);
+        }
+        .timeline-print-item { position: relative; margin-bottom: 5px; padding-left: 14px; }
+        .timeline-print-item::before {
+            content: ''; position: absolute; left: -22px; top: 5px;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--purple); border: 3px solid var(--bg);
+        }
+        .timeline-print-item:first-child::before { box-shadow: 0 0 12px var(--purple); }
+        .timeline-print-date { font-family: var(--mono); font-size: 8px; color: var(--purple); }
+        .timeline-print-role { font-size: 10px; font-weight: 700; line-height: 1.2; }
+        .timeline-print-company { font-size: 8px; color: var(--text-dim); }
     }
 </style>
+
+<script>
+    (function () {
+        /*
+         * Spring-damper physics: F = -K * displacement - B * velocity
+         * Damping ratio ζ = B / (2√K). ζ < 1 = underdamped wobble.
+         *
+         * All transforms are offsets from the block's natural flex position.
+         * Y=0 is "at rest in stack". Y<0 is "above rest".
+         */
+
+        const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
+        const DT_CAP     = 0.05;
+        const STAGGER_MS = 130;    // gap between block drops
+        const START_Y    = -300;   // initial offset above rest
+
+        // Y spring (bounce on landing)
+        const Y_K = 450;  const Y_B = 30;   // ζ ≈ 0.71
+
+        // X spring (lateral wobble)
+        const X_K = 380;  const X_B = 24;   // ζ ≈ 0.62
+
+        // Rotation spring
+        const R_K = 320;  const R_B = 21;   // ζ ≈ 0.59
+
+        const SETTLE_VEL = 1.0;
+        const SETTLE_POS = 0.5;
+
+        // Per-block personality: bottom (0) → top (6), more wobble higher up
+        const W = [0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0];
+        const REST_X = [0, 1.0, -0.7, 1.5, -1.0, 0.5, -0.3];
+        const REST_R = [0, -0.3, 0.2, -0.5, 0.35, -0.2, 0.15];
+        const HIT_R  = [0, 35, -30, 50, -40, 25, -18];
+        const HIT_X  = [0, 18, -14, 25, -20, 12, -8];
+
+        const stage = document.querySelector<HTMLElement>('.tower-stage');
+        if (!stage) return;
+        const els = Array.from(stage.querySelectorAll<HTMLElement>('.tower-block'));
+        if (!els.length) return;
+
+        let animId: number | null = null;
+        let running = false;
+
+        interface S {
+            el: HTMLElement; i: number;
+            y: number; vy: number;
+            x: number; vx: number;
+            r: number; vr: number;
+            phase: 'wait' | 'fall' | 'settle' | 'done';
+            t0: number;
+        }
+        const st: S[] = [];
+
+        function init() {
+            st.length = 0;
+            els.forEach((el, i) => {
+                el.style.opacity = '0';
+                el.style.transform = `translateY(${START_Y}px)`;
+                el.classList.remove('settled');
+                st.push({
+                    el, i,
+                    y: START_Y, vy: 0,
+                    x: 0, vx: 0,
+                    r: 0, vr: 0,
+                    phase: 'wait',
+                    t0: i * STAGGER_MS,
+                });
+            });
+        }
+
+        function tx(s: S) {
+            s.el.style.transform =
+                `translateY(${s.y}px) translateX(${s.x}px) rotate(${s.r}deg)`;
+        }
+
+        function run() {
+            if (running) return;
+            running = true;
+            init();
+            const t0 = performance.now();
+            let prev = t0;
+
+            function tick(now: number) {
+                const dt = Math.min((now - prev) / 1000, DT_CAP);
+                prev = now;
+                const elapsed = now - t0;
+                let allDone = true;
+
+                for (const s of st) {
+                    if (s.phase === 'done') continue;
+                    allDone = false;
+
+                    if (s.phase === 'wait') {
+                        if (elapsed >= s.t0) {
+                            s.phase = 'fall';
+                            s.el.style.opacity = '1';
+                        }
+                        continue;
+                    }
+
+                    if (s.phase === 'fall') {
+                        s.vy += GRAVITY * dt;
+                        s.y += s.vy * dt;
+                        // Gentle tumble
+                        s.r = Math.sin(elapsed * 0.005 + s.i * 1.7) * 3 * W[s.i];
+
+                        if (s.y >= 0) {
+                            s.y = 0;
+                            s.phase = 'settle';
+                            s.vy = -s.vy * 0.1;
+                            s.vx = HIT_X[s.i] * W[s.i];
+                            s.vr = HIT_R[s.i] * W[s.i];
+                            s.r = 0;
+                            s.x = 0;
+                        }
+                        tx(s);
+                        continue;
+                    }
+
+                    if (s.phase === 'settle') {
+                        // Y spring
+                        s.vy += (-Y_K * s.y - Y_B * s.vy) * dt;
+                        s.y  += s.vy * dt;
+                        // X spring
+                        const xr = REST_X[s.i];
+                        s.vx += (-X_K * (s.x - xr) - X_B * s.vx) * dt;
+                        s.x  += s.vx * dt;
+                        // Rotation spring
+                        const rr = REST_R[s.i];
+                        s.vr += (-R_K * (s.r - rr) - R_B * s.vr) * dt;
+                        s.r  += s.vr * dt;
+
+                        if (Math.abs(s.vy) < SETTLE_VEL &&
+                            Math.abs(s.y) < SETTLE_POS &&
+                            Math.abs(s.vx) < SETTLE_VEL &&
+                            Math.abs(s.vr) < SETTLE_VEL) {
+                            s.phase = 'done';
+                            s.y = 0; s.x = xr; s.r = rr;
+                            s.el.classList.add('settled');
+                        }
+                        tx(s);
+                    }
+                }
+
+                if (allDone) { animId = null; running = false; return; }
+                animId = requestAnimationFrame(tick);
+            }
+            animId = requestAnimationFrame(tick);
+        }
+
+        function showFinal() {
+            els.forEach((el, i) => {
+                el.style.opacity = '1';
+                el.style.transform =
+                    `translateY(0) translateX(${REST_X[i]}px) rotate(${REST_R[i]}deg)`;
+                el.classList.add('settled');
+            });
+        }
+
+        function reset() {
+            if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+            running = false;
+            els.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = `translateY(${START_Y}px)`;
+                el.classList.remove('settled');
+            });
+        }
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            showFinal(); return;
+        }
+
+        const rev = stage.closest('.reveal') || stage;
+        const obs = new MutationObserver(() => {
+            if (rev.classList.contains('visible')) { if (!running) run(); }
+            else { reset(); }
+        });
+        obs.observe(rev, { attributes: true, attributeFilter: ['class'] });
+        if (rev.classList.contains('visible')) run();
+    })();
+</script>
