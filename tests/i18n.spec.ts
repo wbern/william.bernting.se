@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 const LOCALES = [
-  { prefix: "", lang: "sv", greeting: "Hej där.", ogLocale: "sv_SE" },
-  { prefix: "/en", lang: "en", greeting: "Hi there.", ogLocale: "en_US" },
+  { prefix: "", lang: "sv", greeting: "Hej!", ogLocale: "sv_SE" },
+  { prefix: "/en", lang: "en", greeting: "Hey!", ogLocale: "en_US" },
 ];
 
 for (const locale of LOCALES) {

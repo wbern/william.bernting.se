@@ -27,6 +27,18 @@ body {
     height: 100vh;
 }
 
+/* ===== FOUC prevention: hide non-first slides before keen-slider JS initializes ===== */
+/* Before init, the container lacks data-keen-slider-v. Once JS runs, the attr is added
+   and these rules stop matching, letting keen-slider take full control. */
+#slider.keen-slider:not([data-keen-slider-v]) {
+    overflow: hidden;
+    height: 100vh;
+}
+
+#slider.keen-slider:not([data-keen-slider-v]) > .keen-slider__slide:not(:first-child) {
+    display: none;
+}
+
 /* ===== KEEN SLIDER OVERRIDES (main page slider only) ===== */
 #slider.keen-slider {
     height: 100vh;

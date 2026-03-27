@@ -144,9 +144,199 @@ const projects = getProjects(lang);
                 </g>
             </svg>
         </div>`,
+        2: `<div class="diorama">
+            <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Back: pipeline connection -->
+                <g class="diorama-el diorama-el--back">
+                    <line x1="160" y1="70" x2="224" y2="70" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.35"/>
+                    <line x1="344" y1="70" x2="408" y2="70" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.35"/>
+                    <polygon points="220,66 228,70 220,74" fill="var(--text-muted)" opacity="0.35"/>
+                    <polygon points="404,66 412,70 404,74" fill="var(--text-muted)" opacity="0.35"/>
+                </g>
+                <!-- Left: sealed DLL (opaque box with lock) -->
+                <g class="diorama-el diorama-el--left">
+                    <rect x="88" y="40" width="64" height="60" rx="4" stroke="var(--text-dim)" stroke-width="2"/>
+                    <rect x="88" y="40" width="64" height="60" rx="4" fill="var(--text-muted)" opacity="0.08"/>
+                    <text x="104" y="66" font-family="var(--mono)" font-size="11" fill="var(--text-dim)" opacity="0.7">.dll</text>
+                    <line x1="96" y1="78" x2="144" y2="78" stroke="var(--text-dim)" stroke-width="1" opacity="0.4"/>
+                    <line x1="96" y1="86" x2="132" y2="86" stroke="var(--text-dim)" stroke-width="1" opacity="0.3"/>
+                    <rect x="126" y="44" width="14" height="11" rx="2" stroke="var(--text-dim)" stroke-width="1.5"/>
+                    <path d="M130,44 V40 A4,4 0 0 1 138,40 V44" stroke="var(--text-dim)" stroke-width="1.5" fill="none"/>
+                </g>
+                <!-- Center: ILSpy decompile (code brackets + wrench) -->
+                <g class="diorama-el diorama-el--center">
+                    <rect x="244" y="28" width="80" height="84" rx="8" stroke="var(--purple)" stroke-width="2.5"/>
+                    <text x="260" y="58" font-family="var(--mono)" font-size="14" fill="var(--purple)" opacity="0.8">{</text>
+                    <line x1="274" y1="52" x2="304" y2="52" stroke="var(--purple)" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="274" y1="62" x2="298" y2="62" stroke="var(--purple)" stroke-width="1.5" opacity="0.4"/>
+                    <circle cx="284" cy="82" r="8" stroke="var(--purple)" stroke-width="2" fill="none"/>
+                    <line x1="290" y1="88" x2="300" y2="98" stroke="var(--purple)" stroke-width="2" stroke-linecap="round"/>
+                    <text x="298" y="58" font-family="var(--mono)" font-size="14" fill="var(--purple)" opacity="0.8">}</text>
+                </g>
+                <!-- Right: patched DLL (check mark) -->
+                <g class="diorama-el diorama-el--right">
+                    <rect x="416" y="40" width="64" height="60" rx="4" stroke="var(--purple-dim)" stroke-width="2"/>
+                    <text x="432" y="66" font-family="var(--mono)" font-size="11" fill="var(--purple-dim)" opacity="0.7">.dll</text>
+                    <line x1="424" y1="78" x2="472" y2="78" stroke="var(--purple-dim)" stroke-width="1" opacity="0.4"/>
+                    <line x1="424" y1="86" x2="460" y2="86" stroke="var(--purple-dim)" stroke-width="1" opacity="0.3"/>
+                    <polyline points="452,44 458,52 470,38" stroke="#50c878" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+            </svg>
+        </div>`,
+        3: `<div class="diorama">
+            <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Back: transformation arrow -->
+                <g class="diorama-el diorama-el--back">
+                    <line x1="170" y1="70" x2="390" y2="70" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.25" stroke-dasharray="6 4"/>
+                    <polygon points="386,64 398,70 386,76" fill="var(--text-muted)" opacity="0.3"/>
+                </g>
+                <!-- Left: chunky desktop window (Java Swing) -->
+                <g class="diorama-el diorama-el--left">
+                    <rect x="72" y="32" width="80" height="76" rx="2" stroke="var(--text-dim)" stroke-width="2.5"/>
+                    <rect x="72" y="32" width="80" height="16" rx="2" stroke="var(--text-dim)" stroke-width="2.5" fill="var(--text-muted)" opacity="0.12"/>
+                    <circle cx="84" cy="40" r="3" fill="var(--text-dim)" opacity="0.5"/>
+                    <circle cx="94" cy="40" r="3" fill="var(--text-dim)" opacity="0.4"/>
+                    <circle cx="104" cy="40" r="3" fill="var(--text-dim)" opacity="0.3"/>
+                    <rect x="84" y="56" width="12" height="12" fill="var(--text-dim)" opacity="0.15"/>
+                    <rect x="108" y="56" width="12" height="12" fill="var(--text-dim)" opacity="0.15"/>
+                    <rect x="96" y="68" width="12" height="12" fill="var(--text-dim)" opacity="0.15"/>
+                    <rect x="84" y="80" width="12" height="12" fill="var(--text-dim)" opacity="0.15"/>
+                    <rect x="108" y="80" width="12" height="12" fill="var(--text-dim)" opacity="0.15"/>
+                    <line x1="68" y1="108" x2="156" y2="32" stroke="var(--text-muted)" stroke-width="1" opacity="0.2"/>
+                </g>
+                <!-- Center: crossed-out server -->
+                <g class="diorama-el diorama-el--center" style="animation: none; opacity: 0.35;">
+                    <rect x="264" y="48" width="40" height="44" rx="3" stroke="var(--text-muted)" stroke-width="1.5"/>
+                    <line x1="272" y1="60" x2="296" y2="60" stroke="var(--text-muted)" stroke-width="1"/>
+                    <line x1="272" y1="68" x2="296" y2="68" stroke="var(--text-muted)" stroke-width="1"/>
+                    <circle cx="284" cy="80" r="3" stroke="var(--text-muted)" stroke-width="1" fill="none"/>
+                    <line x1="258" y1="42" x2="310" y2="98" stroke="#c84d4d" stroke-width="2" opacity="0.6"/>
+                    <line x1="310" y1="42" x2="258" y2="98" stroke="#c84d4d" stroke-width="2" opacity="0.6"/>
+                </g>
+                <!-- Right: browser with embedded DB (WebAssembly) -->
+                <g class="diorama-el diorama-el--right">
+                    <rect x="408" y="32" width="88" height="76" rx="8" stroke="var(--purple)" stroke-width="2.5"/>
+                    <line x1="408" y1="48" x2="496" y2="48" stroke="var(--purple)" stroke-width="1.5" opacity="0.5"/>
+                    <circle cx="420" cy="40" r="2.5" fill="var(--purple)" opacity="0.5"/>
+                    <circle cx="430" cy="40" r="2.5" fill="var(--purple)" opacity="0.35"/>
+                    <rect x="430" y="58" width="44" height="28" rx="4" stroke="var(--purple-dim)" stroke-width="1.5"/>
+                    <text x="438" y="76" font-family="var(--mono)" font-size="9" fill="var(--purple)" opacity="0.8">sql.js</text>
+                    <rect x="414" y="62" width="12" height="12" rx="2" stroke="var(--purple-dim)" stroke-width="1" fill="var(--purple-glow)"/>
+                    <text x="415" y="72" font-family="var(--mono)" font-size="7" fill="var(--purple)">W</text>
+                </g>
+            </svg>
+        </div>`,
+        4: `<div class="diorama">
+            <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Back: subtle grid lines -->
+                <g class="diorama-el diorama-el--back">
+                    <line x1="200" y1="120" x2="368" y2="120" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.2"/>
+                    <line x1="200" y1="120" x2="200" y2="24" stroke="var(--text-muted)" stroke-width="1" opacity="0.15" stroke-dasharray="3 4"/>
+                    <line x1="368" y1="120" x2="368" y2="24" stroke="var(--text-muted)" stroke-width="1" opacity="0.15" stroke-dasharray="3 4"/>
+                </g>
+                <!-- Bottom: Tests (solid foundation) -->
+                <g class="diorama-el diorama-el--left">
+                    <rect x="210" y="94" width="148" height="24" rx="4" stroke="var(--purple)" stroke-width="2.5"/>
+                    <rect x="210" y="94" width="148" height="24" rx="4" fill="var(--purple-glow)"/>
+                    <text x="250" y="110" font-family="var(--mono)" font-size="11" fill="var(--purple)">Tests</text>
+                </g>
+                <!-- Middle: Verification -->
+                <g class="diorama-el diorama-el--center">
+                    <rect x="218" y="66" width="132" height="24" rx="4" stroke="var(--purple)" stroke-width="2" opacity="0.7"/>
+                    <rect x="218" y="66" width="132" height="24" rx="4" fill="var(--purple-glow)" opacity="0.6"/>
+                    <text x="236" y="82" font-family="var(--mono)" font-size="11" fill="var(--purple)" opacity="0.8">Verification</text>
+                </g>
+                <!-- Top: AI (wobbly/dashed) -->
+                <g class="diorama-el diorama-el--right">
+                    <rect x="228" y="38" width="112" height="24" rx="4" stroke="var(--purple-dim)" stroke-width="2" stroke-dasharray="5 3" opacity="0.6"/>
+                    <text x="264" y="54" font-family="var(--mono)" font-size="11" fill="var(--purple-dim)" opacity="0.7">AI</text>
+                    <path d="M346,44 Q352,40 358,44 Q364,48 370,44" stroke="var(--text-muted)" stroke-width="1" fill="none" opacity="0.4"/>
+                    <path d="M346,54 Q352,50 358,54 Q364,58 370,54" stroke="var(--text-muted)" stroke-width="1" fill="none" opacity="0.3"/>
+                </g>
+                <!-- Right side: quotation mark accent -->
+                <g class="diorama-el diorama-el--back">
+                    <text x="410" y="60" font-family="Georgia, serif" font-size="48" fill="var(--purple)" opacity="0.12">\u201C</text>
+                    <line x1="420" y1="72" x2="490" y2="72" stroke="var(--text-muted)" stroke-width="1" opacity="0.25"/>
+                    <line x1="420" y1="82" x2="480" y2="82" stroke="var(--text-muted)" stroke-width="1" opacity="0.2"/>
+                    <line x1="420" y1="92" x2="470" y2="92" stroke="var(--text-muted)" stroke-width="1" opacity="0.15"/>
+                </g>
+            </svg>
+        </div>`,
+        5: `<div class="diorama">
+            <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Back: recursive frame lines -->
+                <g class="diorama-el diorama-el--back">
+                    <rect x="160" y="16" width="248" height="108" rx="8" stroke="var(--text-muted)" stroke-width="1" opacity="0.15"/>
+                </g>
+                <!-- Center: mini CV inside a CV (recursive mirror) -->
+                <g class="diorama-el diorama-el--center">
+                    <rect x="204" y="24" width="160" height="92" rx="8" stroke="var(--purple)" stroke-width="2.5"/>
+                    <line x1="204" y1="40" x2="364" y2="40" stroke="var(--purple)" stroke-width="1.5" opacity="0.5"/>
+                    <circle cx="216" cy="32" r="2.5" fill="var(--purple)" opacity="0.5"/>
+                    <circle cx="226" cy="32" r="2.5" fill="var(--purple)" opacity="0.35"/>
+                    <rect x="216" y="48" width="40" height="6" rx="2" fill="var(--purple)" opacity="0.3"/>
+                    <line x1="216" y1="62" x2="352" y2="62" stroke="var(--text-muted)" stroke-width="1" opacity="0.3"/>
+                    <rect x="270" y="70" width="80" height="38" rx="4" stroke="var(--purple-dim)" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="270" y1="78" x2="350" y2="78" stroke="var(--purple-dim)" stroke-width="1" opacity="0.3"/>
+                    <rect x="278" y="82" width="20" height="3" rx="1" fill="var(--purple-dim)" opacity="0.3"/>
+                    <line x1="278" y1="90" x2="342" y2="90" stroke="var(--text-muted)" stroke-width="0.5" opacity="0.3"/>
+                    <rect x="308" y="94" width="34" height="12" rx="2" stroke="var(--text-muted)" stroke-width="0.5" opacity="0.25"/>
+                </g>
+                <!-- Left: cursor -->
+                <g class="diorama-el diorama-el--left">
+                    <polygon points="126,70 138,58 138,66 150,66 150,74 138,74 138,82" fill="var(--text-dim)" opacity="0.4"/>
+                </g>
+                <!-- Right: agent indicator -->
+                <g class="diorama-el diorama-el--right">
+                    <circle cx="440" cy="70" r="16" stroke="var(--purple-dim)" stroke-width="2" fill="none"/>
+                    <text x="433" y="75" font-family="var(--mono)" font-size="12" fill="var(--purple-dim)">AI</text>
+                </g>
+            </svg>
+        </div>`,
+        6: `<div class="diorama">
+            <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <!-- Back: cycle connection arcs -->
+                <g class="diorama-el diorama-el--back">
+                    <path d="M190,70 Q240,20 290,70" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.25" fill="none"/>
+                    <path d="M290,70 Q340,120 390,70" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.25" fill="none"/>
+                    <path d="M390,70 Q290,140 190,70" stroke="var(--text-muted)" stroke-width="1" opacity="0.15" fill="none" stroke-dasharray="4 3"/>
+                    <polygon points="192,64 186,70 194,74" fill="var(--text-muted)" opacity="0.25"/>
+                </g>
+                <!-- Left: RED node -->
+                <g class="diorama-el diorama-el--left">
+                    <circle cx="190" cy="70" r="22" stroke="#c84d4d" stroke-width="2.5" fill="none"/>
+                    <circle cx="190" cy="70" r="22" fill="#c84d4d" opacity="0.1"/>
+                    <text x="174" y="66" font-family="var(--mono)" font-size="9" fill="#c84d4d">/red</text>
+                    <text x="176" y="80" font-family="var(--mono)" font-size="7" fill="var(--text-muted)" opacity="0.6">FAIL</text>
+                </g>
+                <!-- Center: GREEN node -->
+                <g class="diorama-el diorama-el--center">
+                    <circle cx="290" cy="70" r="22" stroke="#50c878" stroke-width="2.5" fill="none"/>
+                    <circle cx="290" cy="70" r="22" fill="#50c878" opacity="0.1"/>
+                    <text x="268" y="66" font-family="var(--mono)" font-size="9" fill="#50c878">/green</text>
+                    <text x="272" y="80" font-family="var(--mono)" font-size="7" fill="var(--text-muted)" opacity="0.6">PASS</text>
+                </g>
+                <!-- Right: REFACTOR node -->
+                <g class="diorama-el diorama-el--right">
+                    <circle cx="390" cy="70" r="22" stroke="var(--purple)" stroke-width="2.5" fill="none"/>
+                    <circle cx="390" cy="70" r="22" fill="var(--purple)" opacity="0.1"/>
+                    <text x="364" y="66" font-family="var(--mono)" font-size="8" fill="var(--purple)">/refactor</text>
+                    <text x="370" y="80" font-family="var(--mono)" font-size="7" fill="var(--text-muted)" opacity="0.6">CLEAN</text>
+                </g>
+                <!-- terminal prompt at top -->
+                <g class="diorama-el diorama-el--back">
+                    <text x="248" y="24" font-family="var(--mono)" font-size="10" fill="var(--text-muted)" opacity="0.4">$ npx @wbern/agent-instructions</text>
+                </g>
+            </svg>
+        </div>`,
+        7: `<div class="diorama diorama--photo">
+            <img src="/chess-reel.jpg" alt="Chess Reel — a meme-oriented chess board" style="display:block;width:100%;height:auto;" />
+        </div>`,
+        8: `<div class="diorama diorama--photo">
+            <img src="/tdd-presentation.jpg" alt="TDD with AI — How to do your job and stop writing code" style="display:block;width:100%;height:auto;" />
+        </div>`,
     };
 
-    const SLIDE_HEIGHT = 60; // px per slot
     const N = PROJECTS.length;
 
     let scrollPos = 0;       // continuous fractional scroll position
@@ -158,6 +348,7 @@ const projects = getProjects(lang);
     let navAnimId: number | null = null;
 
     const section = document.querySelector("[data-testid='projects-section']") as HTMLElement;
+    const SLIDE_HEIGHT = parseFloat(getComputedStyle(section).getPropertyValue("--slide-h")) || 60;
     const detailCard = document.querySelector("[data-testid='detail-card']") as HTMLElement;
     const spinBtn = document.querySelector("[data-testid='spin-button']") as HTMLElement;
     const openBtn = document.querySelector("[data-testid='open-button']") as HTMLElement;
@@ -320,6 +511,26 @@ const projects = getProjects(lang);
         e.stopPropagation();
         isDragging = false;
         viewport.releasePointerCapture(e.pointerId);
+
+        // Detect tap (no significant drag) and treat as slide click.
+        // Pointer capture redirects the click event to the viewport,
+        // so the track click handler never fires — handle it here.
+        const dragDelta = Math.abs(e.clientY - dragStartY);
+        if (dragDelta < 5) {
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            const slide = el?.closest(".roller-slide") as HTMLElement | null;
+            if (slide) {
+                const idx = Number(slide.dataset.index);
+                if (idx === currentIdx) {
+                    transitionToDetail();
+                } else {
+                    targetIdx = idx;
+                    animateTo(idx);
+                }
+                return;
+            }
+        }
+
         // Snap to nearest slide
         const nearest = mod(Math.round(scrollPos), N);
         targetIdx = nearest;
@@ -547,6 +758,7 @@ const projects = getProjects(lang);
     /* Grid stacking: both views overlap in the same cell.
        No position toggling → no layout shift during transition. */
     .roller-section {
+        --slide-h: 60px;
         display: grid;
         justify-items: center;
         width: 100%;
@@ -667,7 +879,7 @@ const projects = getProjects(lang);
     /* ===== Viewport ===== */
     .roller-viewport {
         width: 380px;
-        height: 180px;
+        height: calc(var(--slide-h) * 3);
         position: relative;
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -696,10 +908,10 @@ const projects = getProjects(lang);
     /* Centre highlight overlay */
     .roller-highlight {
         position: absolute;
-        top: 60px;
+        top: var(--slide-h);
         left: 0;
         right: 0;
-        height: 60px;
+        height: var(--slide-h);
         border-top: 1px solid var(--purple-dim);
         border-bottom: 1px solid var(--purple-dim);
         background: linear-gradient(90deg, transparent, var(--purple-glow), transparent);
@@ -713,7 +925,7 @@ const projects = getProjects(lang);
         top: 0;
         left: 0;
         width: 100%;
-        height: 60px;
+        height: var(--slide-h);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -900,6 +1112,10 @@ const projects = getProjects(lang);
         height: auto;
     }
 
+    .diorama--photo {
+        padding: 0;
+    }
+
     /* Phase 1: curtain reveal (initial hidden state) */
     .diorama-el {
         opacity: 0;
@@ -964,6 +1180,19 @@ const projects = getProjects(lang);
 
     .detail-active .diorama-el--back {
         animation: diorama-float-slow 5s ease-in-out 0.7s infinite;
+    }
+
+    /* ===== Desktop ===== */
+    @media (min-width: 901px) {
+        .roller-section { --slide-h: 76px; }
+        .roller-viewport { width: 520px; }
+        .roller-slide__tag { font-size: 10px; letter-spacing: 2.5px; }
+        .roller-slide__title { font-size: 17px; }
+        .roller-slide--selected .roller-slide__title { font-size: 20px; }
+        .roller-slide--near .roller-slide__title { font-size: 16px; }
+        .roller-slide--far .roller-slide__title { font-size: 14px; }
+        .action-button--spin { width: 58px; height: 58px; }
+        .spin-icon { width: 30px; height: 30px; }
     }
 
     /* ===== Print fallback ===== */

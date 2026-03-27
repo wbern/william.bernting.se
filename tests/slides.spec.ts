@@ -4,7 +4,6 @@ const SLIDES = [
   "hero",
   "projects",
   "stats",
-  "traits",
   "timeline",
   "skills",
   "quote",
@@ -12,8 +11,8 @@ const SLIDES = [
 
 // Hero CSS animations finish at ~3.2s + 1s buffer
 const HERO_WAIT_MS = 4200;
-// keen-slider transition duration (800ms) + reveal animations (~700ms + delays up to 600ms) + buffer
-const SLIDE_TRANSITION_MS = 2600;
+// keen-slider transition duration (500ms) + reveal animations (~700ms + delays up to 600ms) + buffer
+const SLIDE_TRANSITION_MS = 2300;
 
 const LOCALES = [
   { prefix: "", label: "sv" },
