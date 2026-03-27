@@ -1,10 +1,15 @@
 ---
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 ---
 
 <div class="section-inner" style="text-align: center;">
-    <div class="section-label reveal">Tools of the trade</div>
+    <div class="section-label reveal">{t("skills.label")}</div>
     <h2 class="section-heading reveal reveal-delay-1">
-        The <span class="highlight">stack</span>.
+        {t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}
     </h2>
 
     <div class="skills-cloud reveal reveal-delay-2">

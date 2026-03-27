@@ -1,142 +1,36 @@
 ---
-const rows = [
-    { items: ['AI-Native Builder', 'Team-builder', 'Debugger', '"Legacy Diver"'], speed: 'slow', size: 'lg', style: 'accent' },
-    { items: ['Agentic Workflows', 'Coach & Mentor', 'Troubleshooter', 'Codebase Rescue'], speed: 'mid', size: 'md', style: 'dim' },
-    { items: ['Ship with AI', 'Build Great Teams', 'Deep Diver', 'Modernizer'], speed: 'fast', size: 'lg', style: 'bright' },
-    { items: ['every project is AI', 'recruited talent', 'complex debugging', 'rescued codebases'], speed: 'mid2', size: 'sm', style: 'dim' },
-    { items: ['AI Collaboration', 'Unified Departments', 'Rewrite Whisperer', 'Legacy Expert'], speed: 'slow2', size: 'md', style: 'accent' },
-];
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+import { getTraitRows } from "../i18n/traits";
+import MarqueeField from "./MarqueeField.astro";
 
-/** Build a single set of items with separators between them */
-function buildItems(items: string[]) {
-    const result: string[] = [];
-    items.forEach((item, i) => {
-        if (i > 0) result.push('·');
-        result.push(item);
-    });
-    return result;
-}
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const rows = getTraitRows(lang);
 ---
 
 <div class="section-inner">
-    <div class="section-label reveal">What makes me different</div>
-    <h2 class="section-heading reveal reveal-delay-1">
-        Not your average <span class="highlight">developer</span>.
+    <div class="section-label">{t("traits.label")}</div>
+    <h2 class="section-heading">
+        {t("traits.heading.before")}<span class="highlight">{t("traits.heading.highlight")}</span>{t("traits.heading.after")}
     </h2>
 
-    <div class="marquee-field reveal reveal-delay-2">
-        {rows.map((row) => {
-            const items = buildItems(row.items);
-            return (
-                <div class={`marquee-row marquee-row--${row.speed}`}>
-                    <div class={`marquee-track marquee-track--${row.size} marquee-track--${row.style}`}>
-                        {/* two identical sets for seamless loop */}
-                        {[0, 1].map(() => (
-                            <div class="marquee-set">
-                                {items.map((text) => (
-                                    <span class={text === '·' ? 'marquee-sep' : 'marquee-item'}>{text}</span>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        })}
-    </div>
+    <MarqueeField rows={rows} />
 </div>
 
 <!-- print fallback (hidden in browser, shown in print) -->
 <div class="traits-print-fallback">
-    <div class="section-label">What makes me different</div>
-    <h2 class="section-heading">Not your average <span class="highlight">developer</span>.</h2>
+    <div class="section-label">{t("traits.label")}</div>
+    <h2 class="section-heading">{t("traits.heading.before")}<span class="highlight">{t("traits.heading.highlight")}</span>{t("traits.heading.after")}</h2>
     <div class="traits-print-grid">
-        <div class="traits-print-item"><h3>AI-Native Builder</h3><p>Builds with AI, ships with AI, thinks in agentic workflows.</p></div>
-        <div class="traits-print-item"><h3>Team-builder</h3><p>Coached developers, recruited talent, unified departments.</p></div>
-        <div class="traits-print-item"><h3>Debugger</h3><p>Complex troubleshooting that makes others reach for the rewrite button.</p></div>
-        <div class="traits-print-item"><h3>"Legacy Diver"</h3><p>Rescues legacy codebases when everyone else wants to rewrite.</p></div>
+        <div class="traits-print-item"><h3>{rows[0].items[0]}</h3><p>{t("print.traits.ai")}</p></div>
+        <div class="traits-print-item"><h3>{rows[0].items[1]}</h3><p>{t("print.traits.team")}</p></div>
+        <div class="traits-print-item"><h3>{rows[0].items[2]}</h3><p>{t("print.traits.debug")}</p></div>
+        <div class="traits-print-item"><h3>{rows[0].items[3]}</h3><p>{t("print.traits.legacy")}</p></div>
     </div>
 </div>
 
 <style>
-    .marquee-field {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        overflow: hidden;
-        -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
-        mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
-    }
-
-    .marquee-row {
-        overflow: hidden;
-        white-space: nowrap;
-    }
-
-    .marquee-track {
-        display: flex;
-        width: max-content;
-        will-change: transform;
-    }
-
-    .marquee-set {
-        display: flex;
-        align-items: center;
-        flex-shrink: 0;
-        padding-right: 60px;
-    }
-
-    /* speeds */
-    .marquee-row--slow  .marquee-track { animation: marquee-drift 38s linear infinite; }
-    .marquee-row--mid   .marquee-track { animation: marquee-drift 26s linear infinite; }
-    .marquee-row--fast  .marquee-track { animation: marquee-drift 22s linear infinite; }
-    .marquee-row--mid2  .marquee-track { animation: marquee-drift 30s linear infinite; }
-    .marquee-row--slow2 .marquee-track { animation: marquee-drift 42s linear infinite; }
-
-    /* sizes */
-    .marquee-track--lg .marquee-item {
-        font-size: clamp(28px, 4vw, 42px);
-        font-weight: 800;
-        letter-spacing: -0.5px;
-    }
-    .marquee-track--md .marquee-item {
-        font-size: clamp(18px, 2.5vw, 26px);
-        font-weight: 600;
-        letter-spacing: 1px;
-    }
-    .marquee-track--sm .marquee-item {
-        font-size: clamp(13px, 1.8vw, 17px);
-        font-weight: 500;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-    }
-
-    /* colour styles */
-    .marquee-track--accent .marquee-item { color: var(--purple); }
-    .marquee-track--accent .marquee-sep  { color: var(--purple-dim); }
-    .marquee-track--bright .marquee-item { color: var(--text); }
-    .marquee-track--bright .marquee-sep  { color: var(--text-muted); }
-    .marquee-track--dim    .marquee-item { color: var(--text-muted); }
-    .marquee-track--dim    .marquee-sep  { color: var(--text-muted); opacity: 0.4; }
-
-    .marquee-item {
-        font-family: var(--mono);
-        white-space: nowrap;
-        flex-shrink: 0;
-        padding: 0 20px;
-    }
-
-    .marquee-sep {
-        font-size: 24px;
-        flex-shrink: 0;
-        padding: 0 12px;
-        opacity: 0.4;
-    }
-
-    @keyframes marquee-drift {
-        from { transform: translateX(0); }
-        to   { transform: translateX(-50%); }
-    }
-
     /* print fallback */
     .traits-print-fallback { display: none; }
 

@@ -1,18 +1,25 @@
 ---
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+import { getProjects } from "../i18n/projects";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const projects = getProjects(lang);
 ---
 
 <div class="section-inner roller-section" data-testid="projects-section">
     <!-- ===== VIEW 1: Roller ===== -->
     <div class="roller-view" data-testid="roller-view">
-        <div class="section-label reveal">What I've been building</div>
-        <h2 class="section-heading reveal reveal-delay-1">
-            Shipped with <span class="highlight">AI</span>, not just hype.
+        <div class="section-label">{t("projects.label")}</div>
+        <h2 class="section-heading">
+            {t("projects.heading.before")}<span class="highlight">{t("projects.heading.highlight")}</span>{t("projects.heading.after")}
         </h2>
 
-        <div class="roller-wrapper reveal reveal-delay-2">
-            <button class="roller-arrow" data-testid="roller-arrow-up" aria-label="Previous project">&#x25B2;</button>
+        <div class="roller-wrapper">
+            <button class="roller-arrow" data-testid="roller-arrow-up" aria-label={t("projects.aria.prev")}>&#x25B2;</button>
 
-            <div class="roller-viewport" data-testid="roller" data-keen-slider-clickable role="listbox" aria-label="Projects">
+            <div class="roller-viewport" data-testid="roller" data-keen-slider-clickable role="listbox" aria-label={t("projects.aria.list")}>
                 <div id="roller-track" class="roller-track" aria-live="polite">
                     <!-- Slides populated by script -->
                 </div>
@@ -20,23 +27,27 @@
                 <div class="roller-highlight"></div>
             </div>
 
-            <button class="roller-arrow" data-testid="roller-arrow-down" aria-label="Next project">&#x25BC;</button>
+            <button class="roller-arrow" data-testid="roller-arrow-down" aria-label={t("projects.aria.next")}>&#x25BC;</button>
         </div>
 
-        <div class="roller-actions reveal reveal-delay-3">
+        <div class="roller-actions">
             <button class="action-button action-button--spin" data-testid="spin-button">
-                <span class="spin-icon">&#x21BB;</span> Spin
+                <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M 19.5 12 A 7.5 7.5 0 1 0 15 18.9" />
+                    <polyline points="19.5,8 19.5,12 15.5,12" />
+                </svg>
             </button>
-            <button class="action-button action-button--open" data-testid="open-button">
-                Open &#x2192;
+            <!-- Hidden but functional for test automation -->
+            <button class="action-button action-button--open sr-only" data-testid="open-button">
+                {t("projects.open")} &#x2192;
             </button>
         </div>
     </div>
 
     <!-- ===== VIEW 2: Detail ===== -->
     <div class="detail-view" data-testid="detail-view">
-        <button class="back-button" data-testid="back-button" aria-label="Back to roller">
-            <span class="back-arrow">&#x2190;</span> Back
+        <button class="back-button" data-testid="back-button" aria-label={t("projects.aria.back")}>
+            <span class="back-arrow">&#x2190;</span> {t("projects.back")}
         </button>
         <div class="detail-card" data-testid="detail-card">
             <!-- Detail content injected by script -->
@@ -44,28 +55,27 @@
     </div>
 </div>
 
-<!-- Print fallback -->
+<!-- Print fallback (server-rendered) -->
 <div class="section-inner projects-print-fallback">
-    <div class="section-label">What I've been building</div>
-    <h2 class="section-heading">Shipped with <span class="highlight">AI</span>, not just hype.</h2>
-    <div class="projects-grid" id="projects-print-grid"></div>
+    <div class="section-label">{t("projects.label")}</div>
+    <h2 class="section-heading">{t("projects.heading.before")}<span class="highlight">{t("projects.heading.highlight")}</span>{t("projects.heading.after")}</h2>
+    <div class="projects-grid">
+        {projects.map((p) => (
+            <div class="project-card">
+                <div class="project-tag">{p.tag}</div>
+                <h3>{p.title}</h3>
+                <p>{p.description}</p>
+            </div>
+        ))}
+    </div>
 </div>
 
+<!-- Inject translated project data for client JS -->
+<script type="application/json" id="projects-i18n-data" set:html={JSON.stringify(projects)} />
+
 <script>
-    const PROJECTS = [
-        { tag: "AI Agent", title: "Community Assistant", description: "AI chatbot agents exposed as HTTP endpoints. Email ingestion, AI tagging, event sourcing. 3-tier LLM testing strategy with 80% coverage." },
-        { tag: "Infrastructure", title: "Pi-PAI", description: "MCP control plane deploying autonomous Claude Code servers. Session lifecycle, bearer token auth, resource caps, auto-restore on boot." },
-        { tag: "Legacy Rescue", title: "Agentic DLL Decompilation", description: "Decompile-edit-recompile pipeline for proprietary .NET DLLs. Named mutex fixes, 19 Playwright regression tests, deployed to 5 customer sites." },
-        { tag: "Full-Stack PoC", title: "Chess Tournament Modernizer", description: "Legacy Java Swing app reborn as Spring Boot + React 19. 10 API controllers, 260+ E2E tests, Docker multi-stage build, Ansible deployment." },
-        { tag: "Thought Leadership", title: "AI Trust Infrastructure", description: "Published article on shipping AI agents in production. 22 iterative drafts, 15+ ADRs. Trust as infrastructure, not capability." },
-        { tag: "Meta", title: "This CV", description: "Built by an AI agent. The HTML, the scroll animations, the content. You're looking at it right now." },
-        { tag: "DevOps", title: "GitOps Pipeline Engine", description: "Declarative deployment pipeline with auto-rollback. Helm chart templating, ArgoCD sync waves, Slack alerting on drift detection." },
-        { tag: "Data Platform", title: "Event Stream Backbone", description: "Kafka-based event mesh processing 2M events/day. Schema registry, dead-letter queues, exactly-once delivery with idempotent consumers." },
-        { tag: "Security", title: "Zero-Trust Auth Gateway", description: "mTLS service mesh gateway with OIDC integration. Token rotation, rate limiting, audit logging. Sub-5ms overhead per request." },
-        { tag: "Mobile", title: "Field Inspection App", description: "Offline-first React Native app for industrial inspections. SQLite sync engine, camera OCR pipeline, PDF report generation on-device." },
-        { tag: "ML Ops", title: "Model Serving Platform", description: "Kubernetes-native model registry with canary deployments. A/B traffic splitting, latency-aware autoscaling, GPU bin-packing scheduler." },
-        { tag: "Open Source", title: "AST Refactor CLI", description: "TypeScript codemods via AST manipulation. 40+ transform rules, dry-run mode, git-aware diffing. 1.2k GitHub stars." },
-    ];
+    const PROJECTS: { tag: string; title: string; description: string }[] =
+        JSON.parse(document.getElementById("projects-i18n-data")!.textContent!);
 
     /* ── Diorama illustrations (keyed by project index) ── */
     const PROJECT_ILLUSTRATIONS: Record<number, string> = {
@@ -156,7 +166,6 @@
     const backBtn = document.querySelector("[data-testid='back-button']") as HTMLElement;
     const track = document.getElementById("roller-track") as HTMLElement;
     const viewport = document.querySelector("[data-testid='roller']") as HTMLElement;
-    const printGrid = document.getElementById("projects-print-grid");
 
     // Build slide elements
     PROJECTS.forEach((p, i) => {
@@ -318,44 +327,98 @@
         animateTo(nearest, 200);
     });
 
-    // ── Spin animation (smooth continuous) ────────────────
+    // ── Momentum-based spin ─────────────────────────────
+    // Each click adds velocity. Friction decays it. Button spin speed matches.
+    let spinVelocity = 0;      // slides per second
+    let btnAngle = 0;          // cumulative button rotation in degrees
+    let lastSpinTime = 0;
+
+    const SPIN_KICK_MIN = 14;  // slides/sec added per click (min)
+    const SPIN_KICK_MAX = 24;  // slides/sec added per click (max)
+    const MAX_VELOCITY = 50;   // cap
+    const FRICTION_MIN = 0.965;
+    const FRICTION_MAX = 0.975;
+    const SETTLE_THRESHOLD = 0.3;
+    let currentFriction = 0.97;
+
     function spin() {
-        if (isSpinning || isDetailView) return;
-        isSpinning = true;
-        viewport?.classList.add("roller-spinning");
+        if (isDetailView) return;
+        if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
+        isSettling = false;
 
-        const pool = Array.from({ length: N - 1 }, (_, i) => (currentIdx + 1 + i) % N);
-        const target = pool[Math.floor(Math.random() * pool.length)];
-        const rotations = 2 + Math.floor(Math.random() * 2);
-        const offsetToTarget = ((target - currentIdx) % N + N) % N;
-        const totalDist = rotations * N + offsetToTarget;
-        const duration = 2000 + totalDist * 30;
+        const kick = SPIN_KICK_MIN + Math.random() * (SPIN_KICK_MAX - SPIN_KICK_MIN);
+        spinVelocity = Math.min(spinVelocity + kick, MAX_VELOCITY);
+        // Randomize friction each spin so duration feels different
+        currentFriction = FRICTION_MIN + Math.random() * (FRICTION_MAX - FRICTION_MIN);
 
-        const startPos = scrollPos;
-        const startTime = performance.now();
+        if (!isSpinning) {
+            isSpinning = true;
+            lastSpinTime = performance.now();
+            viewport?.classList.add("roller-spinning");
+            spinBtn?.classList.add("spinning");
+            spinAnimId = requestAnimationFrame(spinLoop);
+        }
+    }
 
-        function animate(now: number) {
-            const t = Math.min((now - startTime) / duration, 1);
-            // Cubic ease-out for decelerating spin
-            const eased = 1 - Math.pow(1 - t, 3);
-            scrollPos = startPos + eased * totalDist;
+    let isSettling = false;
+    let settleStart = 0;
+    let settleFrom = 0;
+    let settleTo = 0;
+    const SETTLE_DURATION = 280; // ms
+
+    function spinLoop(now: number) {
+        const dt = Math.min((now - lastSpinTime) / 1000, 0.05);
+        lastSpinTime = now;
+
+        // Settling phase — smooth ease into the target slot
+        if (isSettling) {
+            const t = Math.min((now - settleStart) / SETTLE_DURATION, 1);
+            // Overshoot ease: slight bounce past target then back
+            const eased = t < 0.7
+                ? 1.2 * (t / 0.7) * (t / 0.7) * (3 - 2 * (t / 0.7)) // smooth overshoot
+                : 1.0 + 0.2 * (1 - ((t - 0.7) / 0.3)) * (1 - ((t - 0.7) / 0.3)) * -1 + 0.2; // settle back
+            // Simpler: use an elastic-ish ease
+            const elastic = t === 1 ? 1 : 1 - Math.pow(2, -10 * t) * Math.cos((t * 10 - 0.75) * (2 * Math.PI / 3));
+            scrollPos = settleFrom + (settleTo - settleFrom) * elastic;
+            btnAngle += (1 - t) * 2; // gentle residual button rotation
+            if (spinBtn) spinBtn.style.transform = `rotate(${btnAngle}deg)`;
             render();
 
-            if (t < 1) {
-                spinAnimId = requestAnimationFrame(animate);
-            } else {
-                scrollPos = target;
-                currentIdx = target;
-                targetIdx = target;
-                render();
+            if (t >= 1) {
+                scrollPos = mod(settleTo, N);
+                currentIdx = mod(settleTo, N);
+                targetIdx = currentIdx;
                 isSpinning = false;
+                isSettling = false;
                 viewport?.classList.remove("roller-spinning");
+                spinBtn?.classList.remove("spinning");
                 spinAnimId = null;
-                setTimeout(() => transitionToDetail(), 600);
+                render();
+                setTimeout(() => transitionToDetail(), 400);
+                return;
             }
+
+            spinAnimId = requestAnimationFrame(spinLoop);
+            return;
         }
 
-        spinAnimId = requestAnimationFrame(animate);
+        // Momentum phase — friction decay
+        spinVelocity *= currentFriction;
+        scrollPos += spinVelocity * dt;
+        btnAngle += spinVelocity * dt * 60;
+        if (spinBtn) spinBtn.style.transform = `rotate(${btnAngle}deg)`;
+        render();
+
+        if (spinVelocity < SETTLE_THRESHOLD) {
+            // Transition to settle phase
+            isSettling = true;
+            settleStart = now;
+            settleFrom = scrollPos;
+            settleTo = Math.round(scrollPos);
+            spinVelocity = 0;
+        }
+
+        spinAnimId = requestAnimationFrame(spinLoop);
     }
 
     // ── Detail view transitions ──────────────────────────
@@ -390,6 +453,20 @@
     arrowUp?.addEventListener("click", () => prev());
     arrowDown?.addEventListener("click", () => next());
 
+    // Click a slide to open it
+    track?.addEventListener("click", (e: MouseEvent) => {
+        if (isSpinning) return;
+        const slide = (e.target as HTMLElement).closest(".roller-slide") as HTMLElement | null;
+        if (!slide) return;
+        const idx = Number(slide.dataset.index);
+        if (idx === currentIdx) {
+            transitionToDetail();
+        } else {
+            targetIdx = idx;
+            animateTo(idx);
+        }
+    });
+
     // Keyboard nav
     viewport?.setAttribute("tabindex", "0");
     viewport?.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -410,15 +487,59 @@
         if (e.key === "Escape" && isDetailView) { e.preventDefault(); transitionToRoller(); }
     });
 
-    // Print fallback
-    if (printGrid) {
-        PROJECTS.forEach((p) => {
-            const card = document.createElement("div");
-            card.className = "project-card";
-            card.innerHTML = `<div class="project-tag">${p.tag}</div><h3>${p.title}</h3><p>${p.description}</p>`;
-            printGrid.appendChild(card);
-        });
+    // ── Auto-spin on enter, reset on leave ─────────────
+    const PROJECTS_SLIDE_INDEX = 1;
+    let hasAutoSpun = false;
+    let isOnProjectsSlide = false;
+
+    function autoSpin() {
+        if (isSpinning || isDetailView) return;
+        spinVelocity = 28 + Math.random() * 8;
+        currentFriction = FRICTION_MAX;
+        isSpinning = true;
+        lastSpinTime = performance.now();
+        viewport?.classList.add("roller-spinning");
+        spinBtn?.classList.add("spinning");
+        spinAnimId = requestAnimationFrame(spinLoop);
     }
+
+    function silentReset() {
+        if (spinAnimId) { cancelAnimationFrame(spinAnimId); spinAnimId = null; }
+        if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
+        isSpinning = false;
+        isSettling = false;
+        spinVelocity = 0;
+        isDetailView = false;
+        section?.classList.remove("detail-active");
+        viewport?.classList.remove("roller-spinning");
+        spinBtn?.classList.remove("spinning");
+        document.getElementById("slide-dots")?.classList.remove("hidden");
+        // Scramble position so next visit looks different
+        const randomStart = Math.floor(Math.random() * N);
+        scrollPos = randomStart;
+        currentIdx = randomStart;
+        targetIdx = randomStart;
+        render();
+    }
+
+    document.addEventListener("slide-changed", ((e: CustomEvent) => {
+        const idx = e.detail.index;
+        if (idx === PROJECTS_SLIDE_INDEX) {
+            if (!isOnProjectsSlide) {
+                isOnProjectsSlide = true;
+                if (!hasAutoSpun) {
+                    hasAutoSpun = true;
+                    autoSpin();
+                }
+            }
+        } else {
+            if (isOnProjectsSlide) {
+                isOnProjectsSlide = false;
+                silentReset();
+            }
+        }
+    }) as EventListener);
+
 </script>
 
 <style is:global>
@@ -685,8 +806,21 @@
     /* ===== Action Buttons Row ===== */
     .roller-actions {
         display: flex;
+        justify-content: center;
         gap: 12px;
         margin-top: 16px;
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
     }
 
     .action-button {
@@ -703,9 +837,16 @@
     }
 
     .action-button--spin {
+        width: 52px;
+        height: 52px;
+        padding: 0;
+        border-radius: 50%;
         background: var(--bg-card);
-        border: 1px solid var(--purple-dim);
+        border: 2px solid var(--purple-dim);
         color: var(--purple);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .action-button--spin:hover {
@@ -715,14 +856,20 @@
         transform: translateY(-2px);
     }
 
-    .action-button--spin:hover .spin-icon {
-        transform: rotate(180deg);
+    .action-button--spin.spinning {
+        transition: none;
+        border-color: var(--purple);
+        box-shadow: 0 0 24px var(--purple-glow-strong);
+    }
+
+    .action-button--spin.spinning:hover {
+        transform: none;
     }
 
     .spin-icon {
-        font-size: 18px;
-        display: inline-block;
-        transition: transform 0.3s ease;
+        width: 28px;
+        height: 28px;
+        display: block;
     }
 
     .action-button--open {
@@ -832,6 +979,8 @@
         .detail-card p { font-size: 15px; }
         .roller-actions { gap: 8px; }
         .action-button { font-size: 13px; padding: 8px 18px; }
+        .action-button--spin { width: 44px; height: 44px; padding: 0; }
+        .spin-icon { width: 22px; height: 22px; }
         .diorama { margin-bottom: 12px; padding: 4px 0; }
         .diorama svg { max-height: 80px; }
     }

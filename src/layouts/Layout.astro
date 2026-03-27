@@ -1,33 +1,52 @@
 ---
+import { getHreflangUrls } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
 interface Props {
     title: string;
     description?: string;
 }
 
-const { title, description = "Frontend developer who builds things with AI. 10 years of shipping software — from legacy rescue to agentic workflows." } = Astro.props;
+const currentLang = (Astro.currentLocale ?? defaultLang) as Lang;
+const { title, description } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const hreflang = getHreflangUrls(Astro.url, currentLang);
+const ogLocale = currentLang === "sv" ? "sv_SE" : "en_US";
+const ogLocaleAlt = currentLang === "sv" ? "en_US" : "sv_SE";
+const ogImage = new URL("/og-image.jpg", Astro.site).href;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={currentLang}>
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
         <meta name="description" content={description} />
+        <meta name="google" content="notranslate" />
         <link rel="canonical" href={canonicalURL.href} />
+
+        <!-- Hreflang -->
+        <link rel="alternate" hreflang="sv" href={hreflang.sv} />
+        <link rel="alternate" hreflang="en" href={hreflang.en} />
+        <link rel="alternate" hreflang="x-default" href={hreflang["x-default"]} />
 
         <!-- Open Graph -->
         <meta property="og:type" content="website" />
         <meta property="og:url" content={canonicalURL.href} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:locale" content="en_US" />
+        <meta property="og:locale" content={ogLocale} />
+        <meta property="og:locale:alternate" content={ogLocaleAlt} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="718" />
+        <meta property="og:image:height" content="718" />
 
         <!-- Twitter -->
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

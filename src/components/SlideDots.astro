@@ -1,8 +1,13 @@
 ---
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
 interface Props {
     count: number;
 }
 
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 const { count } = Astro.props;
 ---
 
@@ -11,7 +16,7 @@ const { count } = Astro.props;
         <button
             class:list={['slide-dot', { active: i === 0 }]}
             data-slide={i}
-            aria-label={`Go to slide ${i + 1}`}
+            aria-label={`${t("nav.goToSlide")} ${i + 1}`}
         />
     ))}
 </nav>

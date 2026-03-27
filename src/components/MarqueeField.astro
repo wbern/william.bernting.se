@@ -1,0 +1,123 @@
+---
+import type { TraitRow } from "../i18n/traits";
+
+interface Props {
+    rows: TraitRow[];
+    class?: string;
+}
+
+const { rows, class: className } = Astro.props;
+
+function buildItems(items: string[]) {
+    const result: string[] = [];
+    items.forEach((item, i) => {
+        if (i > 0) result.push('·');
+        result.push(item);
+    });
+    return result;
+}
+---
+
+<div class:list={["marquee-field", className]}>
+    {rows.map((row) => {
+        const items = buildItems(row.items);
+        return (
+            <div class={`marquee-row marquee-row--${row.speed}`}>
+                <div class={`marquee-track marquee-track--${row.size} marquee-track--${row.style}`}>
+                    {[0, 1].map(() => (
+                        <div class="marquee-set">
+                            {items.map((text) => (
+                                <span class={text === '·' ? 'marquee-sep' : 'marquee-item'}>{text}</span>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    })}
+</div>
+
+<style>
+    .marquee-field {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+        mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+    }
+
+    .marquee-row {
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .marquee-track {
+        display: flex;
+        width: max-content;
+        will-change: transform;
+    }
+
+    .marquee-set {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        padding-right: 60px;
+    }
+
+    /* speeds */
+    .marquee-row--slow  .marquee-track { animation: marquee-drift 38s linear infinite; }
+    .marquee-row--mid   .marquee-track { animation: marquee-drift 26s linear infinite; }
+    .marquee-row--fast  .marquee-track { animation: marquee-drift 22s linear infinite; }
+    .marquee-row--mid2  .marquee-track { animation: marquee-drift 30s linear infinite; }
+    .marquee-row--slow2 .marquee-track { animation: marquee-drift 42s linear infinite; }
+
+    /* sizes */
+    .marquee-track--lg .marquee-item {
+        font-size: clamp(28px, 4vw, 42px);
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+    .marquee-track--md .marquee-item {
+        font-size: clamp(18px, 2.5vw, 26px);
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+    .marquee-track--sm .marquee-item {
+        font-size: clamp(13px, 1.8vw, 17px);
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    /* colour styles */
+    .marquee-track--accent .marquee-item { color: var(--purple); }
+    .marquee-track--accent .marquee-sep  { color: var(--purple-dim); }
+    .marquee-track--bright .marquee-item { color: var(--text); }
+    .marquee-track--bright .marquee-sep  { color: var(--text-muted); }
+    .marquee-track--dim    .marquee-item { color: var(--text-muted); }
+    .marquee-track--dim    .marquee-sep  { color: var(--text-muted); opacity: 0.4; }
+
+    .marquee-item {
+        font-family: var(--mono);
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 0 20px;
+    }
+
+    .marquee-sep {
+        font-size: 24px;
+        flex-shrink: 0;
+        padding: 0 12px;
+        opacity: 0.4;
+    }
+
+    @keyframes marquee-drift {
+        from { transform: translateX(0); }
+        to   { transform: translateX(-50%); }
+    }
+
+    @media print {
+        .marquee-field { display: none !important; }
+    }
+</style>
