@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { getProjects, projectEntries } from "./projects";
 
 describe("projects", () => {
-  it("has 12 projects", () => {
-    expect(projectEntries).toHaveLength(12);
+  it("has 13 projects", () => {
+    expect(projectEntries).toHaveLength(13);
   });
 
-  it("returns 12 projects for each locale", () => {
-    expect(getProjects("sv")).toHaveLength(12);
-    expect(getProjects("en")).toHaveLength(12);
+  it("returns 13 projects for each locale", () => {
+    expect(getProjects("sv")).toHaveLength(13);
+    expect(getProjects("en")).toHaveLength(13);
   });
 
   it("each entry has both sv and en", () => {
