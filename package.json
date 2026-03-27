@@ -11,13 +11,16 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "playwright test",
+    "test:unit": "vitest run",
     "test:update": "playwright test --update-snapshots"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.2",
     "astro": "^6.0.8",
     "keen-slider": "^6.8.6"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "vitest": "^4.1.2"
   }
 }

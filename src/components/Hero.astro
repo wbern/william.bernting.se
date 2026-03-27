@@ -1,20 +1,45 @@
 ---
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+import { getTraitRows } from "../i18n/traits";
+import MarqueeField from "./MarqueeField.astro";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const rows = getTraitRows(lang);
+
+const topRows = rows.slice(0, 2);
+const bottomRows = rows.slice(2);
+
+const greeting = t("hero.greeting");
+const greetingLen = greeting.length;
 ---
 
 <div class="hero-slide">
-    <div class="hero-greeting">Hi there.</div>
-    <h1>William Bernting</h1>
-    <p class="hero-tagline">
-        I build things with <strong>AI</strong>. Then I build more things. Then I ship them.
-    </p>
+    <div class="hero-marquee-wrap hero-marquee-top">
+        <MarqueeField rows={topRows} />
+    </div>
+
+    <div class="hero-center">
+        <div
+            class="hero-greeting"
+            style={`--greeting-width: ${greetingLen}ch; animation: typewriter 1s steps(${greetingLen}) 0.5s forwards, blink 0.7s step-end infinite, greetingFade 0.8s ease 1.8s forwards;`}
+        >{greeting}</div>
+        <h1>William Bernting</h1>
+    </div>
+
+    <div class="hero-marquee-wrap hero-marquee-bottom">
+        <MarqueeField rows={bottomRows} />
+    </div>
+
     <div class="hero-contact-print" style="display: none;">
         <a href="mailto:william@bernting.se">william@bernting.se</a>
         <span>+46 706 67 60 47</span>
         <a href="https://www.linkedin.com/in/williambernting">LinkedIn</a>
-        <a href="https://kendev.se">kendev.se</a>
+        <a href="https://www.kendev.se/">kendev.se</a>
         <span>Gothenburg, Sweden</span>
     </div>
-    <div class="hero-scroll-hint">scroll down</div>
+    <div class="hero-scroll-hint">{t("hero.scroll")}</div>
 </div>
 
 <style>
@@ -29,24 +54,46 @@
         position: relative;
     }
 
+    .hero-marquee-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        width: 100vw;
+        opacity: 0;
+    }
+
+    .hero-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 0;
+        flex-shrink: 0;
+    }
+
     .hero-greeting {
         font-family: var(--mono);
         font-size: 18px;
-        color: var(--purple);
+        color: var(--text);
         margin-bottom: 20px;
         overflow: hidden;
         white-space: nowrap;
-        border-right: 2px solid var(--purple);
+        border-right: 2px solid var(--text);
         width: 0;
-        animation: typewriter 1s steps(10) 0.5s forwards, blink 0.7s step-end infinite;
     }
 
     @keyframes typewriter {
-        to { width: 10ch; }
+        to { width: var(--greeting-width); }
     }
 
     @keyframes blink {
         50% { border-color: transparent; }
+    }
+
+    @keyframes greetingFade {
+        to {
+            color: var(--text-muted);
+            border-color: transparent;
+        }
     }
 
     h1 {
@@ -54,22 +101,16 @@
         font-weight: 900;
         letter-spacing: -2px;
         line-height: 1;
-        margin-bottom: 16px;
         opacity: 0;
         animation: fadeUp 1s ease 1.8s forwards;
     }
 
-    .hero-tagline {
-        font-size: clamp(16px, 2.5vw, 22px);
-        color: var(--text-dim);
-        font-weight: 400;
-        opacity: 0;
-        animation: fadeUp 1s ease 2.4s forwards;
+    .hero-marquee-top {
+        animation: fadeDown 1s ease 2.4s forwards;
     }
 
-    .hero-tagline strong {
-        color: var(--purple);
-        font-weight: 600;
+    .hero-marquee-bottom {
+        animation: fadeUp 1s ease 2.4s forwards;
     }
 
     .hero-scroll-hint {
@@ -87,6 +128,11 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes fadeDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     @keyframes float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-8px); }
@@ -98,8 +144,8 @@
             padding-bottom: 2px;
         }
         .hero-greeting {
-            animation: none;
-            width: auto;
+            animation: none !important;
+            width: auto !important;
             border: none;
             font-size: 10px;
             margin-bottom: 2px;
@@ -110,10 +156,9 @@
             opacity: 1;
             margin-bottom: 2px;
         }
-        .hero-tagline {
-            font-size: 11px;
-            animation: none;
-            opacity: 1;
+        .hero-center { padding: 0; }
+        .hero-marquee-wrap {
+            display: none;
         }
         .hero-scroll-hint {
             display: none;

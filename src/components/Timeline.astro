@@ -1,21 +1,19 @@
 ---
-const jobs = [
-    { date: '2025 —', role: 'Frontend Developer', company: 'Akka', color: '#00d4aa', w: 50 },
-    { date: '2025', role: 'Backend Dev (C#)', company: 'Hedin IT', color: '#f0a030', w: 35 },
-    { date: '2023 – 25', role: 'Dev → Tech Lead', company: 'Sembo', color: '#9b4dca', w: 80 },
-    { date: '2022 – 23', role: 'Dev → CTO', company: 'NetConsult', color: '#e84060', w: 55 },
-    { date: '2020 – 22', role: 'Senior → Lead', company: 'Telia', color: '#40a0e8', w: 95 },
-    { date: '2017 – 20', role: 'Systems Developer', company: 'KITS AB', color: '#50c040', w: 70 },
-    { date: '2011 – 16', role: 'Coord → Team Lead', company: 'HPE', color: '#e8e040', w: 100 },
-];
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+import { getJobs } from "../i18n/jobs";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const jobs = getJobs(lang);
 // Reverse: index 0 = bottom (HPE), 6 = top (Akka)
 const blocks = [...jobs].reverse();
 ---
 
 <div class="section-inner tower-section">
-    <div class="section-label reveal">The journey so far</div>
+    <div class="section-label reveal">{t("timeline.label")}</div>
     <h2 class="section-heading reveal reveal-delay-1">
-        10 years of <span class="highlight">building</span>.
+        {t("timeline.heading.before")}<span class="highlight">{t("timeline.heading.highlight")}</span>{t("timeline.heading.after")}
     </h2>
 
     <div class="tower-stage reveal reveal-delay-2" data-testid="tower-stage">
@@ -39,8 +37,8 @@ const blocks = [...jobs].reverse();
 
 <!-- Print fallback -->
 <div class="timeline-print-fallback" style="display:none">
-    <div class="section-label">The journey so far</div>
-    <h2 class="section-heading">10 years of <span class="highlight">building</span>.</h2>
+    <div class="section-label">{t("timeline.label")}</div>
+    <h2 class="section-heading">{t("timeline.heading.before")}<span class="highlight">{t("timeline.heading.highlight")}</span>{t("timeline.heading.after")}</h2>
     <div class="timeline-print-list">
         {jobs.map((job) => (
             <div class="timeline-print-item">
