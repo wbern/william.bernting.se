@@ -358,6 +358,14 @@ for (const img of photoImages) {
     const backBtn = document.querySelector("[data-testid='back-button']") as HTMLElement;
     const track = document.getElementById("roller-track") as HTMLElement;
     const viewport = document.querySelector("[data-testid='roller']") as HTMLElement;
+    const detailView = document.querySelector("[data-testid='detail-view']") as HTMLElement;
+    const sliderContainer = document.getElementById("slider") as HTMLElement;
+
+    // When detail view is open, prevent pointer events from reaching the
+    // page-level keen-slider (which would interpret drags as slide navigation).
+    detailView?.addEventListener("pointerdown", (e: PointerEvent) => {
+        if (isDetailView) e.stopPropagation();
+    });
 
     // Match the CSS media query for --slide-h: 76px on desktop, 60px on mobile
     const SLIDE_HEIGHT = window.matchMedia("(min-width: 901px)").matches ? 76 : 60;
@@ -691,6 +699,9 @@ for (const img of photoImages) {
         if (parentSlide) parentSlide.scrollTop = 0;
         // Tell keen-slider to freeze
         document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: true } }));
+        // Override keen-slider's touch-action so the browser handles
+        // vertical scrolling natively inside the detail card.
+        sliderContainer?.style.setProperty("touch-action", "auto");
         // Update URL hash for deep linking
         const slug = PROJECT_SLUGS[currentIdx];
         if (slug) {
@@ -708,6 +719,8 @@ for (const img of photoImages) {
         if (parentSlide) parentSlide.scrollTop = 0;
         // Tell keen-slider to unfreeze
         document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: false } }));
+        // Restore keen-slider's touch-action for slide navigation.
+        sliderContainer?.style.removeProperty("touch-action");
         // Clear URL hash
         history.replaceState(null, "", location.pathname);
     }
@@ -745,10 +758,18 @@ for (const img of photoImages) {
 
     let wheelAccum = 0;
     section?.addEventListener("wheel", (e: WheelEvent) => {
+        if (isDetailView) {
+            // Prevent keen-slider from navigating slides while detail card
+            // is open. Don't preventDefault — let the browser scroll the
+            // slide content natively.
+            e.stopPropagation();
+            wheelAccum = 0;
+            return;
+        }
         if (!viewport?.contains(e.target as Node)) return;
         e.stopPropagation();
         e.preventDefault();
-        if (isSpinning || isDetailView) {
+        if (isSpinning) {
             wheelAccum = 0;
             return;
         }
