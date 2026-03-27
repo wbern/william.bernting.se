@@ -63,9 +63,11 @@ const t = useTranslations(lang);
             return el.scrollTop > tolerance;
         }
 
+        const WHEEL_SPEED = 2.5; // amplify mouse-wheel delta so one notch triggers a slide change
+
         function dispatch(e: WheelEvent, name: string) {
-            position.x -= e.deltaX;
-            position.y -= e.deltaY;
+            position.x -= e.deltaX * WHEEL_SPEED;
+            position.y -= e.deltaY * WHEEL_SPEED;
             slider.container.dispatchEvent(
                 new CustomEvent(name, {
                     detail: { x: position.x, y: position.y },
@@ -142,7 +144,8 @@ const t = useTranslations(lang);
             {
                 vertical: true,
                 slides: { perView: 1 },
-                defaultAnimation: { duration: 800 },
+                defaultAnimation: { duration: 500 },
+                dragSpeed: 1.5,
                 detailsChanged: (s) => {
                     const slideIndex = s.track.details.rel;
                     updateDots(slideIndex);
