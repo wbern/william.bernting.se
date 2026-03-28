@@ -195,14 +195,20 @@ const greetingLen = greeting.length;
     import { createGrid } from "../matrix/grid";
     import { createColumns, tickColumn } from "../matrix/rain";
     import { lerpRainColor } from "../matrix/color";
+    import { tickWordEvent, type WordEvent } from "../matrix/words";
+    import { createScheduler } from "../matrix/scheduler";
 
     const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
     if (canvas && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         const ctx = canvas.getContext("2d", { alpha: false });
         if (ctx) {
             const FONT_SIZE = 16;
+            const WORD_INTERVAL = 4000;
             let paused = false;
             let animId = 0;
+
+            // Load traits from data attribute
+            const traits: string[] = JSON.parse(canvas.dataset.traits || "[]");
 
             function resize() {
                 const dpr = window.devicePixelRatio || 1;
@@ -216,6 +222,9 @@ const greetingLen = greeting.length;
 
             let grid = createGrid(canvas.getBoundingClientRect().width, canvas.getBoundingClientRect().height, FONT_SIZE);
             let columns = createColumns(grid.cols, grid.rows);
+            let scheduler = createScheduler(traits, grid.cols, grid.rows);
+            let wordEvents: WordEvent[] = [];
+            let nextWordTime = 3000;
 
             let resizeTimer: number;
             window.addEventListener("resize", () => {
@@ -224,6 +233,9 @@ const greetingLen = greeting.length;
                     resize();
                     grid = createGrid(canvas!.getBoundingClientRect().width, canvas!.getBoundingClientRect().height, FONT_SIZE);
                     columns = createColumns(grid.cols, grid.rows);
+                    scheduler = createScheduler(traits, grid.cols, grid.rows);
+                    wordEvents = [];
+                    nextWordTime = 0;
                 }, 150);
             });
 
@@ -258,6 +270,23 @@ const greetingLen = greeting.length;
 
                 const rect = canvas!.getBoundingClientRect();
 
+                // Schedule new words
+                if (timestamp >= nextWordTime) {
+                    const event = scheduler.next(timestamp);
+                    if (event) {
+                        wordEvents.push(event);
+                    }
+                    nextWordTime = timestamp + WORD_INTERVAL + Math.random() * 2000;
+                }
+
+                // Tick word events
+                for (const event of wordEvents) {
+                    tickWordEvent(event, timestamp, columns);
+                }
+
+                // Clean up completed word events
+                wordEvents = wordEvents.filter((e) => e.state !== "done");
+
                 // Clear with solid black
                 ctx!.fillStyle = "#0a0a0f";
                 ctx!.fillRect(0, 0, rect.width, rect.height);
@@ -279,7 +308,7 @@ const greetingLen = greeting.length;
 
                         // Head cell is slightly brighter/whiter
                         const headRow = Math.floor(col.headY);
-                        if (r === headRow) {
+                        if (r === headRow && !cell.locked) {
                             ctx!.fillStyle = `rgba(180, 255, 180, ${cell.brightness})`;
                         } else {
                             ctx!.fillStyle = lerpRainColor(cell.colorProgress, cell.brightness);
