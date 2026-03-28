@@ -457,50 +457,5 @@ export function getCvQuote(lang: Lang): CvQuote {
   return cv[lang].quote;
 }
 
-// ===== Timeline-specific merged jobs =====
-
-export interface TimelineJob {
-  date: string;
-  role: string;
-  company: string;
-  color: string;
-  techStack: string[];
-  bullets: string[];
-  companyDescription?: string;
-}
-
-/** Returns 7 merged job entries for the timeline slide (Telia roles combined). */
-export function getTimelineJobs(lang: Lang): TimelineJob[] {
-  const cvJobs = cv[lang].jobs;
-  return jobMeta.map((meta, metaIdx) => {
-    const cvIndices = cvJobToMetaIndex
-      .map((mi, ci) => (mi === metaIdx ? ci : -1))
-      .filter((ci) => ci >= 0);
-
-    const bullets: string[] = [];
-    const techStack: string[] = [];
-    let companyDescription: string | undefined;
-
-    for (const ci of cvIndices) {
-      const job = cvJobs[ci];
-      bullets.push(...job.bullets);
-      for (const t of job.techStack) {
-        if (!techStack.includes(t)) techStack.push(t);
-      }
-      if (job.companyDescription) companyDescription = job.companyDescription;
-    }
-
-    return {
-      date: meta.timelineDate,
-      role: meta.timelineRole[lang],
-      company: meta.timelineCompany,
-      color: meta.color,
-      techStack,
-      bullets,
-      companyDescription,
-    };
-  });
-}
-
 // Re-export jobMeta for backward-compatible jobs.ts derivation
 export { jobMeta };
