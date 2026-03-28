@@ -10,6 +10,7 @@ export type WordState =
 
 export interface WordEvent {
   word: string;
+  chars: string[];
   row: number;
   colStart: number;
   triggerTime: number;
@@ -33,6 +34,7 @@ export function createWordEvent(
 ): WordEvent {
   return {
     word,
+    chars: word.split(""),
     row,
     colStart,
     triggerTime,
@@ -59,7 +61,7 @@ export function tickWordEvent(
 
   if (event.state === "materializing") {
     const elapsed = now - event.materializeStart;
-    const chars = event.word.split("");
+    const chars = event.chars;
 
     // Stagger: reveal one character per STAGGER_DELAY
     const revealedCount = Math.min(
@@ -105,7 +107,7 @@ export function tickWordEvent(
     event.colorProgress = Math.min(1, elapsed / COLOR_TRANSITION_MS);
 
     // Apply color progress to each cell
-    const chars = event.word.split("");
+    const chars = event.chars;
     for (let i = 0; i < chars.length; i++) {
       const col = event.colStart + i;
       if (col >= columns.length) continue;
@@ -122,7 +124,7 @@ export function tickWordEvent(
   }
 
   if (event.state === "dissolving") {
-    const chars = event.word.split("");
+    const chars = event.chars;
     let allDone = true;
 
     for (let i = 0; i < chars.length; i++) {
