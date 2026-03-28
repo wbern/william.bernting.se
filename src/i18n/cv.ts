@@ -5,7 +5,7 @@ import type { Lang } from "./ui";
 export interface CvProfile {
   name: string;
   subtitle: string;
-  contacts: { icon: string; text: string; href?: string }[];
+  contacts: { icon: "phone" | "email" | "link" | "location" | "web"; text: string; href?: string }[];
   intro: string[];
 }
 
@@ -396,10 +396,10 @@ const jobMeta: { color: string; w: number; timelineDate: string; timelineRole: {
   { color: "#e8e040", w: 100, timelineDate: "2011 \u2013 16", timelineRole: { sv: "Koordinator \u2192 Teamledare", en: "Coord \u2192 Team Lead" }, timelineCompany: "HPE" },
 ];
 
-// Note: Telia has two entries in jobMeta (Lead + Senior) but the old timeline merged them.
-// The old jobs.ts had 7 entries mapping to: Akka, Hedin, Sembo, NetConsult, Telia (merged), KITS, HPE.
-// CV has 8 jobs (Telia split into Lead Developer + Senior Software Engineer).
-// jobMeta[4] covers the merged Telia entry for the timeline.
+// CV has 8 jobs (Telia split into Lead Developer + Senior Software Engineer)
+// but the timeline merges both Telia roles into one entry (7 jobMeta entries).
+// This mapping resolves the off-by-one: both Telia CV jobs (4,5) → jobMeta[4].
+const cvJobToMetaIndex = [0, 1, 2, 3, 4, 4, 5, 6];
 
 // ===== Public API =====
 
@@ -409,10 +409,7 @@ export function getCvProfile(lang: Lang): CvProfile {
 
 export function getCvJobs(lang: Lang): CvJob[] {
   return cv[lang].jobs.map((job, i) => {
-    // For the Telia Senior role (index 5), reuse Telia Lead meta (index 4)
-    // since the timeline merges both Telia roles into one entry
-    const metaIndex = i < jobMeta.length ? i : jobMeta.length - 1;
-    const meta = jobMeta[metaIndex];
+    const meta = jobMeta[cvJobToMetaIndex[i]];
     return {
       ...job,
       color: meta.color,

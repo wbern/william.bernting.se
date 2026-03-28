@@ -92,7 +92,7 @@ const decorLinesBottom = [
             <div class="contact-info">
                 {profile.contacts.map(c => (
                     <div class="contact-item">
-                        <svg viewBox="0 0 24 24"><path d={icons[c.icon as keyof typeof icons]} /></svg>
+                        <svg viewBox="0 0 24 24"><path d={icons[c.icon]} /></svg>
                         {c.href ? <a href={c.href}>{c.text}</a> : <span>{c.text}</span>}
                     </div>
                 ))}

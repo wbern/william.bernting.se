@@ -13,10 +13,10 @@
     "test": "playwright test",
     "test:unit": "vitest run",
     "test:update": "playwright test --update-snapshots",
-    "print:preview": "npx tsx scripts/print-preview.ts",
-    "print:preview:dev": "npx tsx scripts/print-preview.ts --dev",
-    "cv:preview": "npx tsx scripts/print-preview.ts --page=/cv",
-    "cv:preview:dev": "npx tsx scripts/print-preview.ts --dev --page=/cv"
+    "print:preview": "tsx scripts/print-preview.ts",
+    "print:preview:dev": "tsx scripts/print-preview.ts --dev",
+    "cv:preview": "tsx scripts/print-preview.ts --page=/cv",
+    "cv:preview:dev": "tsx scripts/print-preview.ts --dev --page=/cv"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
