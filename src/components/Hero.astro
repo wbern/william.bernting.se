@@ -1,24 +1,23 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
-import { getTraitRows } from "../i18n/traits";
-import MarqueeField from "./MarqueeField.astro";
+import { traitRowEntries } from "../i18n/traits";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
-const rows = getTraitRows(lang);
-
-const topRows = rows.slice(0, 2);
-const bottomRows = rows.slice(2);
+const allTraits = traitRowEntries.flatMap((row) => row[lang]);
 
 const greeting = t("hero.greeting");
 const greetingLen = greeting.length;
 ---
 
 <div class="hero-slide">
-    <div class="hero-marquee-wrap hero-marquee-top">
-        <MarqueeField rows={topRows} />
-    </div>
+    <canvas
+        id="matrix-rain"
+        class="matrix-canvas"
+        aria-hidden="true"
+        data-traits={JSON.stringify(allTraits)}
+    ></canvas>
 
     <div class="hero-center">
         <div
@@ -26,10 +25,6 @@ const greetingLen = greeting.length;
             style={`--greeting-width: ${greetingLen}ch; animation: typewriter 1s steps(${greetingLen}) 0.5s forwards, blink 0.7s step-end infinite, greetingFade 0.8s ease 1.8s forwards;`}
         >{greeting}</div>
         <h1>William Bernting</h1>
-    </div>
-
-    <div class="hero-marquee-wrap hero-marquee-bottom">
-        <MarqueeField rows={bottomRows} />
     </div>
 
     <div class="hero-contact-print" style="display: none;">
@@ -40,6 +35,10 @@ const greetingLen = greeting.length;
         <span>Gothenburg, Sweden</span>
     </div>
     <div class="hero-scroll-hint">{t("hero.scroll")}</div>
+
+    <div class="sr-only traits-keywords">
+        {allTraits.join(", ")}
+    </div>
 </div>
 
 <style>
@@ -52,14 +51,22 @@ const greetingLen = greeting.length;
         height: 100%;
         width: 100%;
         position: relative;
+        overflow: hidden;
     }
 
-    .hero-marquee-wrap {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        width: 100vw;
+    .matrix-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
         opacity: 0;
+        animation: canvasFadeIn 1.5s ease 1.8s forwards;
+    }
+
+    @keyframes canvasFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 
     .hero-center {
@@ -68,6 +75,12 @@ const greetingLen = greeting.length;
         align-items: center;
         padding: 24px 0;
         flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+        text-shadow:
+            0 0 40px rgba(10, 10, 15, 1),
+            0 0 80px rgba(10, 10, 15, 0.8),
+            0 0 120px rgba(10, 10, 15, 0.6);
     }
 
     .hero-greeting {
@@ -105,14 +118,6 @@ const greetingLen = greeting.length;
         animation: fadeUp 1s ease 1.8s forwards;
     }
 
-    .hero-marquee-top {
-        animation: fadeDown 1s ease 2.4s forwards;
-    }
-
-    .hero-marquee-bottom {
-        animation: fadeUp 1s ease 2.4s forwards;
-    }
-
     .hero-scroll-hint {
         position: absolute;
         bottom: 40px;
@@ -120,6 +125,7 @@ const greetingLen = greeting.length;
         font-size: 13px;
         color: var(--text-muted);
         opacity: 0;
+        z-index: 1;
         animation: fadeUp 1s ease 3.2s forwards, float 3s ease-in-out infinite 3.2s;
     }
 
@@ -128,20 +134,28 @@ const greetingLen = greeting.length;
         to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes fadeDown {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
     @keyframes float {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-8px); }
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
     }
 
     @media print {
         .hero-slide {
             text-align: center;
             padding-bottom: 2px;
+        }
+        .matrix-canvas {
+            display: none !important;
         }
         .hero-greeting {
             animation: none !important;
@@ -156,12 +170,129 @@ const greetingLen = greeting.length;
             opacity: 1;
             margin-bottom: 2px;
         }
-        .hero-center { padding: 0; }
-        .hero-marquee-wrap {
-            display: none;
+        .hero-center {
+            padding: 0;
+            text-shadow: none;
         }
         .hero-scroll-hint {
             display: none;
         }
+        .sr-only.traits-keywords {
+            position: static;
+            width: auto;
+            height: auto;
+            clip: unset;
+            overflow: visible;
+            white-space: normal;
+            font-size: 9px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
     }
 </style>
+
+<script>
+    import { createGrid } from "../matrix/grid";
+    import { createColumns, tickColumn } from "../matrix/rain";
+    import { lerpRainColor } from "../matrix/color";
+
+    const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
+    if (canvas && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (ctx) {
+            const FONT_SIZE = 16;
+            let paused = false;
+            let animId = 0;
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas!.getBoundingClientRect();
+                canvas!.width = rect.width * dpr;
+                canvas!.height = rect.height * dpr;
+                ctx!.scale(dpr, dpr);
+            }
+
+            resize();
+
+            let grid = createGrid(canvas.getBoundingClientRect().width, canvas.getBoundingClientRect().height, FONT_SIZE);
+            let columns = createColumns(grid.cols, grid.rows);
+
+            let resizeTimer: number;
+            window.addEventListener("resize", () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = window.setTimeout(() => {
+                    resize();
+                    grid = createGrid(canvas!.getBoundingClientRect().width, canvas!.getBoundingClientRect().height, FONT_SIZE);
+                    columns = createColumns(grid.cols, grid.rows);
+                }, 150);
+            });
+
+            // Pause/resume API for KeenSlider integration
+            (window as any).matrixRainPause = () => { paused = true; };
+            (window as any).matrixRainResume = () => {
+                if (paused) {
+                    paused = false;
+                    lastTime = 0;
+                    animId = requestAnimationFrame(loop);
+                }
+            };
+
+            // Pause when tab hidden
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    paused = true;
+                } else {
+                    paused = false;
+                    lastTime = 0;
+                    animId = requestAnimationFrame(loop);
+                }
+            });
+
+            let lastTime = 0;
+
+            function loop(timestamp: number) {
+                if (paused) return;
+
+                const dt = lastTime === 0 ? 16 : Math.min(timestamp - lastTime, 100);
+                lastTime = timestamp;
+
+                const rect = canvas!.getBoundingClientRect();
+
+                // Clear with solid black
+                ctx!.fillStyle = "#0a0a0f";
+                ctx!.fillRect(0, 0, rect.width, rect.height);
+
+                // Tick and render each column
+                ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
+                ctx!.textBaseline = "top";
+
+                for (let c = 0; c < columns.length; c++) {
+                    const col = columns[c];
+                    tickColumn(col, dt);
+
+                    for (let r = 0; r < col.cells.length; r++) {
+                        const cell = col.cells[r];
+                        if (cell.brightness <= 0.02) continue;
+
+                        const x = c * FONT_SIZE;
+                        const y = r * FONT_SIZE;
+
+                        // Head cell is slightly brighter/whiter
+                        const headRow = Math.floor(col.headY);
+                        if (r === headRow) {
+                            ctx!.fillStyle = `rgba(180, 255, 180, ${cell.brightness})`;
+                        } else {
+                            ctx!.fillStyle = lerpRainColor(cell.colorProgress, cell.brightness);
+                        }
+
+                        ctx!.fillText(cell.char, x, y);
+                    }
+                }
+
+                animId = requestAnimationFrame(loop);
+            }
+
+            animId = requestAnimationFrame(loop);
+        }
+    }
+</script>
