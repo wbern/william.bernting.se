@@ -518,5 +518,45 @@ for (const locale of LOCALES) {
 
       expect(slideIndexAfter).toBe(slideIndexBefore);
     });
+
+    test("projects slide fits viewport after closing detail view", async ({ page }, testInfo) => {
+      if (testInfo.project.name !== "mobile") {
+        test.skip();
+        return;
+      }
+
+      await goToProjectsSlide(page, locale.prefix);
+
+      // Open detail view via spin (auto-transitions to detail)
+      await page.locator("[data-testid='spin-button']").click({ force: true });
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
+
+      // Close detail view
+      await page.click("[data-testid='back-button']");
+      await page.waitForTimeout(600);
+      await expect(page.locator("[data-testid='projects-section']")).not.toHaveClass(/detail-active/);
+
+      // The slide's content should not exceed the viewport height
+      const result = await page.evaluate(() => {
+        const slide = document.querySelectorAll("#slider > .keen-slider__slide")[1] as HTMLElement;
+        if (!slide) return { ok: false, reason: "slide not found" };
+
+        const child = slide.firstElementChild as HTMLElement;
+        if (!child) return { ok: true, reason: "empty slide" };
+
+        const slideHeight = slide.clientHeight;
+        const contentHeight = child.scrollHeight;
+
+        return {
+          ok: contentHeight <= slideHeight + 1,
+          reason: `content=${contentHeight}px, slide=${slideHeight}px (overflow: ${contentHeight - slideHeight}px)`,
+        };
+      });
+
+      expect(result.ok, `Projects slide overflows after closing detail: ${result.reason}`).toBe(true);
+    });
   });
 }

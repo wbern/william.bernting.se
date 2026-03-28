@@ -62,6 +62,71 @@ for (const locale of LOCALES) {
       }
     });
 
+    test("no slide content extends behind navigation dots", async ({ page }, testInfo) => {
+      if (testInfo.project.name !== "mobile") {
+        test.skip();
+        return;
+      }
+
+      await page.goto(locale.prefix + "/");
+      await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
+      await page.click("body");
+
+      for (let i = 0; i < SLIDES.length; i++) {
+        await goToSlide(page, i);
+
+        const issues = await page.evaluate((slideIndex) => {
+          const dots = document.getElementById("slide-dots");
+          if (!dots) return [];
+          const dotsLeft = dots.getBoundingClientRect().left;
+          const results: string[] = [];
+
+          function isClippedHorizontally(el: HTMLElement, stop: Element): boolean {
+            let parent = el.parentElement;
+            while (parent && parent !== stop) {
+              const style = getComputedStyle(parent);
+              if (style.overflowX === "hidden" || style.overflowX === "clip" ||
+                  style.overflow === "hidden" || style.overflow === "clip") {
+                return true;
+              }
+              parent = parent.parentElement;
+            }
+            return false;
+          }
+
+          const slide = document.querySelectorAll("#slider > .keen-slider__slide")[slideIndex] as HTMLElement;
+          if (!slide) return [];
+
+          const inner = slide.querySelector(".section-inner");
+          if (!inner) return [];
+
+          const allEls = inner.querySelectorAll("*");
+          allEls.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            const style = getComputedStyle(htmlEl);
+            // Skip invisible elements
+            if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return;
+            // Skip elements within overflow-hidden containers
+            if (isClippedHorizontally(htmlEl, slide)) return;
+
+            const rect = htmlEl.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            // Skip elements positioned off-screen vertically (other slides)
+            if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+
+            if (rect.right > dotsLeft) {
+              const tag = htmlEl.tagName.toLowerCase();
+              const text = htmlEl.textContent?.trim().slice(0, 40) || "";
+              results.push(`Slide ${slideIndex} (${tag}): "${text}" right=${Math.round(rect.right)}px > dots=${Math.round(dotsLeft)}px`);
+            }
+          });
+          return results;
+        }, i);
+
+        expect(issues, `Slide ${i} "${SLIDES[i]}" overlaps dots:\n${issues.join("\n")}`).toEqual([]);
+      }
+    });
+
     test("no slide content clipped without being scrollable", async ({ page }) => {
       await page.goto(locale.prefix + "/");
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
