@@ -44,9 +44,16 @@ const t = useTranslations(lang);
 <script>
     import KeenSlider from "keen-slider";
 
-    // Mousewheel plugin for keen-slider — one slide per swipe, cooldown prevents skipping
+    // Mousewheel plugin for keen-slider — one slide per swipe.
+    // Mac trackpads produce inertia tails with decaying deltas after a flick.
+    // Strategy: lock after triggering, stay locked while deltas decay (inertia),
+    // but unlock immediately if a fresh high-delta gesture breaks the pattern.
     function WheelControls(slider: any) {
-        let cooldown = false;
+        let locked = false;
+        let unlockTimer: ReturnType<typeof setTimeout> | null = null;
+        let recentDelta = 0; // smoothed recent absolute delta
+        const QUIET_MS = 200;
+        const SPIKE_RATIO = 1.5; // new delta must be 1.5× recent to count as fresh gesture
 
         function currentSlideEl(): HTMLElement | null {
             const idx = slider.track.details.rel;
@@ -67,21 +74,42 @@ const t = useTranslations(lang);
                 (e: WheelEvent) => {
                     const slide = currentSlideEl();
                     if (slide && slideCanScroll(slide, e.deltaY)) {
-                        return; // let browser scroll within the slide
+                        recentDelta = 0;
+                        locked = false;
+                        return;
                     }
 
                     e.preventDefault();
 
-                    if (cooldown) return;
-                    cooldown = true;
+                    const absDelta = Math.abs(e.deltaY);
+
+                    // Quiet-period fallback: unlock if no events for QUIET_MS
+                    if (unlockTimer) clearTimeout(unlockTimer);
+                    unlockTimer = setTimeout(() => {
+                        locked = false;
+                        recentDelta = 0;
+                    }, QUIET_MS);
+
+                    if (locked) {
+                        // Check for a fresh gesture: delta spikes above decaying trend
+                        if (absDelta > recentDelta * SPIKE_RATIO && absDelta > 3) {
+                            locked = false; // let it through below
+                        } else {
+                            // Still inertia — track the decay and swallow
+                            recentDelta = recentDelta * 0.8 + absDelta * 0.2;
+                            return;
+                        }
+                    }
+
+                    // Trigger slide change and lock
+                    locked = true;
+                    recentDelta = absDelta;
 
                     if (e.deltaY > 0) {
                         slider.next();
                     } else {
                         slider.prev();
                     }
-
-                    setTimeout(() => { cooldown = false; }, 500);
                 },
                 { passive: false }
             );
