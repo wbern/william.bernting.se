@@ -151,13 +151,6 @@ const t = useTranslations(lang);
                 detailsChanged: (s) => {
                     const slideIndex = s.track.details.rel;
                     updateDots(slideIndex);
-                    // Pause/resume matrix rain based on hero visibility
-                    if (slideIndex === 0) {
-                        (window as any).matrixRainResume?.();
-                    } else {
-                        (window as any).matrixRainPause?.();
-                    }
-                    // Notify projects slide about slide changes
                     document.dispatchEvent(new CustomEvent("slide-changed", { detail: { index: slideIndex } }));
                 },
                 animationEnded: (s) => {

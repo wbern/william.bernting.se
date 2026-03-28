@@ -1,23 +1,25 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
-import { traitRowEntries } from "../i18n/traits";
+import { getTraitRows } from "../i18n/traits";
+import MarqueeField from "./MarqueeField.astro";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
-const allTraits = traitRowEntries.flatMap((row) => row[lang]);
+const rows = getTraitRows(lang);
+
+const topRows = rows.slice(0, 2);
+const bottomRows = rows.slice(2);
+const allTraits = rows.flatMap((r) => r.items);
 
 const greeting = t("hero.greeting");
 const greetingLen = greeting.length;
 ---
 
 <div class="hero-slide">
-    <canvas
-        id="matrix-rain"
-        class="matrix-canvas"
-        aria-hidden="true"
-        data-traits={JSON.stringify(allTraits)}
-    ></canvas>
+    <div class="hero-marquee-wrap hero-marquee-top">
+        <MarqueeField rows={topRows} />
+    </div>
 
     <div class="hero-center">
         <div
@@ -25,6 +27,10 @@ const greetingLen = greeting.length;
             style={`--greeting-width: ${greetingLen}ch; animation: typewriter 1s steps(${greetingLen}) 0.5s forwards, blink 0.7s step-end infinite, greetingFade 0.8s ease 1.8s forwards;`}
         >{greeting}</div>
         <h1>William Bernting</h1>
+    </div>
+
+    <div class="hero-marquee-wrap hero-marquee-bottom">
+        <MarqueeField rows={bottomRows} />
     </div>
 
     <div class="hero-contact-print" style="display: none;">
@@ -51,24 +57,14 @@ const greetingLen = greeting.length;
         height: 100%;
         width: 100%;
         position: relative;
-        overflow: hidden;
     }
 
-    .matrix-canvas {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 0;
+    .hero-marquee-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        width: 100vw;
         opacity: 0;
-        animation: canvasFadeIn 1.5s ease 1.8s forwards;
-        will-change: transform;
-        contain: strict;
-    }
-
-    @keyframes canvasFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
     }
 
     .hero-center {
@@ -77,12 +73,6 @@ const greetingLen = greeting.length;
         align-items: center;
         padding: 24px 0;
         flex-shrink: 0;
-        position: relative;
-        z-index: 1;
-        text-shadow:
-            0 0 40px rgba(10, 10, 15, 1),
-            0 0 80px rgba(10, 10, 15, 0.8),
-            0 0 120px rgba(10, 10, 15, 0.6);
     }
 
     .hero-greeting {
@@ -120,6 +110,14 @@ const greetingLen = greeting.length;
         animation: fadeUp 1s ease 1.8s forwards;
     }
 
+    .hero-marquee-top {
+        animation: fadeDown 1s ease 2.4s forwards;
+    }
+
+    .hero-marquee-bottom {
+        animation: fadeUp 1s ease 2.4s forwards;
+    }
+
     .hero-scroll-hint {
         position: absolute;
         bottom: 40px;
@@ -127,12 +125,16 @@ const greetingLen = greeting.length;
         font-size: 13px;
         color: var(--text-muted);
         opacity: 0;
-        z-index: 1;
         animation: fadeUp 1s ease 3.2s forwards, float 3s ease-in-out infinite 3.2s;
     }
 
     @keyframes fadeUp {
         from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeDown {
+        from { opacity: 0; transform: translateY(-20px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
@@ -156,9 +158,6 @@ const greetingLen = greeting.length;
             text-align: center;
             padding-bottom: 2px;
         }
-        .matrix-canvas {
-            display: none !important;
-        }
         .hero-greeting {
             animation: none !important;
             width: auto !important;
@@ -172,9 +171,9 @@ const greetingLen = greeting.length;
             opacity: 1;
             margin-bottom: 2px;
         }
-        .hero-center {
-            padding: 0;
-            text-shadow: none;
+        .hero-center { padding: 0; }
+        .hero-marquee-wrap {
+            display: none;
         }
         .hero-scroll-hint {
             display: none;
@@ -192,191 +191,3 @@ const greetingLen = greeting.length;
         }
     }
 </style>
-
-<script>
-    import { createGrid } from "../matrix/grid";
-    import { createColumns, tickColumn } from "../matrix/rain";
-    import { tickWordEvent, type WordEvent } from "../matrix/words";
-    import { createScheduler } from "../matrix/scheduler";
-    import {
-        createSpriteSheet,
-        toImageBitmap,
-        quantizeBrightness,
-        quantizeColorProgress,
-        rainRow,
-        headRow,
-        type SpriteSheet,
-    } from "../matrix/sprites";
-
-    const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
-    if (canvas && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
-        if (ctx) {
-            // Larger font on mobile = fewer cells = less rendering work
-            const FONT_SIZE = window.innerWidth < 600 ? 20 : 16;
-            const WORD_INTERVAL = 4000;
-            let paused = false;
-            let animId = 0;
-
-            // Load traits from data attribute
-            const traits: string[] = JSON.parse(canvas.dataset.traits || "[]");
-
-            // Build sprite sheet after fonts are ready, then convert to GPU-resident ImageBitmap
-            let sprites: SpriteSheet | null = null;
-            document.fonts.ready.then(async () => {
-                const sheet = createSpriteSheet(FONT_SIZE, traits);
-                sprites = await toImageBitmap(sheet);
-            });
-
-            function resize() {
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas!.getBoundingClientRect();
-                canvas!.width = rect.width * dpr;
-                canvas!.height = rect.height * dpr;
-                ctx!.scale(dpr, dpr);
-            }
-
-            resize();
-
-            let canvasWidth = canvas.getBoundingClientRect().width;
-            let canvasHeight = canvas.getBoundingClientRect().height;
-
-            let grid = createGrid(canvasWidth, canvasHeight, FONT_SIZE);
-            let columns = createColumns(grid.cols, grid.rows);
-            let scheduler = createScheduler(traits, grid.cols, grid.rows);
-            let wordEvents: WordEvent[] = [];
-            let nextWordTime = 3000;
-
-            let resizeTimer: number;
-            window.addEventListener("resize", () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = window.setTimeout(() => {
-                    resize();
-                    const rect = canvas!.getBoundingClientRect();
-                    canvasWidth = rect.width;
-                    canvasHeight = rect.height;
-                    grid = createGrid(canvasWidth, canvasHeight, FONT_SIZE);
-                    columns = createColumns(grid.cols, grid.rows);
-                    scheduler = createScheduler(traits, grid.cols, grid.rows);
-                    wordEvents.length = 0;
-                    nextWordTime = 0;
-                }, 150);
-            });
-
-            // Pause/resume API for KeenSlider integration
-            (window as any).matrixRainPause = () => { paused = true; cancelAnimationFrame(animId); };
-            (window as any).matrixRainResume = () => {
-                if (paused) {
-                    paused = false;
-                    lastTime = 0;
-                    cancelAnimationFrame(animId);
-                    animId = requestAnimationFrame(loop);
-                }
-            };
-
-            // Pause when tab hidden
-            document.addEventListener("visibilitychange", () => {
-                if (document.hidden) {
-                    paused = true;
-                    cancelAnimationFrame(animId);
-                } else {
-                    paused = false;
-                    lastTime = 0;
-                    cancelAnimationFrame(animId);
-                    animId = requestAnimationFrame(loop);
-                }
-            });
-
-            // Clean up on page navigation
-            document.addEventListener("astro:before-preparation", () => {
-                paused = true;
-                cancelAnimationFrame(animId);
-            });
-
-            let lastTime = 0;
-
-            function loop(timestamp: number) {
-                if (paused) return;
-
-                const dt = lastTime === 0 ? 16 : Math.min(timestamp - lastTime, 100);
-                lastTime = timestamp;
-
-                // Schedule new words
-                if (timestamp >= nextWordTime) {
-                    const event = scheduler.next(timestamp);
-                    if (event) {
-                        wordEvents.push(event);
-                    }
-                    nextWordTime = timestamp + WORD_INTERVAL + Math.random() * 2000;
-                }
-
-                // Tick word events
-                for (let i = 0; i < wordEvents.length; i++) {
-                    tickWordEvent(wordEvents[i], timestamp, columns);
-                }
-
-                // Clean up completed word events (in-place, no allocation)
-                for (let i = wordEvents.length - 1; i >= 0; i--) {
-                    if (wordEvents[i].state === "done") wordEvents.splice(i, 1);
-                }
-
-                // Clear with solid black
-                ctx!.fillStyle = "#0a0a0f";
-                ctx!.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                // Tick and render each column
-                const sp = sprites;
-                for (let c = 0; c < columns.length; c++) {
-                    const col = columns[c];
-                    tickColumn(col, dt);
-
-                    const headY = (col.headY | 0);
-
-                    for (let r = 0; r < col.cells.length; r++) {
-                        const cell = col.cells[r];
-                        if (cell.brightness <= 0.02) continue;
-
-                        const x = (c * FONT_SIZE) | 0;
-                        const y = (r * FONT_SIZE) | 0;
-                        const isHead = r === headY && !cell.locked;
-
-                        // Fast path: use pre-rendered sprite sheet (ImageBitmap)
-                        if (sp) {
-                            const ci = sp.charIndex.get(cell.char);
-                            if (ci !== undefined) {
-                                const bIdx = quantizeBrightness(cell.brightness);
-                                const row = isHead
-                                    ? headRow(bIdx)
-                                    : rainRow(bIdx, quantizeColorProgress(cell.colorProgress));
-                                ctx!.drawImage(
-                                    sp.source,
-                                    ci * FONT_SIZE, row * FONT_SIZE, FONT_SIZE, FONT_SIZE,
-                                    x, y, FONT_SIZE, FONT_SIZE,
-                                );
-                                continue;
-                            }
-                        }
-
-                        // Fallback: direct fillText (before sprites load or for unknown chars)
-                        if (isHead) {
-                            ctx!.fillStyle = `rgba(180, 255, 180, ${cell.brightness})`;
-                        } else {
-                            const hue = (120 + 160 * cell.colorProgress) | 0;
-                            const lightness = (50 + 10 * cell.colorProgress) | 0;
-                            ctx!.fillStyle = cell.brightness >= 1
-                                ? `hsl(${hue}, 100%, ${lightness}%)`
-                                : `hsla(${hue}, 100%, ${lightness}%, ${cell.brightness})`;
-                        }
-                        ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
-                        ctx!.textBaseline = "top";
-                        ctx!.fillText(cell.char, x, y);
-                    }
-                }
-
-                animId = requestAnimationFrame(loop);
-            }
-
-            animId = requestAnimationFrame(loop);
-        }
-    }
-</script>
