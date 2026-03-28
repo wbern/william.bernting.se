@@ -474,6 +474,8 @@ body {
 @media print {
     body {
         background: none;
+        font-size: 13px;
+        line-height: 1.35;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
@@ -485,7 +487,7 @@ body {
     .page {
         box-shadow: none;
         margin: 0;
-        padding: 36px 46px 24px;
+        padding: 28px 40px 18px;
         width: 100%;
         min-height: auto;
         page-break-after: always;
@@ -495,23 +497,58 @@ body {
         page-break-after: avoid;
     }
 
-    .decor-top-right { width: 180px; height: 180px; }
-    .decor-bottom-left { width: 140px; height: 140px; }
+    .decor-top-right { width: 150px; height: 150px; }
+    .decor-bottom-left { width: 120px; height: 120px; }
 
-    .header { margin-bottom: 18px; }
-    .header h1 { font-size: 32px; }
-    .header .subtitle { margin-bottom: 12px; }
+    .header { margin-bottom: 12px; }
+    .header h1 { font-size: 28px; }
+    .header .subtitle { font-size: 15px; margin-bottom: 8px; }
+    .contact-info { font-size: 12px; gap: 3px 12px; }
+    .contact-item svg { width: 12px; height: 12px; }
 
-    .section { margin-bottom: 16px; }
-    .job-entry { margin-bottom: 10px; }
-    .section-title { font-size: 16px; margin-bottom: 10px; padding-bottom: 5px; }
-    .job-title { font-size: 16px; }
-    .job-company { font-size: 13px; }
-    .job-meta { font-size: 14px; margin-bottom: 3px; }
-    .job-tasks li { font-size: 14px; line-height: 1.4; }
-    .intro-text { font-size: 14px; line-height: 1.5; }
-    .trait p { font-size: 14px; }
-    .trait { margin-bottom: 10px; }
-    .contact-info { font-size: 14px; }
-    .body-columns { gap: 26px; }
+    .body-columns { gap: 22px; }
+    .section { margin-bottom: 10px; }
+    .section-title { font-size: 14px; margin-bottom: 8px; padding-bottom: 4px; }
+
+    .job-entry { margin-bottom: 6px; }
+    .job-title { font-size: 14px; }
+    .job-company { font-size: 12px; }
+    .job-meta { font-size: 11px; margin-bottom: 1px; gap: 10px; }
+    .job-meta-item svg { width: 11px; height: 11px; }
+    .job-tech { font-size: 11px; }
+    .job-desc { font-size: 12px; margin-bottom: 2px; }
+    .job-tasks li { font-size: 13px; line-height: 1.35; margin-bottom: 0; padding-left: 14px; }
+
+    .intro-text { font-size: 13px; line-height: 1.4; }
+    .intro-text + .intro-text { margin-top: 5px; }
+
+    .trait { margin-bottom: 6px; }
+    .trait-header h3 { font-size: 14px; }
+    .trait p { font-size: 13px; padding-left: 26px; }
+    .trait-header .trait-icon svg { width: 15px; height: 15px; }
+
+    .acknowledgement-header h3 { font-size: 14px; }
+    .acknowledgement p { font-size: 13px; padding-left: 26px; }
+    .acknowledgement-header .ack-icon svg { width: 16px; height: 16px; }
+
+    .book-info .book-title { font-size: 14px; }
+    .book-info .book-author { font-size: 12px; }
+    .book-list { gap: 6px; }
+    .book-icon svg { width: 18px; height: 18px; }
+
+    .skill-tag { font-size: 12px; padding: 3px 8px; }
+    .skills-grid { gap: 5px; }
+
+    .quote-text { font-size: 15px; margin-bottom: 5px; }
+    .quote-author { font-size: 13px; }
+
+    .language-name { font-size: 14px; }
+    .language-level { font-size: 13px; }
+    .language-item { margin-bottom: 5px; }
+    .dot { width: 10px; height: 10px; }
+
+    .edu-entry { margin-bottom: 8px; }
+    .edu-title { font-size: 14px; }
+    .edu-school { font-size: 13px; }
+    .edu-meta { font-size: 13px; }
 }
