@@ -7,6 +7,7 @@ import Timeline from "../components/Timeline.astro";
 import Skills from "../components/Skills.astro";
 import Quote from "../components/Quote.astro";
 import SlideDots from "../components/SlideDots.astro";
+import PdfButton from "../components/PdfButton.astro";
 import { useTranslations } from "../i18n/utils";
 import type { Lang } from "../i18n/ui";
 
@@ -37,6 +38,7 @@ const t = useTranslations(lang);
     </div>
 
     <SlideDots count={6} />
+    <PdfButton />
 </Layout>
 
 <script>

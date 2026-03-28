@@ -1,15 +1,13 @@
 ---
+import type { Lang } from "../i18n/ui";
+
+const lang = (Astro.currentLocale ?? "sv") as Lang;
+const cvHref = lang === "sv" ? "/cv" : "/en/cv";
 ---
 
-<button class="pdf-btn" id="pdf-btn">
+<a class="pdf-btn" href={cvHref}>
     <svg viewBox="0 0 24 24">
-        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4zm-3 13H8v-2h2v2zm4 0h-2v-2h2v2zm-4-4H8v-2h2v2zm4 0h-2v-2h2v2z" />
+        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4zm-3 13H8v-2h2v2zm4 0h-2v-2h2v2zm-4-4H8v-2h2v2zm4 0h-2v-2h2v-2z" />
     </svg>
     <span class="pdf-btn-text">just give me the PDF</span>
-</button>
-
-<script>
-    document.getElementById('pdf-btn')?.addEventListener('click', () => {
-        window.print();
-    });
-</script>
+</a>

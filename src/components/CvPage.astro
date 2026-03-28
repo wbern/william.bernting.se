@@ -1,0 +1,299 @@
+---
+import CvLayout from "../layouts/CvLayout.astro";
+import { useTranslations, getLangFromUrl } from "../i18n/utils";
+import type { Lang } from "../i18n/ui";
+import {
+    getCvProfile,
+    getCvJobs,
+    getCvEducation,
+    getCvLanguages,
+    getCvBooks,
+    getCvSkills,
+    getCvTraits,
+    getCvAcknowledgement,
+    getCvCommunity,
+    getCvQuote,
+} from "../i18n/cv";
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const profile = getCvProfile(lang);
+const jobs = getCvJobs(lang);
+const education = getCvEducation(lang);
+const languages = getCvLanguages(lang);
+const books = getCvBooks();
+const skills = getCvSkills();
+const traits = getCvTraits(lang);
+const acknowledgement = getCvAcknowledgement(lang);
+const community = getCvCommunity(lang);
+const quote = getCvQuote(lang);
+
+// Split jobs: first 4 on page 1, rest on page 2
+const page1Jobs = jobs.slice(0, 4);
+const page2Jobs = jobs.slice(4);
+
+const altLang = lang === "sv" ? "en" : "sv";
+const altHref = lang === "sv" ? "/en/cv" : "/cv";
+
+// SVG icon paths
+const icons = {
+    phone: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
+    email: "M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z",
+    link: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z",
+    location: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+    web: "M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z",
+    calendar: "M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z",
+    check: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+    book: "M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z",
+};
+
+const decorLines = [
+    { x1: 60, y1: 0, x2: 200, y2: 140 },
+    { x1: 80, y1: 0, x2: 200, y2: 120 },
+    { x1: 100, y1: 0, x2: 200, y2: 100 },
+    { x1: 120, y1: 0, x2: 200, y2: 80 },
+    { x1: 140, y1: 0, x2: 200, y2: 60 },
+    { x1: 160, y1: 0, x2: 200, y2: 40 },
+    { x1: 180, y1: 0, x2: 200, y2: 20 },
+];
+
+const decorLinesBottom = [
+    { x1: 0, y1: 60, x2: 140, y2: 200 },
+    { x1: 0, y1: 80, x2: 120, y2: 200 },
+    { x1: 0, y1: 100, x2: 100, y2: 200 },
+    { x1: 0, y1: 120, x2: 80, y2: 200 },
+    { x1: 0, y1: 140, x2: 60, y2: 200 },
+    { x1: 0, y1: 160, x2: 40, y2: 200 },
+    { x1: 0, y1: 180, x2: 20, y2: 200 },
+];
+---
+
+<CvLayout title={`${profile.name} — CV`} description={profile.subtitle}>
+    <a class="cv-back-link" href={lang === "sv" ? "/" : "/en/"}>{t("cv.backToSite")}</a>
+
+    <!-- ==================== PAGE 1 ==================== -->
+    <div class="page">
+        <div class="decor-top-right">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                {decorLines.map(l => <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#9b7ea8" stroke-width="3" />)}
+            </svg>
+        </div>
+        <div class="decor-bottom-left">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                {decorLinesBottom.map(l => <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#9b7ea8" stroke-width="3" />)}
+            </svg>
+        </div>
+
+        <!-- HEADER -->
+        <div class="header">
+            <h1>{profile.name.toUpperCase()}</h1>
+            <div class="subtitle">{profile.subtitle}</div>
+            <div class="contact-info">
+                {profile.contacts.map(c => (
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24"><path d={icons[c.icon as keyof typeof icons]} /></svg>
+                        {c.href ? <a href={c.href}>{c.text}</a> : <span>{c.text}</span>}
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <!-- TWO COLUMN BODY -->
+        <div class="body-columns">
+            <div class="col-left">
+                <!-- INTRO -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.intro")}</h2>
+                    {profile.intro.map(p => <p class="intro-text" set:html={p} />)}
+                </div>
+
+                <!-- WORK HISTORY (first 4 jobs) -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.workHistory")}</h2>
+                    {page1Jobs.map(job => (
+                        <div class="job-entry">
+                            <div class="job-title">{job.title}</div>
+                            <div class="job-company">{job.company}</div>
+                            <div class="job-meta">
+                                <div class="job-meta-item">
+                                    <svg viewBox="0 0 24 24"><path d={icons.calendar} /></svg>
+                                    <span>{job.dateRange}</span>
+                                </div>
+                                <div class="job-meta-item">
+                                    <svg viewBox="0 0 24 24"><path d={icons.location} /></svg>
+                                    <span>{job.location}</span>
+                                </div>
+                            </div>
+                            {job.techStack.length > 0 && <div class="job-tech">{job.techStack.join(", ")}</div>}
+                            {job.companyDescription && <div class="job-desc">{job.companyDescription}</div>}
+                            {job.bullets.length > 0 && (
+                                <ul class="job-tasks">
+                                    {job.bullets.map(b => <li set:html={b} />)}
+                                </ul>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div class="col-right">
+                <!-- FAVORITE BOOKS -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.favoriteBooks")}</h2>
+                    <div class="book-list">
+                        {books.map(book => (
+                            <div class="book-item">
+                                <div class="book-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent)"><path d={icons.book} /></svg>
+                                </div>
+                                <div class="book-info">
+                                    <div class="book-title">{book.title}</div>
+                                    <div class="book-author">{book.author}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <!-- ACKNOWLEDGEMENTS -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.acknowledgements")}</h2>
+                    <div class="acknowledgement">
+                        <div class="acknowledgement-header">
+                            <span class="ack-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d={icons.check} /></svg>
+                            </span>
+                            <h3>{acknowledgement.title}</h3>
+                        </div>
+                        <p set:html={acknowledgement.description} />
+                    </div>
+                </div>
+
+                <!-- TRAITS -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.traits")}</h2>
+                    {traits.map(trait => (
+                        <div class="trait">
+                            <div class="trait-header">
+                                <span class="trait-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent)"><path d={icons.check} /></svg>
+                                </span>
+                                <h3>{trait.name}</h3>
+                            </div>
+                            <p>{trait.description}</p>
+                        </div>
+                    ))}
+                </div>
+
+                <!-- SKILLS -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.skills")}</h2>
+                    <div class="skills-grid">
+                        {skills.map(skill => <span class="skill-tag">{skill}</span>)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 2 ==================== -->
+    <div class="page">
+        <div class="decor-top-right">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                {decorLines.map(l => <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#9b7ea8" stroke-width="3" />)}
+            </svg>
+        </div>
+
+        <div class="body-columns">
+            <div class="col-left">
+                <!-- WORK HISTORY (continued) -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.workHistory")}</h2>
+                    {page2Jobs.map(job => (
+                        <div class="job-entry">
+                            <div class="job-title">{job.title}</div>
+                            <div class="job-company">{job.company}</div>
+                            <div class="job-meta">
+                                <div class="job-meta-item">
+                                    <svg viewBox="0 0 24 24"><path d={icons.calendar} /></svg>
+                                    <span>{job.dateRange}</span>
+                                </div>
+                                <div class="job-meta-item">
+                                    <svg viewBox="0 0 24 24"><path d={icons.location} /></svg>
+                                    <span>{job.location}</span>
+                                </div>
+                            </div>
+                            {job.techStack.length > 0 && <div class="job-tech">{job.techStack.join(", ")}</div>}
+                            {job.companyDescription && <div class="job-desc">{job.companyDescription}</div>}
+                            {job.bullets.length > 0 && (
+                                <ul class="job-tasks">
+                                    {job.bullets.map(b => <li set:html={b} />)}
+                                </ul>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div class="col-right">
+                <!-- FAVORITE QUOTE -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.favoriteQuote")}</h2>
+                    <div class="quote-block">
+                        <div class="quote-text">{quote.text}</div>
+                        <div class="quote-author">{quote.author}</div>
+                    </div>
+                </div>
+
+                <!-- LANGUAGES -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.languages")}</h2>
+                    {languages.map(l => (
+                        <div class="language-item">
+                            <div class="language-info">
+                                <span class="language-name">{l.name}</span>
+                                <span class="language-level">{l.proficiency}</span>
+                            </div>
+                            <div class="language-dots">
+                                {Array.from({ length: 5 }, (_, i) => (
+                                    <span class={`dot${i >= l.level ? " empty" : ""}`} />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <!-- EDUCATION -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.education")}</h2>
+                    {education.map(edu => (
+                        <div class="edu-entry">
+                            <div class="edu-title">{edu.degree}</div>
+                            <div class="edu-school">{edu.institution}</div>
+                            <div class="edu-meta">
+                                <svg viewBox="0 0 24 24"><path d={icons.calendar} /></svg>
+                                <span>{edu.dateRange}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <!-- COMMUNITY -->
+                <div class="section">
+                    <h2 class="section-title">{t("cv.community")}</h2>
+                    {community.map(c => (
+                        <div class="edu-entry">
+                            <div class="edu-title">{c.title}</div>
+                            <div class="edu-school">{c.organization}</div>
+                            <div class="edu-meta">
+                                <svg viewBox="0 0 24 24"><path d={icons.calendar} /></svg>
+                                <span>{c.dateRange}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    </div>
+</CvLayout>
