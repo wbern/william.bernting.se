@@ -51,7 +51,7 @@ body {
 
 #slider > .keen-slider__slide {
     display: flex;
-    align-items: flex-start;
+    align-items: safe center;
     justify-content: center;
     padding: 60px 40px;
     /* overflow-y set inline as "scroll" for data-keen-slider-scrollable */
@@ -61,11 +61,6 @@ body {
 
 #slider > .keen-slider__slide::-webkit-scrollbar {
     display: none;
-}
-
-/* Centre content vertically when it fits; collapse to top when it overflows */
-#slider > .keen-slider__slide > * {
-    margin-block: auto;
 }
 
 /* ===== SLIDE NAV DOTS ===== */
