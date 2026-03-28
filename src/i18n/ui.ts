@@ -6,7 +6,7 @@ export const ui = {
   sv: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontendutvecklare med 10 års erfarenhet av mjukvaruutveckling — från legacyräddning till moderna verktyg och snabba leveranser.",
+      "Frontendutvecklare med 15 års erfarenhet av mjukvaruutveckling — från legacyräddning till moderna verktyg och snabba leveranser.",
 
     "hero.greeting": "Hej!",
     "hero.tagline.before": "Jag bygger saker som ",
@@ -15,10 +15,10 @@ export const ui = {
     "hero.scroll": "scrolla ner",
 
     "stats.label": "I siffror",
-    "stats.heading.before": "Det är inte en ",
-    "stats.heading.highlight": "fas",
+    "stats.heading.before": "Några ",
+    "stats.heading.highlight": "siffror",
     "stats.heading.after": ".",
-    "stats.prototypes": "prototyper levererade senaste 12 månaderna",
+    "stats.prototypes": "prototyper skapade senaste 12 månaderna",
     "stats.users": "användare på ett enda internt verktyg",
     "stats.teams": "utvecklingsteam stöttade hos ett bolag",
     "stats.experience": "års professionell mjukvaruutveckling",
@@ -38,7 +38,7 @@ export const ui = {
     "traits.heading.after": ".",
 
     "timeline.label": "Resan hittills",
-    "timeline.heading.before": "10 år av ",
+    "timeline.heading.before": "15 år av ",
     "timeline.heading.highlight": "byggande",
     "timeline.heading.after": ".",
 
@@ -76,7 +76,7 @@ export const ui = {
   en: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontend developer with 10 years of shipping software — from legacy rescue to modern tooling and rapid delivery.",
+      "Frontend developer with 15 years of shipping software — from legacy rescue to modern tooling and rapid delivery.",
 
     "hero.greeting": "Hey!",
     "hero.tagline.before": "I build things that ",
@@ -85,10 +85,10 @@ export const ui = {
     "hero.scroll": "scroll down",
 
     "stats.label": "By the numbers",
-    "stats.heading.before": "It\u2019s not a ",
-    "stats.heading.highlight": "phase",
+    "stats.heading.before": "Some ",
+    "stats.heading.highlight": "numbers",
     "stats.heading.after": ".",
-    "stats.prototypes": "prototypes shipped in the last 12 months",
+    "stats.prototypes": "prototypes created in the last 12 months",
     "stats.users": "users on a single internal tool",
     "stats.teams": "dev teams supported at one company",
     "stats.experience": "of professional software development",
@@ -108,7 +108,7 @@ export const ui = {
     "traits.heading.after": ".",
 
     "timeline.label": "The journey so far",
-    "timeline.heading.before": "10 years of ",
+    "timeline.heading.before": "15 years of ",
     "timeline.heading.highlight": "building",
     "timeline.heading.after": ".",
 
