@@ -25,6 +25,7 @@ body {
     line-height: 1.6;
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
 }
 
 /* ===== FOUC prevention: hide non-first slides before keen-slider JS initializes ===== */
@@ -33,6 +34,7 @@ body {
 #slider.keen-slider:not([data-keen-slider-v]) {
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
 }
 
 #slider.keen-slider:not([data-keen-slider-v]) > .keen-slider__slide:not(:first-child) {
@@ -42,6 +44,7 @@ body {
 /* ===== KEEN SLIDER OVERRIDES (main page slider only) ===== */
 #slider.keen-slider {
     height: 100vh;
+    height: 100dvh;
     width: 100%;
     background: var(--bg);
 }
@@ -51,8 +54,13 @@ body {
     align-items: flex-start;
     justify-content: center;
     padding: 60px 40px;
-    overflow-y: auto;
+    /* overflow-y set inline as "scroll" for data-keen-slider-scrollable */
     overflow-x: hidden;
+    scrollbar-width: none;
+}
+
+#slider > .keen-slider__slide::-webkit-scrollbar {
+    display: none;
 }
 
 /* Centre content vertically when it fits; collapse to top when it overflows */
@@ -172,8 +180,8 @@ body {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
-    #slider > .keen-slider__slide { padding: 40px 20px; }
-    .slide-dots { right: 12px; gap: 8px; }
+    #slider > .keen-slider__slide { padding: 40px 36px 40px 20px; }
+    .slide-dots { right: 8px; gap: 8px; }
     .slide-dot { width: 8px; height: 8px; }
 }
 

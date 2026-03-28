@@ -16,22 +16,22 @@ const t = useTranslations(lang);
 
 <Layout title={t("meta.title")} description={t("meta.description")}>
     <div id="slider" class="keen-slider">
-        <div class="keen-slider__slide">
+        <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Hero />
         </div>
-        <div class="keen-slider__slide">
+        <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Projects />
         </div>
-        <div class="keen-slider__slide">
+        <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Stats />
         </div>
-        <div class="keen-slider__slide">
+        <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Timeline />
         </div>
-        <div class="keen-slider__slide">
+        <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Skills />
         </div>
-        <div class="keen-slider__slide section-quote">
+        <div class="keen-slider__slide section-quote" data-keen-slider-scrollable style="overflow-y: scroll">
             <Quote />
         </div>
     </div>

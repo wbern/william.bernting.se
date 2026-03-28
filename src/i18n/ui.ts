@@ -6,11 +6,11 @@ export const ui = {
   sv: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontendutvecklare som bygger med AI. 10 års erfarenhet av mjukvaruutveckling — från legacyräddning till agentiska arbetsflöden.",
+      "Frontendutvecklare med 10 års erfarenhet av mjukvaruutveckling — från legacyräddning till moderna verktyg och snabba leveranser.",
 
     "hero.greeting": "Hej!",
-    "hero.tagline.before": "Jag bygger med ",
-    "hero.tagline.strong": "AI",
+    "hero.tagline.before": "Jag bygger saker som ",
+    "hero.tagline.strong": "fungerar",
     "hero.tagline.after": ". Sedan bygger jag mer. Sedan levererar jag.",
     "hero.scroll": "scrolla ner",
 
@@ -43,9 +43,9 @@ export const ui = {
     "timeline.heading.after": ".",
 
     "projects.label": "Vad jag har byggt",
-    "projects.heading.before": "Levererat med ",
-    "projects.heading.highlight": "AI",
-    "projects.heading.after": ", inte bara hype.",
+    "projects.heading.before": "Byggt, levererat, ",
+    "projects.heading.highlight": "klart",
+    "projects.heading.after": ".",
     "projects.spin": "Snurra",
     "projects.open": "Visa",
     "projects.back": "Tillbaka",
@@ -56,7 +56,7 @@ export const ui = {
 
     "nav.goToSlide": "Gå till sida",
 
-    "print.traits.ai": "Bygger med AI, levererar med AI, tänker i agentiska arbetsflöden.",
+    "print.traits.ai": "Bygger snabbt, levererar ofta, automatiserar det tråkiga.",
     "print.traits.team": "Coachat utvecklare, rekryterat talang, enat avdelningar.",
     "print.traits.debug": "Komplex felsökning som får andra att vilja skriva om allt.",
     "print.traits.legacy": "Räddar legacykodbaser när alla andra vill skriva om.",
@@ -64,11 +64,11 @@ export const ui = {
   en: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontend developer who builds things with AI. 10 years of shipping software — from legacy rescue to agentic workflows.",
+      "Frontend developer with 10 years of shipping software — from legacy rescue to modern tooling and rapid delivery.",
 
     "hero.greeting": "Hey!",
-    "hero.tagline.before": "I build things with ",
-    "hero.tagline.strong": "AI",
+    "hero.tagline.before": "I build things that ",
+    "hero.tagline.strong": "work",
     "hero.tagline.after": ". Then I build more things. Then I ship them.",
     "hero.scroll": "scroll down",
 
@@ -101,9 +101,9 @@ export const ui = {
     "timeline.heading.after": ".",
 
     "projects.label": "What I\u2019ve been building",
-    "projects.heading.before": "Shipped with ",
-    "projects.heading.highlight": "AI",
-    "projects.heading.after": ", not just hype.",
+    "projects.heading.before": "Built, shipped, ",
+    "projects.heading.highlight": "done",
+    "projects.heading.after": ".",
     "projects.spin": "Spin",
     "projects.open": "Open",
     "projects.back": "Back",
@@ -114,7 +114,7 @@ export const ui = {
 
     "nav.goToSlide": "Go to slide",
 
-    "print.traits.ai": "Builds with AI, ships with AI, thinks in agentic workflows.",
+    "print.traits.ai": "Builds fast, ships often, automates the boring stuff.",
     "print.traits.team": "Coached developers, recruited talent, unified departments.",
     "print.traits.debug": "Complex troubleshooting that makes others reach for the rewrite button.",
     "print.traits.legacy": "Rescues legacy codebases when everyone else wants to rewrite.",
