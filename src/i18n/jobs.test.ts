@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { getJobs, jobEntries } from "./jobs";
 
 describe("jobs", () => {
-  it("has 7 jobs", () => {
-    expect(jobEntries).toHaveLength(7);
+  it("has 8 jobs", () => {
+    expect(jobEntries).toHaveLength(8);
   });
 
-  it("returns 7 jobs for each locale", () => {
-    expect(getJobs("sv")).toHaveLength(7);
-    expect(getJobs("en")).toHaveLength(7);
+  it("returns 8 jobs for each locale", () => {
+    expect(getJobs("sv")).toHaveLength(8);
+    expect(getJobs("en")).toHaveLength(8);
   });
 
   it("each entry has both sv and en with role and company", () => {

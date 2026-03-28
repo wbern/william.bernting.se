@@ -44,10 +44,10 @@ describe("cv data", () => {
 
   it("each job maps to the correct timeline color", () => {
     const jobs = getCvJobs("en");
-    // Telia Lead and Telia Senior should share the same color (merged in timeline)
-    expect(jobs[4].color).toBe(jobs[5].color); // both Telia
-    // KITS and HPE should have distinct colors (not duplicated from each other or Telia)
-    expect(jobs[6].color).not.toBe(jobs[4].color); // KITS ≠ Telia
+    // Telia Lead and Telia Senior now have distinct colors (separate blocks)
+    expect(jobs[4].color).not.toBe(jobs[5].color);
+    // KITS and HPE should have distinct colors
+    expect(jobs[6].color).not.toBe(jobs[4].color); // KITS ≠ Telia Lead
     expect(jobs[7].color).not.toBe(jobs[6].color); // HPE ≠ KITS
     // HPE is the last entry and should be yellow
     expect(jobs[7].color).toBe("#e8e040");
