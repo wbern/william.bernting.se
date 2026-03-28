@@ -70,4 +70,17 @@ export function getProjects(lang: Lang): Project[] {
   return projectEntries.map((entry) => entry[lang]);
 }
 
+/** Generate a URL slug from an English project title. */
+export function slugify(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/** Get URL slugs derived from English project titles (stable, locale-independent). */
+export function getProjectSlugs(): string[] {
+  return projectEntries.map((entry) => slugify(entry.en.title));
+}
+
 export { projectEntries };

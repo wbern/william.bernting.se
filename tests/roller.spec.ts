@@ -519,6 +519,84 @@ for (const locale of LOCALES) {
       expect(slideIndexAfter).toBe(slideIndexBefore);
     });
 
+    /* ===== Deep linking tests ===== */
+
+    test("deep link to #pixi-platformer opens detail view", async ({ page }) => {
+      await page.goto(locale.prefix + "/#pixi-platformer", { waitUntil: "networkidle" });
+      await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
+
+      // Wait for detail-active class (deep link → auto-open)
+      await page.waitForFunction(
+        () => {
+          const section = document.querySelector("[data-testid='projects-section']");
+          return section && section.classList.contains("detail-active");
+        },
+        { timeout: 15000 },
+      );
+
+      const detailCard = page.locator("[data-testid='detail-card']");
+      await expect(detailCard).toBeVisible();
+      await expect(detailCard.locator("h3")).toHaveText("Pixi Platformer");
+    });
+
+    test("deep link to #community-assistant opens detail view", async ({ page }) => {
+      await page.goto(locale.prefix + "/#community-assistant", { waitUntil: "networkidle" });
+      await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
+
+      await page.waitForFunction(
+        () => {
+          const section = document.querySelector("[data-testid='projects-section']");
+          return section && section.classList.contains("detail-active");
+        },
+        { timeout: 15000 },
+      );
+
+      const detailCard = page.locator("[data-testid='detail-card']");
+      await expect(detailCard).toBeVisible();
+      await expect(detailCard.locator("h3")).toHaveText("Community Assistant");
+    });
+
+    test("invalid hash does not crash and auto-spin still works", async ({ page }) => {
+      await page.goto(locale.prefix + "/#nonexistent-project", { waitUntil: "networkidle" });
+      await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
+
+      // The invalid hash still triggers navigation to the projects slide
+      // Auto-spin should fire since hash doesn't match any slug
+      await page.waitForFunction(
+        () => {
+          const section = document.querySelector("[data-testid='projects-section']");
+          return section && section.classList.contains("detail-active");
+        },
+        { timeout: 15000 },
+      );
+
+      // If we reached detail-active, auto-spin completed and opened detail
+      const detailCard = page.locator("[data-testid='detail-card']");
+      await expect(detailCard).toBeVisible();
+    });
+
+    test("hash updates when opening and closing detail view", async ({ page }) => {
+      await goToProjectsSlide(page, locale.prefix);
+
+      // Auto-spin has landed and opened detail view
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
+
+      // Hash should be set after auto-spin opens detail
+      const hashAfterOpen = await page.evaluate(() => location.hash);
+      expect(hashAfterOpen).toMatch(/^#.+/);
+
+      // Close detail view
+      await page.locator("[data-testid='back-button']").click();
+      await page.waitForTimeout(600);
+
+      // Hash should be cleared
+      const hashAfterClose = await page.evaluate(() => location.hash);
+      expect(hashAfterClose).toBe("");
+    });
+
     test("projects slide fits viewport after closing detail view", async ({ page }, testInfo) => {
       if (testInfo.project.name !== "mobile") {
         test.skip();
