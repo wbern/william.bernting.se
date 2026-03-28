@@ -1,7 +1,7 @@
 ---
-import type { Lang } from "../i18n/ui";
+import { getLangFromUrl } from "../i18n/utils";
 
-const lang = (Astro.currentLocale ?? "sv") as Lang;
+const lang = getLangFromUrl(Astro.url);
 const cvHref = lang === "sv" ? "/cv" : "/en/cv";
 ---
 
