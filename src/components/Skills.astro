@@ -22,53 +22,73 @@ const skills = [
 ];
 ---
 
-<div class="section-inner skills-section" style="text-align: center;">
+{/* Canvas fills the entire slide; heading floats on top */}
+<div class="skills-pit" data-skills={JSON.stringify(skills)}>
+    <canvas class="skills-canvas"></canvas>
+</div>
+<div class="section-inner skills-heading-overlay" style="text-align: center;">
     <div class="section-label reveal">{t("skills.label")}</div>
     <h2 class="section-heading reveal reveal-delay-1">
         {t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}
     </h2>
-
-    <div class="skills-pit" data-skills={JSON.stringify(skills)}>
-        <canvas class="skills-canvas"></canvas>
-    </div>
 </div>
 
 <!-- Print fallback -->
 <div class="skills-print-fallback">
-    <div class="skills-cloud-print">
-        {skills.map(s => (
-            <span class:list={["skill-pill-print", { featured: s.featured }]}>{s.label}</span>
-        ))}
+    <div class="section-inner" style="text-align: center;">
+        <div class="section-label">{t("skills.label")}</div>
+        <h2 class="section-heading">{t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}</h2>
+        <div class="skills-cloud-print">
+            {skills.map(s => (
+                <span class:list={["skill-pill-print", { featured: s.featured }]}>{s.label}</span>
+            ))}
+        </div>
     </div>
 </div>
 
 <style>
-    .skills-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        height: calc(100vh - 120px); /* fill slide minus padding */
-        max-height: calc(100vh - 120px);
-    }
-
+    /* Canvas covers the entire slide */
     .skills-pit {
-        flex: 1;
-        width: 100%;
-        position: relative;
+        position: absolute;
+        inset: 0;
         overflow: hidden;
-        min-height: 200px;
+        z-index: 0;
     }
 
     .skills-canvas {
         width: 100%;
         height: 100%;
         display: block;
+        cursor: grab;
+    }
+
+    .skills-canvas:active {
+        cursor: grabbing;
+    }
+
+    /* Heading floats at top of slide, pointer-events pass through to canvas */
+    .skills-heading-overlay {
+        position: absolute;
+        top: 60px;
+        left: 40px;
+        right: 40px;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+        .skills-heading-overlay {
+            top: 40px;
+            left: 20px;
+            right: 20px;
+        }
     }
 
     /* Print */
     .skills-print-fallback { display: none; }
     @media print {
         .skills-pit { display: none !important; }
+        .skills-heading-overlay { display: none !important; }
         .skills-print-fallback { display: block !important; }
         .skills-cloud-print {
             display: flex; flex-wrap: wrap; gap: 3px; justify-content: center;
@@ -85,6 +105,7 @@ const skills = [
 
     @media (prefers-reduced-motion: reduce) {
         .skills-canvas { display: none; }
+        .skills-heading-overlay { display: none; }
         .skills-print-fallback {
             display: block !important;
         }
@@ -115,21 +136,20 @@ const skills = [
         JSON.parse(pit.dataset.skills || '[]');
     if (!skillsData.length) return;
 
-    // Reduced-motion bail
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     // ─── Physics constants ───
-    const GRAVITY   = 500;     // px/s² — fluid, not snappy
-    const BOUNCE    = 0.35;    // coefficient of restitution
-    const FRICTION  = 0.6;     // tangential friction on bounce
-    const AIR_DRAG  = 0.997;   // per-frame velocity damping
-    const ROT_DRAG  = 0.92;    // rotational drag — heavier to calm spin
-    const ROT_SPRING = 8;      // spring constant pulling rotation toward 0
-    const ROT_MAX   = 0.25;    // max settled tilt (radians, ~14 degrees)
+    const GRAVITY   = 500;
+    const BOUNCE    = 0.35;
+    const FRICTION  = 0.6;
+    const AIR_DRAG  = 0.997;
+    const ROT_DRAG  = 0.92;
+    const ROT_SPRING = 8;
+    const ROT_MAX   = 0.25;
     const DT_CAP    = 0.033;
-    const SPAWN_INTERVAL = 350; // ms between new pills
+    const SPAWN_INTERVAL = 350;
     const MAX_PILLS = 50;
-    const SETTLE_FRAMES = 120;
+    const COL_GAP   = 4;
 
     // ─── Pill rendering ───
     const PILL_H    = 32;
@@ -145,15 +165,16 @@ const skills = [
     interface Pill {
         x: number; y: number;
         vx: number; vy: number;
-        r: number; vr: number; // rotation
-        w: number; h: number;  // bounding box
+        r: number; vr: number;
+        w: number; h: number;
         label: string;
         featured: boolean;
-        settled: number;       // frames near rest
+        settled: number;
         alive: boolean;
-        restR: number;         // target rest rotation (slight tilt)
-        opacity: number;       // for fade-out recycling
-        age: number;           // spawn order
+        restR: number;
+        opacity: number;
+        age: number;
+        grabbed: boolean;
     }
 
     const pills: Pill[] = [];
@@ -163,7 +184,12 @@ const skills = [
     let running = false;
     let W = 0, H = 0;
 
-    // Measure text widths
+    // ─── Drag state ───
+    let dragPill: Pill | null = null;
+    let dragOffX = 0, dragOffY = 0;
+    let prevMouseX = 0, prevMouseY = 0;
+    let mouseVX = 0, mouseVY = 0;
+
     function measurePill(label: string): number {
         ctx.font = FONT;
         return ctx.measureText(label).width + PILL_PAD * 2;
@@ -171,9 +197,9 @@ const skills = [
 
     function resize() {
         const dpr = window.devicePixelRatio || 1;
-        const rect = pit.getBoundingClientRect();
-        W = rect.width;
-        H = rect.height;
+        // Use actual pit dimensions (absolute-positioned, inset:0 within slide)
+        W = pit.offsetWidth;
+        H = pit.offsetHeight;
         canvas.width = W * dpr;
         canvas.height = H * dpr;
         canvas.style.width = W + 'px';
@@ -187,10 +213,9 @@ const skills = [
         const skill = skillsData[spawnIdx % skillsData.length];
         spawnIdx++;
         const w = measurePill(skill.label);
-        // Small random tilt it will settle toward
         const restR = (Math.random() - 0.5) * ROT_MAX;
-        const pill: Pill = {
-            x: Math.random() * (W - w - 40) + 20,
+        pills.push({
+            x: Math.random() * (W - w - 20) + 10,
             y: -PILL_H - Math.random() * 40,
             vx: (Math.random() - 0.5) * 60,
             vy: Math.random() * 30 + 10,
@@ -204,13 +229,10 @@ const skills = [
             restR,
             opacity: 1,
             age: spawnIdx,
-        };
-        pills.push(pill);
+            grabbed: false,
+        });
     }
 
-    const COL_GAP = 4; // margin between pills
-
-    // AABB overlap with gap margin
     function pillsOverlap(a: Pill, b: Pill): { nx: number; ny: number; overlap: number } | null {
         const ax = a.x - COL_GAP, ay = a.y - COL_GAP;
         const aw = a.w + COL_GAP * 2, ah = a.h + COL_GAP * 2;
@@ -222,7 +244,6 @@ const skills = [
 
         if (overlapX <= 0 || overlapY <= 0) return null;
 
-        // Resolve along smallest overlap axis
         if (overlapX < overlapY) {
             const nx = (a.x + a.w / 2) < (b.x + b.w / 2) ? -1 : 1;
             return { nx, ny: 0, overlap: overlapX };
@@ -232,38 +253,139 @@ const skills = [
         }
     }
 
+    // ─── Hit-test: find pill under cursor ───
+    function hitTest(mx: number, my: number): Pill | null {
+        // Iterate in reverse so topmost (last drawn) pill is picked first
+        for (let i = pills.length - 1; i >= 0; i--) {
+            const p = pills[i];
+            if (!p.alive || p.opacity < 0.5) continue;
+            if (mx >= p.x && mx <= p.x + p.w && my >= p.y && my <= p.y + p.h) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    // ─── Mouse / Touch handlers ───
+    function getCanvasPos(e: MouseEvent | Touch): { x: number; y: number } {
+        const rect = canvas.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function onPointerDown(mx: number, my: number) {
+        const p = hitTest(mx, my);
+        if (!p) return;
+        dragPill = p;
+        p.grabbed = true;
+        p.settled = 0;
+        dragOffX = mx - p.x;
+        dragOffY = my - p.y;
+        prevMouseX = mx;
+        prevMouseY = my;
+        mouseVX = 0;
+        mouseVY = 0;
+    }
+
+    function onPointerMove(mx: number, my: number) {
+        if (!dragPill) return;
+        // Track velocity for throw
+        mouseVX = (mx - prevMouseX) * 60; // scale to ~px/s at 60fps
+        mouseVY = (my - prevMouseY) * 60;
+        prevMouseX = mx;
+        prevMouseY = my;
+
+        dragPill.x = mx - dragOffX;
+        dragPill.y = my - dragOffY;
+        dragPill.vx = 0;
+        dragPill.vy = 0;
+    }
+
+    function onPointerUp() {
+        if (!dragPill) return;
+        // Throw with tracked velocity
+        dragPill.vx = mouseVX;
+        dragPill.vy = mouseVY;
+        dragPill.vr = (Math.random() - 0.5) * 3 * Math.min(1, Math.abs(mouseVX) / 500);
+        dragPill.grabbed = false;
+        dragPill = null;
+    }
+
+    // Stop propagation when dragging to prevent keen-slider from swiping
+    function stopIfDragging(e: Event) {
+        if (dragPill) { e.stopPropagation(); }
+    }
+
+    // Mouse events
+    canvas.addEventListener('mousedown', (e) => {
+        const pos = getCanvasPos(e);
+        onPointerDown(pos.x, pos.y);
+        if (dragPill) e.stopPropagation();
+    });
+    canvas.addEventListener('mousemove', (e) => {
+        const pos = getCanvasPos(e);
+        onPointerMove(pos.x, pos.y);
+        stopIfDragging(e);
+    });
+    canvas.addEventListener('mouseup', (e) => {
+        stopIfDragging(e);
+        onPointerUp();
+    });
+    canvas.addEventListener('mouseleave', onPointerUp);
+
+    // Touch events
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const pos = getCanvasPos(e.touches[0]);
+        const hit = hitTest(pos.x, pos.y);
+        if (hit) {
+            e.preventDefault();
+            e.stopPropagation();
+            onPointerDown(pos.x, pos.y);
+        }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+        if (!dragPill) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const pos = getCanvasPos(e.touches[0]);
+        onPointerMove(pos.x, pos.y);
+    }, { passive: false });
+    canvas.addEventListener('touchend', (e) => {
+        if (dragPill) e.stopPropagation();
+        onPointerUp();
+    });
+    canvas.addEventListener('touchcancel', onPointerUp);
+
     function step(dt: number) {
-        // Integrate
         for (const p of pills) {
-            if (!p.alive) continue;
+            if (!p.alive || p.grabbed) continue;
 
             p.vy += GRAVITY * dt;
             p.vx *= AIR_DRAG;
             p.vy *= AIR_DRAG;
             p.vr *= ROT_DRAG;
 
-            // Rotation spring: pull toward restR
             p.vr += -ROT_SPRING * (p.r - p.restR) * dt;
 
             p.x += p.vx * dt;
             p.y += p.vy * dt;
             p.r += p.vr * dt;
 
-            // Floor collision
-            if (p.y + p.h > H) {
-                p.y = H - p.h;
+            const FLOOR = H;
+            if (p.y + p.h > FLOOR) {
+                p.y = FLOOR - p.h;
                 if (Math.abs(p.vy) > 15) {
-                    p.vr += (Math.random() - 0.5) * 1.2; // mild spin on impact
+                    p.vr += (Math.random() - 0.5) * 1.2;
                 }
                 p.vy = -p.vy * BOUNCE;
                 p.vx *= FRICTION;
             }
 
-            // Wall collisions
+            // Walls
             if (p.x < 0) { p.x = 0; p.vx = -p.vx * BOUNCE; }
             if (p.x + p.w > W) { p.x = W - p.w; p.vx = -p.vx * BOUNCE; }
 
-            // Settle detection
+            // Settle
             if (Math.abs(p.vx) < 1.5 && Math.abs(p.vy) < 1.5 &&
                 Math.abs(p.vr) < 0.1 && p.y + p.h >= H - 2) {
                 p.settled++;
@@ -271,14 +393,14 @@ const skills = [
                 p.settled = 0;
             }
 
-            // Fade out dying pills
+            // Fade dying
             if (p.opacity < 1) {
                 p.opacity -= 0.02;
                 if (p.opacity <= 0) p.alive = false;
             }
         }
 
-        // Pill-pill collisions — multiple iterations for stable stacking
+        // Collisions
         for (let iter = 0; iter < 3; iter++) {
             for (let i = 0; i < pills.length; i++) {
                 const a = pills[i];
@@ -291,14 +413,21 @@ const skills = [
 
                     const { nx, ny, overlap } = hit;
 
-                    // Push apart — full separation
-                    a.x += nx * overlap * 0.55;
-                    a.y += ny * overlap * 0.55;
-                    b.x -= nx * overlap * 0.55;
-                    b.y -= ny * overlap * 0.55;
+                    // If one is grabbed, only push the other
+                    if (a.grabbed) {
+                        b.x -= nx * overlap;
+                        b.y -= ny * overlap;
+                    } else if (b.grabbed) {
+                        a.x += nx * overlap;
+                        a.y += ny * overlap;
+                    } else {
+                        a.x += nx * overlap * 0.55;
+                        a.y += ny * overlap * 0.55;
+                        b.x -= nx * overlap * 0.55;
+                        b.y -= ny * overlap * 0.55;
+                    }
 
-                    // Only apply velocity impulse on first iteration
-                    if (iter === 0) {
+                    if (iter === 0 && !a.grabbed && !b.grabbed) {
                         const dvx = a.vx - b.vx;
                         const dvy = a.vy - b.vy;
                         const impulse = (dvx * nx + dvy * ny) * 0.5;
@@ -310,13 +439,28 @@ const skills = [
 
                         a.vr += (Math.random() - 0.5) * 0.2;
                         b.vr += (Math.random() - 0.5) * 0.2;
+                    } else if (iter === 0) {
+                        // Grabbed pill shoves others
+                        const other = a.grabbed ? b : a;
+                        other.vx += nx * (a.grabbed ? -1 : 1) * 150;
+                        other.vy += ny * (a.grabbed ? -1 : 1) * 150;
+                        other.vr += (Math.random() - 0.5) * 1;
                     }
                 }
-                // Re-enforce floor after push
-                if (a.y + a.h > H) { a.y = H - a.h; a.vy = Math.min(a.vy, 0); }
-                if (a.x < 0) a.x = 0;
-                if (a.x + a.w > W) a.x = W - a.w;
+                if (!a.grabbed) {
+                    if (a.y + a.h > H) { a.y = H - a.h; a.vy = Math.min(a.vy, 0); }
+                    if (a.x < 0) a.x = 0;
+                    if (a.x + a.w > W) a.x = W - a.w;
+                }
             }
+        }
+
+        // Hard clamp: no pill below floor or outside walls
+        for (const p of pills) {
+            if (!p.alive || p.grabbed) continue;
+            if (p.y + p.h > H) { p.y = H - p.h; p.vy = Math.min(p.vy, 0); }
+            if (p.x < 0) p.x = 0;
+            if (p.x + p.w > W) p.x = W - p.w;
         }
     }
 
@@ -330,9 +474,8 @@ const skills = [
 
         const hw = p.w / 2;
         const hh = p.h / 2;
-        const radius = hh; // full rounded ends
+        const radius = hh;
 
-        // Draw rounded rect
         ctx.beginPath();
         ctx.moveTo(-hw + radius, -hh);
         ctx.lineTo(hw - radius, -hh);
@@ -345,16 +488,13 @@ const skills = [
         ctx.arcTo(-hw, -hh, -hw + radius, -hh, radius);
         ctx.closePath();
 
-        // Fill
         ctx.fillStyle = p.featured ? PURPLE_BG : BG_CARD;
         ctx.fill();
 
-        // Border
         ctx.strokeStyle = p.featured ? PURPLE_BORDER : BORDER;
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Text
         ctx.font = FONT;
         ctx.fillStyle = p.featured ? PURPLE : TEXT_DIM;
         ctx.textAlign = 'center';
@@ -385,25 +525,23 @@ const skills = [
             const dt = Math.min((now - prev) / 1000, DT_CAP);
             prev = now;
 
-            // Spawn new pills on interval
             if (now - lastSpawn > SPAWN_INTERVAL) {
                 spawnPill();
                 lastSpawn = now;
             }
 
-            // Recycle: when pile gets high, fade oldest settled pills
-            const highMark = H * 0.25; // if any pill above 25% from top
-            const alivePills = pills.filter(p => p.alive && p.opacity === 1);
+            // Recycle when pile gets high
+            const highMark = H * 0.15;
+            const alivePills = pills.filter(p => p.alive && p.opacity === 1 && !p.grabbed);
             const anyHigh = alivePills.some(p => p.y < highMark && p.settled > 30);
             if (anyHigh) {
-                // Find oldest settled pills and start fading them
                 const settled = alivePills.filter(p => p.settled > 60).sort((a, b) => a.age - b.age);
                 for (let k = 0; k < Math.min(3, settled.length); k++) {
-                    settled[k].opacity = 0.99; // trigger fade
+                    settled[k].opacity = 0.99;
                 }
             }
 
-            // Garbage-collect dead pills
+            // GC dead pills
             for (let k = pills.length - 1; k >= 0; k--) {
                 if (!pills[k].alive) pills.splice(k, 1);
             }
@@ -420,10 +558,10 @@ const skills = [
         if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
         running = false;
         pills.length = 0;
+        dragPill = null;
         ctx.clearRect(0, 0, W, H);
     }
 
-    // Resize handler
     let resizeTimer: number;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
@@ -432,9 +570,9 @@ const skills = [
         }, 100);
     });
 
-    // The revealSlide() function in IndexPage toggles 'visible' on .reveal elements.
-    // Watch a sibling .reveal to know when our slide is active.
-    const revealSibling = pit.parentElement?.querySelector('.reveal');
+    // Watch reveal visibility to start/stop
+    const revealSibling = pit.parentElement?.querySelector('.reveal') ||
+                          pit.nextElementSibling?.querySelector('.reveal');
     if (revealSibling) {
         const mo = new MutationObserver(() => {
             if (revealSibling.classList.contains('visible')) {
