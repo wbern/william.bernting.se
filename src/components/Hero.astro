@@ -200,9 +200,10 @@ const greetingLen = greeting.length;
 
     const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
     if (canvas && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        const ctx = canvas.getContext("2d", { alpha: false });
+        const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
         if (ctx) {
-            const FONT_SIZE = 16;
+            // Larger font on mobile = fewer cells = less rendering work
+            const FONT_SIZE = window.innerWidth < 600 ? 20 : 16;
             const WORD_INTERVAL = 4000;
             let paused = false;
             let animId = 0;
@@ -216,11 +217,16 @@ const greetingLen = greeting.length;
                 canvas!.width = rect.width * dpr;
                 canvas!.height = rect.height * dpr;
                 ctx!.scale(dpr, dpr);
+                ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
+                ctx!.textBaseline = "top";
             }
 
             resize();
 
-            let grid = createGrid(canvas.getBoundingClientRect().width, canvas.getBoundingClientRect().height, FONT_SIZE);
+            let canvasWidth = canvas.getBoundingClientRect().width;
+            let canvasHeight = canvas.getBoundingClientRect().height;
+
+            let grid = createGrid(canvasWidth, canvasHeight, FONT_SIZE);
             let columns = createColumns(grid.cols, grid.rows);
             let scheduler = createScheduler(traits, grid.cols, grid.rows);
             let wordEvents: WordEvent[] = [];
@@ -231,7 +237,10 @@ const greetingLen = greeting.length;
                 clearTimeout(resizeTimer);
                 resizeTimer = window.setTimeout(() => {
                     resize();
-                    grid = createGrid(canvas!.getBoundingClientRect().width, canvas!.getBoundingClientRect().height, FONT_SIZE);
+                    const rect = canvas!.getBoundingClientRect();
+                    canvasWidth = rect.width;
+                    canvasHeight = rect.height;
+                    grid = createGrid(canvasWidth, canvasHeight, FONT_SIZE);
                     columns = createColumns(grid.cols, grid.rows);
                     scheduler = createScheduler(traits, grid.cols, grid.rows);
                     wordEvents = [];
@@ -240,11 +249,12 @@ const greetingLen = greeting.length;
             });
 
             // Pause/resume API for KeenSlider integration
-            (window as any).matrixRainPause = () => { paused = true; };
+            (window as any).matrixRainPause = () => { paused = true; cancelAnimationFrame(animId); };
             (window as any).matrixRainResume = () => {
                 if (paused) {
                     paused = false;
                     lastTime = 0;
+                    cancelAnimationFrame(animId);
                     animId = requestAnimationFrame(loop);
                 }
             };
@@ -253,11 +263,19 @@ const greetingLen = greeting.length;
             document.addEventListener("visibilitychange", () => {
                 if (document.hidden) {
                     paused = true;
+                    cancelAnimationFrame(animId);
                 } else {
                     paused = false;
                     lastTime = 0;
+                    cancelAnimationFrame(animId);
                     animId = requestAnimationFrame(loop);
                 }
+            });
+
+            // Clean up on page navigation
+            document.addEventListener("astro:before-preparation", () => {
+                paused = true;
+                cancelAnimationFrame(animId);
             });
 
             let lastTime = 0;
@@ -267,8 +285,6 @@ const greetingLen = greeting.length;
 
                 const dt = lastTime === 0 ? 16 : Math.min(timestamp - lastTime, 100);
                 lastTime = timestamp;
-
-                const rect = canvas!.getBoundingClientRect();
 
                 // Schedule new words
                 if (timestamp >= nextWordTime) {
@@ -289,12 +305,9 @@ const greetingLen = greeting.length;
 
                 // Clear with solid black
                 ctx!.fillStyle = "#0a0a0f";
-                ctx!.fillRect(0, 0, rect.width, rect.height);
+                ctx!.fillRect(0, 0, canvasWidth, canvasHeight);
 
                 // Tick and render each column
-                ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
-                ctx!.textBaseline = "top";
-
                 for (let c = 0; c < columns.length; c++) {
                     const col = columns[c];
                     tickColumn(col, dt);
@@ -303,8 +316,8 @@ const greetingLen = greeting.length;
                         const cell = col.cells[r];
                         if (cell.brightness <= 0.02) continue;
 
-                        const x = c * FONT_SIZE;
-                        const y = r * FONT_SIZE;
+                        const x = (c * FONT_SIZE) | 0;
+                        const y = (r * FONT_SIZE) | 0;
 
                         // Head cell is slightly brighter/whiter
                         const headRow = Math.floor(col.headY);
