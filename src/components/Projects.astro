@@ -2,11 +2,25 @@
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
 import { getProjects, getProjectSlugs } from "../i18n/projects";
+import { blurPlaceholder } from "../utils/blur-placeholder";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 const projects = getProjects(lang);
 const slugs = getProjectSlugs();
+
+// Generate blur placeholders for photo dioramas at build time
+const photoImages = [
+    "chess-tool.jpg",
+    "chess-reel.jpg",
+    "tdd-presentation.jpg",
+    "3d-visualization.jpg",
+    "pixi-platformer.jpg",
+];
+const blurMap: Record<string, { dataUrl: string; width: number; height: number }> = {};
+for (const img of photoImages) {
+    blurMap[`/${img}`] = await blurPlaceholder(img);
+}
 ---
 
 <div class="section-inner roller-section" data-testid="projects-section">
@@ -74,6 +88,7 @@ const slugs = getProjectSlugs();
 <!-- Inject translated project data for client JS -->
 <script type="application/json" id="projects-i18n-data" set:html={JSON.stringify(projects)} />
 <script type="application/json" id="projects-slugs-data" set:html={JSON.stringify(slugs)} />
+<script type="application/json" id="projects-blur-data" set:html={JSON.stringify(blurMap)} />
 
 <script>
     const PROJECTS: { tag: string; title: string; description: string }[] =
@@ -84,6 +99,23 @@ const slugs = getProjectSlugs();
         JSON.parse(document.getElementById("projects-slugs-data")!.textContent!);
     const slugToIndex: Record<string, number> = {};
     PROJECT_SLUGS.forEach((slug, i) => { slugToIndex[slug] = i; });
+
+    /* ── Blur placeholders for photo dioramas ── */
+    const BLUR_DATA: Record<string, { dataUrl: string; width: number; height: number }> =
+        JSON.parse(document.getElementById("projects-blur-data")!.textContent!);
+
+    /** Build a photo diorama with blur-up placeholder. */
+    function photoDiorama(src: string, alt: string): string {
+        const blur = BLUR_DATA[src];
+        if (!blur) {
+            return `<div class="diorama diorama--photo"><img src="${src}" alt="${alt}" style="display:block;width:100%;height:auto;" /></div>`;
+        }
+        return `<div class="diorama diorama--photo">
+            <div class="diorama-blur" style="background-image:url(${blur.dataUrl})">
+                <img src="${src}" alt="${alt}" width="${blur.width}" height="${blur.height}" onload="this.classList.add('loaded')" />
+            </div>
+        </div>`;
+    }
 
     /* ── Diorama illustrations (keyed by project index) ── */
     const PROJECT_ILLUSTRATIONS: Record<number, string> = {
@@ -191,9 +223,7 @@ const slugs = getProjectSlugs();
                 </g>
             </svg>
         </div>`,
-        3: `<div class="diorama diorama--photo">
-            <img src="/chess-tool.jpg" alt="Legacy chess seeding tool — tournament settings dialog" style="display:block;width:100%;height:auto;" />
-        </div>`,
+        3: photoDiorama("/chess-tool.jpg", "Legacy chess seeding tool — tournament settings dialog"),
         4: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: subtle grid lines -->
@@ -297,18 +327,10 @@ const slugs = getProjectSlugs();
                 </g>
             </svg>
         </div>`,
-        7: `<div class="diorama diorama--photo">
-            <img src="/chess-reel.jpg" alt="Chess Reel — a meme-oriented chess board" style="display:block;width:100%;height:auto;" />
-        </div>`,
-        8: `<div class="diorama diorama--photo">
-            <img src="/tdd-presentation.jpg" alt="TDD with AI — How to do your job and stop writing code" style="display:block;width:100%;height:auto;" />
-        </div>`,
-        10: `<div class="diorama diorama--photo">
-            <img src="/3d-visualization.jpg" alt="Architectural Blueprint to 3D — rendered building from CAD data" style="display:block;width:100%;height:auto;" />
-        </div>`,
-        11: `<div class="diorama diorama--photo">
-            <img src="/pixi-platformer.jpg" alt="Pixi Platformer — a Doodle Jump-style game built with web technology" style="display:block;width:100%;height:auto;" />
-        </div>`,
+        7: photoDiorama("/chess-reel.jpg", "Chess Reel — a meme-oriented chess board"),
+        8: photoDiorama("/tdd-presentation.jpg", "TDD with AI — How to do your job and stop writing code"),
+        10: photoDiorama("/3d-visualization.jpg", "Architectural Blueprint to 3D — rendered building from CAD data"),
+        11: photoDiorama("/pixi-platformer.jpg", "Pixi Platformer — a Doodle Jump-style game built with web technology"),
     };
 
     const N = PROJECTS.length;
@@ -1133,6 +1155,33 @@ const slugs = getProjectSlugs();
 
     .diorama--photo {
         padding: 0;
+    }
+
+    /* Blur-up placeholder for photo dioramas */
+    .diorama-blur {
+        position: relative;
+        background-size: cover;
+        background-position: center;
+        filter: blur(8px);
+        transform: scale(1.05); /* hide blur edges */
+        transition: filter 0.4s ease, transform 0.4s ease;
+    }
+
+    .diorama-blur img {
+        display: block;
+        width: 100%;
+        height: auto;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    .diorama-blur img.loaded {
+        opacity: 1;
+    }
+
+    .diorama-blur:has(img.loaded) {
+        filter: blur(0);
+        transform: scale(1);
     }
 
     /* Phase 1: curtain reveal (initial hidden state) */
