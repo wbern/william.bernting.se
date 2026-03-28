@@ -386,20 +386,23 @@ const cv: Record<Lang, CvData> = {
 };
 
 // Timeline-specific metadata per job (shared between languages)
-const jobMeta: { color: string; w: number; timelineDate: string; timelineRole: { sv: string; en: string }; timelineCompany: string }[] = [
-  { color: "#00d4aa", w: 50, timelineDate: "2025 \u2014", timelineRole: { sv: "Frontendutvecklare", en: "Frontend Developer" }, timelineCompany: "Akka" },
-  { color: "#f0a030", w: 35, timelineDate: "2025", timelineRole: { sv: "Backendutvecklare (C#)", en: "Backend Dev (C#)" }, timelineCompany: "Hedin IT" },
-  { color: "#9b4dca", w: 80, timelineDate: "2023 \u2013 25", timelineRole: { sv: "Utvecklare \u2192 Tech Lead", en: "Dev \u2192 Tech Lead" }, timelineCompany: "Sembo" },
-  { color: "#e84060", w: 55, timelineDate: "2022 \u2013 23", timelineRole: { sv: "Utvecklare \u2192 CTO", en: "Dev \u2192 CTO" }, timelineCompany: "NetConsult" },
-  { color: "#40a0e8", w: 95, timelineDate: "2020 \u2013 22", timelineRole: { sv: "Senior \u2192 Lead", en: "Senior \u2192 Lead" }, timelineCompany: "Telia" },
-  { color: "#50c040", w: 70, timelineDate: "2017 \u2013 20", timelineRole: { sv: "Systemutvecklare", en: "Systems Developer" }, timelineCompany: "KITS AB" },
-  { color: "#e8e040", w: 100, timelineDate: "2011 \u2013 16", timelineRole: { sv: "Koordinator \u2192 Teamledare", en: "Coord \u2192 Team Lead" }, timelineCompany: "HPE" },
+// months = actual role duration, w = block width derived from months
+const jobMetaRaw: { color: string; months: number; timelineDate: string; timelineRole: { sv: string; en: string }; timelineCompany: string }[] = [
+  { color: "#00d4aa", months: 7,  timelineDate: "2025 \u2014",   timelineRole: { sv: "Frontendutvecklare", en: "Frontend Developer" }, timelineCompany: "Akka" },
+  { color: "#f0a030", months: 5,  timelineDate: "2025",          timelineRole: { sv: "Backendutvecklare",  en: "Backend Developer" },  timelineCompany: "Hedin IT" },
+  { color: "#9b4dca", months: 22, timelineDate: "2023 \u2013 25", timelineRole: { sv: "Tech Lead",          en: "Tech Lead" },          timelineCompany: "Sembo" },
+  { color: "#e84060", months: 12, timelineDate: "2022 \u2013 23", timelineRole: { sv: "Utvecklingschef",    en: "Head of Dev" },        timelineCompany: "NetConsult" },
+  { color: "#40a0e8", months: 14, timelineDate: "2021 \u2013 22", timelineRole: { sv: "Lead-utvecklare",    en: "Lead Developer" },     timelineCompany: "Telia" },
+  { color: "#3080c0", months: 6,  timelineDate: "2020 \u2013 21", timelineRole: { sv: "Senior-utvecklare",  en: "Senior Engineer" },    timelineCompany: "Telia" },
+  { color: "#50c040", months: 42, timelineDate: "2017 \u2013 20", timelineRole: { sv: "Systemutvecklare",   en: "Systems Developer" },  timelineCompany: "KITS AB" },
+  { color: "#e8e040", months: 13, timelineDate: "2015 \u2013 16", timelineRole: { sv: "Teamledare",         en: "Team Lead" },          timelineCompany: "HPE" },
 ];
 
-// CV has 8 jobs (Telia split into Lead Developer + Senior Software Engineer)
-// but the timeline merges both Telia roles into one entry (7 jobMeta entries).
-// This mapping resolves the off-by-one: both Telia CV jobs (4,5) → jobMeta[4].
-const cvJobToMetaIndex = [0, 1, 2, 3, 4, 4, 5, 6];
+const maxMonths = Math.max(...jobMetaRaw.map((j) => j.months));
+const jobMeta = jobMetaRaw.map((j) => ({
+  ...j,
+  w: Math.round(20 + (j.months / maxMonths) * 80),
+}));
 
 // ===== Public API =====
 
@@ -408,8 +411,12 @@ export function getCvProfile(lang: Lang): CvProfile {
 }
 
 export function getCvJobs(lang: Lang): CvJob[] {
-  return cv[lang].jobs.map((job, i) => {
-    const meta = jobMeta[cvJobToMetaIndex[i]];
+  const jobs = cv[lang].jobs;
+  if (jobs.length !== jobMeta.length) {
+    throw new Error(`CV jobs (${jobs.length}) and jobMeta (${jobMeta.length}) count mismatch — update both when adding a role`);
+  }
+  return jobs.map((job, i) => {
+    const meta = jobMeta[i];
     return {
       ...job,
       color: meta.color,

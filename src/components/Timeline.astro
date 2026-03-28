@@ -6,7 +6,7 @@ import { getJobs } from "../i18n/jobs";
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 const jobs = getJobs(lang);
-// Reverse: index 0 = bottom (HPE), 6 = top (Akka)
+// Reverse: index 0 = bottom (HPE), 7 = top (Akka)
 const blocks = [...jobs].reverse();
 ---
 
@@ -240,17 +240,22 @@ const blocks = [...jobs].reverse();
         const SETTLE_VEL = 1.0;
         const SETTLE_POS = 0.5;
 
-        // Per-block personality: bottom (0) → top (6), more wobble higher up
-        const W = [0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0];
-        const REST_X = [0, 1.0, -0.7, 1.5, -1.0, 0.5, -0.3];
-        const REST_R = [0, -0.3, 0.2, -0.5, 0.35, -0.2, 0.15];
-        const HIT_R  = [0, 35, -30, 50, -40, 25, -18];
-        const HIT_X  = [0, 18, -14, 25, -20, 12, -8];
-
         const stage = document.querySelector<HTMLElement>('.tower-stage');
         if (!stage) return;
         const els = Array.from(stage.querySelectorAll<HTMLElement>('.tower-block'));
         if (!els.length) return;
+
+        // Per-block personality derived from count — scales with any number of jobs
+        const N = els.length;
+        const W      = Array.from({length: N}, (_, i) => +((i + 1) / N).toFixed(2));
+        const REST_X = Array.from({length: N}, (_, i) =>
+            i === 0 ? 0 : +((i % 2 ? 1 : -1) * (0.5 + 0.3 * Math.sin(i * 1.7))).toFixed(1));
+        const REST_R = Array.from({length: N}, (_, i) =>
+            i === 0 ? 0 : +((i % 2 ? -1 : 1) * (0.15 + 0.1 * Math.sin(i * 2.3))).toFixed(2));
+        const HIT_R  = Array.from({length: N}, (_, i) =>
+            i === 0 ? 0 : Math.round((i % 2 ? 1 : -1) * (20 + i * 4)));
+        const HIT_X  = Array.from({length: N}, (_, i) =>
+            i === 0 ? 0 : Math.round((i % 2 ? 1 : -1) * (10 + i * 2)));
 
         let animId: number | null = null;
         let running = false;
@@ -386,9 +391,16 @@ const blocks = [...jobs].reverse();
         }
 
         const rev = stage.closest('.reveal') || stage;
+        let resetTimer: ReturnType<typeof setTimeout> | null = null;
+
         const obs = new MutationObserver(() => {
-            if (rev.classList.contains('visible')) { if (!running) run(); }
-            else { reset(); }
+            if (rev.classList.contains('visible')) {
+                if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+                if (!running) run();
+            } else {
+                // Delay reset so transient class flickers (e.g. click) don't restart
+                resetTimer = setTimeout(() => { reset(); resetTimer = null; }, 200);
+            }
         });
         obs.observe(rev, { attributes: true, attributeFilter: ['class'] });
         if (rev.classList.contains('visible')) run();
