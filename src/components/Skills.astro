@@ -4,65 +4,447 @@ import { defaultLang, type Lang } from "../i18n/ui";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
+
+const skills = [
+    { label: "Agentic AI", featured: true },
+    { label: "Test-Driven Development", featured: true },
+    { label: "Claude / LLMs", featured: true },
+    { label: "Node.js", featured: false },
+    { label: "TypeScript", featured: false },
+    { label: "React", featured: false },
+    { label: "Next.js", featured: false },
+    { label: "C#", featured: false },
+    { label: "Vue", featured: false },
+    { label: "Angular", featured: false },
+    { label: "DevOps / CI/CD", featured: false },
+    { label: "AWS / Azure", featured: false },
+    { label: "Servant Leadership", featured: false },
+];
 ---
 
-<div class="section-inner" style="text-align: center;">
+<div class="section-inner skills-section" style="text-align: center;">
     <div class="section-label reveal">{t("skills.label")}</div>
     <h2 class="section-heading reveal reveal-delay-1">
         {t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}
     </h2>
 
-    <div class="skills-cloud reveal reveal-delay-2">
-        <span class="skill-pill featured">Agentic AI</span>
-        <span class="skill-pill featured">Test-Driven Development</span>
-        <span class="skill-pill featured">Claude / LLMs</span>
-        <span class="skill-pill">Node.js</span>
-        <span class="skill-pill">TypeScript</span>
-        <span class="skill-pill">React</span>
-        <span class="skill-pill">Next.js</span>
-        <span class="skill-pill">C#</span>
-        <span class="skill-pill">Vue</span>
-        <span class="skill-pill">Angular</span>
-        <span class="skill-pill">DevOps / CI/CD</span>
-        <span class="skill-pill">AWS / Azure</span>
-        <span class="skill-pill">Servant Leadership</span>
+    <div class="skills-pit" data-skills={JSON.stringify(skills)}>
+        <canvas class="skills-canvas"></canvas>
+    </div>
+</div>
+
+<!-- Print fallback -->
+<div class="skills-print-fallback">
+    <div class="skills-cloud-print">
+        {skills.map(s => (
+            <span class:list={["skill-pill-print", { featured: s.featured }]}>{s.label}</span>
+        ))}
     </div>
 </div>
 
 <style>
-    .skills-cloud {
+    .skills-section {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        height: calc(100vh - 120px); /* fill slide minus padding */
+        max-height: calc(100vh - 120px);
     }
 
-    .skill-pill {
-        font-family: var(--mono);
-        font-size: 14px;
-        padding: 8px 18px;
-        border-radius: 100px;
-        border: 1px solid var(--border);
-        background: var(--bg-card);
-        color: var(--text-dim);
-        transition: all 0.3s ease;
+    .skills-pit {
+        flex: 1;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        min-height: 200px;
     }
 
-    .skill-pill:hover {
-        border-color: var(--purple);
-        color: var(--purple);
-        box-shadow: 0 0 20px var(--purple-glow);
+    .skills-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
     }
 
-    .skill-pill.featured {
-        border-color: var(--purple-dim);
-        color: var(--purple);
-        background: var(--purple-glow);
-    }
-
+    /* Print */
+    .skills-print-fallback { display: none; }
     @media print {
-        .skills-cloud { gap: 3px; }
-        .skill-pill { font-size: 8px; padding: 2px 6px; }
-        .skill-pill:hover { box-shadow: none; }
+        .skills-pit { display: none !important; }
+        .skills-print-fallback { display: block !important; }
+        .skills-cloud-print {
+            display: flex; flex-wrap: wrap; gap: 3px; justify-content: center;
+        }
+        .skill-pill-print {
+            font-family: var(--mono); font-size: 8px; padding: 2px 6px;
+            border-radius: 100px; border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+        .skill-pill-print.featured {
+            border-color: var(--purple-dim); color: var(--purple);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .skills-canvas { display: none; }
+        .skills-print-fallback {
+            display: block !important;
+        }
+        .skills-cloud-print {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+        }
+        .skill-pill-print {
+            font-family: var(--mono); font-size: 14px; padding: 8px 18px;
+            border-radius: 100px; border: 1px solid var(--border);
+            background: var(--bg-card); color: var(--text-dim);
+        }
+        .skill-pill-print.featured {
+            border-color: var(--purple-dim); color: var(--purple);
+            background: var(--purple-glow);
+        }
     }
 </style>
+
+<script>
+(function () {
+    const pit = document.querySelector<HTMLElement>('.skills-pit');
+    if (!pit) return;
+    const canvas = pit.querySelector<HTMLCanvasElement>('.skills-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+
+    const skillsData: { label: string; featured: boolean }[] =
+        JSON.parse(pit.dataset.skills || '[]');
+    if (!skillsData.length) return;
+
+    // Reduced-motion bail
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // ─── Physics constants ───
+    const GRAVITY   = 500;     // px/s² — fluid, not snappy
+    const BOUNCE    = 0.35;    // coefficient of restitution
+    const FRICTION  = 0.6;     // tangential friction on bounce
+    const AIR_DRAG  = 0.997;   // per-frame velocity damping
+    const ROT_DRAG  = 0.92;    // rotational drag — heavier to calm spin
+    const ROT_SPRING = 8;      // spring constant pulling rotation toward 0
+    const ROT_MAX   = 0.25;    // max settled tilt (radians, ~14 degrees)
+    const DT_CAP    = 0.033;
+    const SPAWN_INTERVAL = 350; // ms between new pills
+    const MAX_PILLS = 50;
+    const SETTLE_FRAMES = 120;
+
+    // ─── Pill rendering ───
+    const PILL_H    = 32;
+    const PILL_PAD  = 18;
+    const FONT      = '600 13px "JetBrains Mono", monospace';
+    const PURPLE    = '#9b4dca';
+    const PURPLE_BG = 'rgba(155, 77, 202, 0.15)';
+    const PURPLE_BORDER = '#7b2d8e';
+    const BORDER    = '#222233';
+    const BG_CARD   = '#13131a';
+    const TEXT_DIM  = '#8888a0';
+
+    interface Pill {
+        x: number; y: number;
+        vx: number; vy: number;
+        r: number; vr: number; // rotation
+        w: number; h: number;  // bounding box
+        label: string;
+        featured: boolean;
+        settled: number;       // frames near rest
+        alive: boolean;
+        restR: number;         // target rest rotation (slight tilt)
+        opacity: number;       // for fade-out recycling
+        age: number;           // spawn order
+    }
+
+    const pills: Pill[] = [];
+    let spawnIdx = 0;
+    let lastSpawn = 0;
+    let animId: number | null = null;
+    let running = false;
+    let W = 0, H = 0;
+
+    // Measure text widths
+    function measurePill(label: string): number {
+        ctx.font = FONT;
+        return ctx.measureText(label).width + PILL_PAD * 2;
+    }
+
+    function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = pit.getBoundingClientRect();
+        W = rect.width;
+        H = rect.height;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function spawnPill() {
+        const aliveCount = pills.filter(p => p.alive).length;
+        if (aliveCount >= MAX_PILLS) return;
+        const skill = skillsData[spawnIdx % skillsData.length];
+        spawnIdx++;
+        const w = measurePill(skill.label);
+        // Small random tilt it will settle toward
+        const restR = (Math.random() - 0.5) * ROT_MAX;
+        const pill: Pill = {
+            x: Math.random() * (W - w - 40) + 20,
+            y: -PILL_H - Math.random() * 40,
+            vx: (Math.random() - 0.5) * 60,
+            vy: Math.random() * 30 + 10,
+            r: (Math.random() - 0.5) * 0.15,
+            vr: (Math.random() - 0.5) * 0.8,
+            w, h: PILL_H,
+            label: skill.label,
+            featured: skill.featured,
+            settled: 0,
+            alive: true,
+            restR,
+            opacity: 1,
+            age: spawnIdx,
+        };
+        pills.push(pill);
+    }
+
+    const COL_GAP = 4; // margin between pills
+
+    // AABB overlap with gap margin
+    function pillsOverlap(a: Pill, b: Pill): { nx: number; ny: number; overlap: number } | null {
+        const ax = a.x - COL_GAP, ay = a.y - COL_GAP;
+        const aw = a.w + COL_GAP * 2, ah = a.h + COL_GAP * 2;
+        const bx = b.x - COL_GAP, by = b.y - COL_GAP;
+        const bw = b.w + COL_GAP * 2, bh = b.h + COL_GAP * 2;
+
+        const overlapX = Math.min(ax + aw, bx + bw) - Math.max(ax, bx);
+        const overlapY = Math.min(ay + ah, by + bh) - Math.max(ay, by);
+
+        if (overlapX <= 0 || overlapY <= 0) return null;
+
+        // Resolve along smallest overlap axis
+        if (overlapX < overlapY) {
+            const nx = (a.x + a.w / 2) < (b.x + b.w / 2) ? -1 : 1;
+            return { nx, ny: 0, overlap: overlapX };
+        } else {
+            const ny = (a.y + a.h / 2) < (b.y + b.h / 2) ? -1 : 1;
+            return { nx: 0, ny, overlap: overlapY };
+        }
+    }
+
+    function step(dt: number) {
+        // Integrate
+        for (const p of pills) {
+            if (!p.alive) continue;
+
+            p.vy += GRAVITY * dt;
+            p.vx *= AIR_DRAG;
+            p.vy *= AIR_DRAG;
+            p.vr *= ROT_DRAG;
+
+            // Rotation spring: pull toward restR
+            p.vr += -ROT_SPRING * (p.r - p.restR) * dt;
+
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.r += p.vr * dt;
+
+            // Floor collision
+            if (p.y + p.h > H) {
+                p.y = H - p.h;
+                if (Math.abs(p.vy) > 15) {
+                    p.vr += (Math.random() - 0.5) * 1.2; // mild spin on impact
+                }
+                p.vy = -p.vy * BOUNCE;
+                p.vx *= FRICTION;
+            }
+
+            // Wall collisions
+            if (p.x < 0) { p.x = 0; p.vx = -p.vx * BOUNCE; }
+            if (p.x + p.w > W) { p.x = W - p.w; p.vx = -p.vx * BOUNCE; }
+
+            // Settle detection
+            if (Math.abs(p.vx) < 1.5 && Math.abs(p.vy) < 1.5 &&
+                Math.abs(p.vr) < 0.1 && p.y + p.h >= H - 2) {
+                p.settled++;
+            } else {
+                p.settled = 0;
+            }
+
+            // Fade out dying pills
+            if (p.opacity < 1) {
+                p.opacity -= 0.02;
+                if (p.opacity <= 0) p.alive = false;
+            }
+        }
+
+        // Pill-pill collisions — multiple iterations for stable stacking
+        for (let iter = 0; iter < 3; iter++) {
+            for (let i = 0; i < pills.length; i++) {
+                const a = pills[i];
+                if (!a.alive) continue;
+                for (let j = i + 1; j < pills.length; j++) {
+                    const b = pills[j];
+                    if (!b.alive) continue;
+                    const hit = pillsOverlap(a, b);
+                    if (!hit) continue;
+
+                    const { nx, ny, overlap } = hit;
+
+                    // Push apart — full separation
+                    a.x += nx * overlap * 0.55;
+                    a.y += ny * overlap * 0.55;
+                    b.x -= nx * overlap * 0.55;
+                    b.y -= ny * overlap * 0.55;
+
+                    // Only apply velocity impulse on first iteration
+                    if (iter === 0) {
+                        const dvx = a.vx - b.vx;
+                        const dvy = a.vy - b.vy;
+                        const impulse = (dvx * nx + dvy * ny) * 0.5;
+
+                        a.vx -= impulse * nx * BOUNCE;
+                        a.vy -= impulse * ny * BOUNCE;
+                        b.vx += impulse * nx * BOUNCE;
+                        b.vy += impulse * ny * BOUNCE;
+
+                        a.vr += (Math.random() - 0.5) * 0.2;
+                        b.vr += (Math.random() - 0.5) * 0.2;
+                    }
+                }
+                // Re-enforce floor after push
+                if (a.y + a.h > H) { a.y = H - a.h; a.vy = Math.min(a.vy, 0); }
+                if (a.x < 0) a.x = 0;
+                if (a.x + a.w > W) a.x = W - a.w;
+            }
+        }
+    }
+
+    function drawPill(p: Pill) {
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        const cx = p.x + p.w / 2;
+        const cy = p.y + p.h / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate(p.r);
+
+        const hw = p.w / 2;
+        const hh = p.h / 2;
+        const radius = hh; // full rounded ends
+
+        // Draw rounded rect
+        ctx.beginPath();
+        ctx.moveTo(-hw + radius, -hh);
+        ctx.lineTo(hw - radius, -hh);
+        ctx.arcTo(hw, -hh, hw, -hh + radius, radius);
+        ctx.lineTo(hw, hh - radius);
+        ctx.arcTo(hw, hh, hw - radius, hh, radius);
+        ctx.lineTo(-hw + radius, hh);
+        ctx.arcTo(-hw, hh, -hw, hh - radius, radius);
+        ctx.lineTo(-hw, -hh + radius);
+        ctx.arcTo(-hw, -hh, -hw + radius, -hh, radius);
+        ctx.closePath();
+
+        // Fill
+        ctx.fillStyle = p.featured ? PURPLE_BG : BG_CARD;
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = p.featured ? PURPLE_BORDER : BORDER;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Text
+        ctx.font = FONT;
+        ctx.fillStyle = p.featured ? PURPLE : TEXT_DIM;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.label, 0, 0.5);
+
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        for (const p of pills) {
+            if (p.alive) drawPill(p);
+        }
+    }
+
+    function start() {
+        if (running) return;
+        running = true;
+        pills.length = 0;
+        spawnIdx = 0;
+        lastSpawn = 0;
+        resize();
+
+        let prev = performance.now();
+
+        function tick(now: number) {
+            const dt = Math.min((now - prev) / 1000, DT_CAP);
+            prev = now;
+
+            // Spawn new pills on interval
+            if (now - lastSpawn > SPAWN_INTERVAL) {
+                spawnPill();
+                lastSpawn = now;
+            }
+
+            // Recycle: when pile gets high, fade oldest settled pills
+            const highMark = H * 0.25; // if any pill above 25% from top
+            const alivePills = pills.filter(p => p.alive && p.opacity === 1);
+            const anyHigh = alivePills.some(p => p.y < highMark && p.settled > 30);
+            if (anyHigh) {
+                // Find oldest settled pills and start fading them
+                const settled = alivePills.filter(p => p.settled > 60).sort((a, b) => a.age - b.age);
+                for (let k = 0; k < Math.min(3, settled.length); k++) {
+                    settled[k].opacity = 0.99; // trigger fade
+                }
+            }
+
+            // Garbage-collect dead pills
+            for (let k = pills.length - 1; k >= 0; k--) {
+                if (!pills[k].alive) pills.splice(k, 1);
+            }
+
+            step(dt);
+            draw();
+
+            animId = requestAnimationFrame(tick);
+        }
+        animId = requestAnimationFrame(tick);
+    }
+
+    function stop() {
+        if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+        running = false;
+        pills.length = 0;
+        ctx.clearRect(0, 0, W, H);
+    }
+
+    // Resize handler
+    let resizeTimer: number;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(() => {
+            if (running) resize();
+        }, 100);
+    });
+
+    // The revealSlide() function in IndexPage toggles 'visible' on .reveal elements.
+    // Watch a sibling .reveal to know when our slide is active.
+    const revealSibling = pit.parentElement?.querySelector('.reveal');
+    if (revealSibling) {
+        const mo = new MutationObserver(() => {
+            if (revealSibling.classList.contains('visible')) {
+                if (!running) start();
+            } else {
+                if (running) stop();
+            }
+        });
+        mo.observe(revealSibling, { attributes: true, attributeFilter: ['class'] });
+        if (revealSibling.classList.contains('visible')) start();
+    }
+})();
+</script>
