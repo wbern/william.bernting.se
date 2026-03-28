@@ -39,4 +39,3 @@ cv-preview.png
 .logs/
 __pycache__/
 state.json
-CLAUDE.md
