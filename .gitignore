@@ -27,6 +27,12 @@ pnpm-debug.log*
 test-results/
 playwright-report/
 
+# print preview artifacts (pnpm print:preview / cv:preview)
+print-preview.pdf
+print-preview.png
+cv-preview.pdf
+cv-preview.png
+
 # Gas Town (added by gt)
 .runtime/
 .claude/

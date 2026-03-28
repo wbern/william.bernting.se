@@ -1,0 +1,517 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --accent: #7b2d8e;
+    --accent-light: #f3e8f7;
+    --text-dark: #333;
+    --text-mid: #444;
+    --text-light: #666;
+    --border-color: #ddd;
+    --decor-color: #d8d0db;
+    --sans: 'Inter', 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+}
+
+body {
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--text-dark);
+    background: #e8e8e8;
+    overflow: visible;
+    height: auto;
+}
+
+/* ===== BACK LINK ===== */
+.cv-back-link {
+    display: block;
+    max-width: 210mm;
+    margin: 20px auto 0;
+    padding: 0 10px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.cv-back-link:hover {
+    opacity: 0.7;
+}
+
+/* ===== PAGE CONTAINER ===== */
+.page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    background: #fff;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+    padding: 44px 56px 36px;
+}
+
+.page + .page {
+    margin-top: 40px;
+}
+
+/* ===== DECORATIVE DIAGONAL LINES ===== */
+.decor-top-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    opacity: 0.18;
+}
+
+.decor-bottom-left {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 160px;
+    height: 160px;
+    opacity: 0.18;
+}
+
+.decor-top-right svg,
+.decor-bottom-left svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== HEADER ===== */
+.header {
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 1;
+}
+
+.header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-dark);
+    line-height: 1.1;
+}
+
+.header .subtitle {
+    font-size: 18px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 12px;
+    font-style: italic;
+}
+
+.contact-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    font-size: 16px;
+    color: var(--text-mid);
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.contact-item svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--accent);
+    flex-shrink: 0;
+}
+
+.contact-item a {
+    color: var(--text-mid);
+    text-decoration: none;
+}
+
+/* ===== TWO COLUMN BODY ===== */
+.body-columns {
+    display: flex;
+    gap: 30px;
+    position: relative;
+    z-index: 1;
+}
+
+.col-left {
+    width: 58%;
+    flex-shrink: 0;
+}
+
+.col-right {
+    width: 42%;
+}
+
+/* ===== SECTION HEADERS ===== */
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dark);
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 12px;
+}
+
+.section {
+    margin-bottom: 14px;
+}
+
+/* ===== JOB ENTRIES ===== */
+.job-entry {
+    margin-bottom: 10px;
+}
+
+.job-entry:last-child {
+    margin-bottom: 0;
+}
+
+.job-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.job-company {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.job-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 16px;
+    color: var(--text-light);
+    margin-bottom: 2px;
+    margin-top: 1px;
+}
+
+.job-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.job-meta-item svg {
+    width: 13px;
+    height: 13px;
+    fill: var(--text-light);
+    flex-shrink: 0;
+}
+
+.job-tech {
+    font-size: 13px;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 1px;
+}
+
+.job-desc {
+    font-size: 14px;
+    color: var(--text-light);
+    font-style: italic;
+    margin-bottom: 3px;
+}
+
+.job-tasks {
+    list-style: none;
+    padding: 0;
+}
+
+.job-tasks li {
+    font-size: 16px;
+    color: #444;
+    padding-left: 16px;
+    position: relative;
+    margin-bottom: 1px;
+    line-height: 1.4;
+}
+
+.job-tasks li::before {
+    content: '\2022';
+    position: absolute;
+    left: 2px;
+    color: #444;
+}
+
+/* ===== INTRO TEXT ===== */
+.intro-text {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-mid);
+}
+
+.intro-text + .intro-text {
+    margin-top: 8px;
+}
+
+/* ===== TRAITS ===== */
+.trait {
+    margin-bottom: 10px;
+}
+
+.trait:last-child {
+    margin-bottom: 0;
+}
+
+.trait-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.trait-header .trait-icon {
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.trait-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.trait p {
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--text-mid);
+    padding-left: 30px;
+}
+
+/* ===== SKILLS ===== */
+.skills-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-tag {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: var(--accent-light);
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+/* ===== ACKNOWLEDGEMENT ===== */
+.acknowledgement {
+    margin-bottom: 10px;
+}
+
+.acknowledgement-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.acknowledgement-header .ack-icon {
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.acknowledgement-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.acknowledgement p {
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--text-mid);
+    padding-left: 30px;
+}
+
+/* ===== QUOTE ===== */
+.quote-block {
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+    margin-top: 4px;
+}
+
+.quote-text {
+    font-size: 18px;
+    font-style: italic;
+    color: var(--text-dark);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.quote-author {
+    font-size: 16px;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+/* ===== BOOKS ===== */
+.book-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.book-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.book-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.book-info .book-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.book-info .book-author {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+/* ===== LANGUAGES ===== */
+.language-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.language-item:last-child {
+    margin-bottom: 0;
+}
+
+.language-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.language-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.language-level {
+    font-size: 16px;
+    color: var(--text-light);
+}
+
+.language-dots {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.dot.empty {
+    background: #ddd;
+}
+
+/* ===== EDUCATION ===== */
+.edu-entry {
+    margin-bottom: 12px;
+}
+
+.edu-entry:last-child {
+    margin-bottom: 0;
+}
+
+.edu-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.edu-school {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.edu-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 16px;
+    color: var(--text-light);
+    margin-top: 1px;
+}
+
+.edu-meta svg {
+    width: 13px;
+    height: 13px;
+    fill: var(--text-light);
+}
+
+/* ===== PRINT / PDF ===== */
+@page {
+    margin: 0;
+    size: A4;
+}
+
+@media print {
+    body {
+        background: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .cv-back-link {
+        display: none !important;
+    }
+
+    .page {
+        box-shadow: none;
+        margin: 0;
+        padding: 36px 46px 24px;
+        width: 100%;
+        min-height: auto;
+        page-break-after: always;
+    }
+
+    .page:last-child {
+        page-break-after: avoid;
+    }
+
+    .decor-top-right { width: 180px; height: 180px; }
+    .decor-bottom-left { width: 140px; height: 140px; }
+
+    .header { margin-bottom: 18px; }
+    .header h1 { font-size: 32px; }
+    .header .subtitle { margin-bottom: 12px; }
+
+    .section { margin-bottom: 16px; }
+    .job-entry { margin-bottom: 10px; }
+    .section-title { font-size: 16px; margin-bottom: 10px; padding-bottom: 5px; }
+    .job-title { font-size: 16px; }
+    .job-company { font-size: 13px; }
+    .job-meta { font-size: 14px; margin-bottom: 3px; }
+    .job-tasks li { font-size: 14px; line-height: 1.4; }
+    .intro-text { font-size: 14px; line-height: 1.5; }
+    .trait p { font-size: 14px; }
+    .trait { margin-bottom: 10px; }
+    .contact-info { font-size: 14px; }
+    .body-columns { gap: 26px; }
+}
