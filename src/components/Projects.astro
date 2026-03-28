@@ -1,11 +1,12 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
-import { getProjects } from "../i18n/projects";
+import { getProjects, getProjectSlugs } from "../i18n/projects";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 const projects = getProjects(lang);
+const slugs = getProjectSlugs();
 ---
 
 <div class="section-inner roller-section" data-testid="projects-section">
@@ -72,10 +73,17 @@ const projects = getProjects(lang);
 
 <!-- Inject translated project data for client JS -->
 <script type="application/json" id="projects-i18n-data" set:html={JSON.stringify(projects)} />
+<script type="application/json" id="projects-slugs-data" set:html={JSON.stringify(slugs)} />
 
 <script>
     const PROJECTS: { tag: string; title: string; description: string }[] =
         JSON.parse(document.getElementById("projects-i18n-data")!.textContent!);
+
+    /* ── Deep-link slug map (English titles → index) ── */
+    const PROJECT_SLUGS: string[] =
+        JSON.parse(document.getElementById("projects-slugs-data")!.textContent!);
+    const slugToIndex: Record<string, number> = {};
+    PROJECT_SLUGS.forEach((slug, i) => { slugToIndex[slug] = i; });
 
     /* ── Diorama illustrations (keyed by project index) ── */
     const PROJECT_ILLUSTRATIONS: Record<number, string> = {
@@ -297,6 +305,9 @@ const projects = getProjects(lang);
         </div>`,
         10: `<div class="diorama diorama--photo">
             <img src="/3d-visualization.jpg" alt="Architectural Blueprint to 3D — rendered building from CAD data" style="display:block;width:100%;height:auto;" />
+        </div>`,
+        11: `<div class="diorama diorama--photo">
+            <img src="/pixi-platformer.jpg" alt="Pixi Platformer — a Doodle Jump-style game built with web technology" style="display:block;width:100%;height:auto;" />
         </div>`,
     };
 
@@ -614,6 +625,11 @@ const projects = getProjects(lang);
         }
         section?.classList.add("detail-active");
         document.getElementById("slide-dots")?.classList.add("hidden");
+        // Update URL hash for deep linking
+        const slug = PROJECT_SLUGS[currentIdx];
+        if (slug) {
+            history.replaceState(null, "", "#" + slug);
+        }
     }
 
     function transitionToRoller() {
@@ -621,6 +637,8 @@ const projects = getProjects(lang);
         isDetailView = false;
         section?.classList.remove("detail-active");
         document.getElementById("slide-dots")?.classList.remove("hidden");
+        // Clear URL hash
+        history.replaceState(null, "", location.pathname);
     }
 
     // ── Event listeners ──────────────────────────────────
@@ -673,6 +691,20 @@ const projects = getProjects(lang);
         if (e.key === "Escape" && isDetailView) { e.preventDefault(); transitionToRoller(); }
     });
 
+    // Browser back/forward: close detail if hash no longer matches
+    window.addEventListener("popstate", () => {
+        const hash = location.hash.replace(/^#/, "");
+        if (isDetailView && !(hash in slugToIndex)) {
+            transitionToRoller();
+        } else if (!isDetailView && hash in slugToIndex) {
+            const idx = slugToIndex[hash];
+            targetIdx = idx;
+            animateTo(idx, 300);
+            // Open detail after animation
+            setTimeout(() => transitionToDetail(), 350);
+        }
+    });
+
     // ── Auto-spin on enter, reset on leave ─────────────
     const PROJECTS_SLIDE_INDEX = 1;
     let hasAutoSpun = false;
@@ -713,7 +745,16 @@ const projects = getProjects(lang);
         if (idx === PROJECTS_SLIDE_INDEX) {
             if (!isOnProjectsSlide) {
                 isOnProjectsSlide = true;
-                if (!hasAutoSpun) {
+
+                // Deep link: if hash matches a project slug, navigate directly
+                const hash = location.hash.replace(/^#/, "");
+                if (hash && hash in slugToIndex) {
+                    hasAutoSpun = true; // skip auto-spin
+                    const target = slugToIndex[hash];
+                    targetIdx = target;
+                    animateTo(target, 300);
+                    setTimeout(() => transitionToDetail(), 350);
+                } else if (!hasAutoSpun) {
                     hasAutoSpun = true;
                     autoSpin();
                 }

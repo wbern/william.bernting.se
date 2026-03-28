@@ -171,6 +171,13 @@ const t = useTranslations(lang);
             [WheelControls]
         );
 
+        // Deep link: if URL has a hash, navigate to projects slide
+        if (location.hash) {
+            requestAnimationFrame(() => {
+                slider.moveToIdx(1);
+            });
+        }
+
         // Dot click navigation
         document.querySelectorAll(".slide-dot").forEach((dot) => {
             dot.addEventListener("click", () => {
