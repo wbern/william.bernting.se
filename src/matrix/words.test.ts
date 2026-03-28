@@ -11,6 +11,7 @@ describe("createWordEvent", () => {
     const event = createWordEvent("HELLO", 5, 10, 3000);
 
     expect(event.word).toBe("HELLO");
+    expect(event.chars).toEqual(["H", "E", "L", "L", "O"]);
     expect(event.row).toBe(5);
     expect(event.colStart).toBe(10);
     expect(event.triggerTime).toBe(3000);

@@ -62,6 +62,8 @@ const greetingLen = greeting.length;
         z-index: 0;
         opacity: 0;
         animation: canvasFadeIn 1.5s ease 1.8s forwards;
+        will-change: transform;
+        contain: strict;
     }
 
     @keyframes canvasFadeIn {
@@ -194,9 +196,17 @@ const greetingLen = greeting.length;
 <script>
     import { createGrid } from "../matrix/grid";
     import { createColumns, tickColumn } from "../matrix/rain";
-    import { lerpRainColor } from "../matrix/color";
     import { tickWordEvent, type WordEvent } from "../matrix/words";
     import { createScheduler } from "../matrix/scheduler";
+    import {
+        createSpriteSheet,
+        toImageBitmap,
+        quantizeBrightness,
+        quantizeColorProgress,
+        rainRow,
+        headRow,
+        type SpriteSheet,
+    } from "../matrix/sprites";
 
     const canvas = document.getElementById("matrix-rain") as HTMLCanvasElement | null;
     if (canvas && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -211,14 +221,19 @@ const greetingLen = greeting.length;
             // Load traits from data attribute
             const traits: string[] = JSON.parse(canvas.dataset.traits || "[]");
 
+            // Build sprite sheet after fonts are ready, then convert to GPU-resident ImageBitmap
+            let sprites: SpriteSheet | null = null;
+            document.fonts.ready.then(async () => {
+                const sheet = createSpriteSheet(FONT_SIZE, traits);
+                sprites = await toImageBitmap(sheet);
+            });
+
             function resize() {
                 const dpr = window.devicePixelRatio || 1;
                 const rect = canvas!.getBoundingClientRect();
                 canvas!.width = rect.width * dpr;
                 canvas!.height = rect.height * dpr;
                 ctx!.scale(dpr, dpr);
-                ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
-                ctx!.textBaseline = "top";
             }
 
             resize();
@@ -243,7 +258,7 @@ const greetingLen = greeting.length;
                     grid = createGrid(canvasWidth, canvasHeight, FONT_SIZE);
                     columns = createColumns(grid.cols, grid.rows);
                     scheduler = createScheduler(traits, grid.cols, grid.rows);
-                    wordEvents = [];
+                    wordEvents.length = 0;
                     nextWordTime = 0;
                 }, 150);
             });
@@ -296,21 +311,26 @@ const greetingLen = greeting.length;
                 }
 
                 // Tick word events
-                for (const event of wordEvents) {
-                    tickWordEvent(event, timestamp, columns);
+                for (let i = 0; i < wordEvents.length; i++) {
+                    tickWordEvent(wordEvents[i], timestamp, columns);
                 }
 
-                // Clean up completed word events
-                wordEvents = wordEvents.filter((e) => e.state !== "done");
+                // Clean up completed word events (in-place, no allocation)
+                for (let i = wordEvents.length - 1; i >= 0; i--) {
+                    if (wordEvents[i].state === "done") wordEvents.splice(i, 1);
+                }
 
                 // Clear with solid black
                 ctx!.fillStyle = "#0a0a0f";
                 ctx!.fillRect(0, 0, canvasWidth, canvasHeight);
 
                 // Tick and render each column
+                const sp = sprites;
                 for (let c = 0; c < columns.length; c++) {
                     const col = columns[c];
                     tickColumn(col, dt);
+
+                    const headY = (col.headY | 0);
 
                     for (let r = 0; r < col.cells.length; r++) {
                         const cell = col.cells[r];
@@ -318,15 +338,37 @@ const greetingLen = greeting.length;
 
                         const x = (c * FONT_SIZE) | 0;
                         const y = (r * FONT_SIZE) | 0;
+                        const isHead = r === headY && !cell.locked;
 
-                        // Head cell is slightly brighter/whiter
-                        const headRow = Math.floor(col.headY);
-                        if (r === headRow && !cell.locked) {
-                            ctx!.fillStyle = `rgba(180, 255, 180, ${cell.brightness})`;
-                        } else {
-                            ctx!.fillStyle = lerpRainColor(cell.colorProgress, cell.brightness);
+                        // Fast path: use pre-rendered sprite sheet (ImageBitmap)
+                        if (sp) {
+                            const ci = sp.charIndex.get(cell.char);
+                            if (ci !== undefined) {
+                                const bIdx = quantizeBrightness(cell.brightness);
+                                const row = isHead
+                                    ? headRow(bIdx)
+                                    : rainRow(bIdx, quantizeColorProgress(cell.colorProgress));
+                                ctx!.drawImage(
+                                    sp.source,
+                                    ci * FONT_SIZE, row * FONT_SIZE, FONT_SIZE, FONT_SIZE,
+                                    x, y, FONT_SIZE, FONT_SIZE,
+                                );
+                                continue;
+                            }
                         }
 
+                        // Fallback: direct fillText (before sprites load or for unknown chars)
+                        if (isHead) {
+                            ctx!.fillStyle = `rgba(180, 255, 180, ${cell.brightness})`;
+                        } else {
+                            const hue = (120 + 160 * cell.colorProgress) | 0;
+                            const lightness = (50 + 10 * cell.colorProgress) | 0;
+                            ctx!.fillStyle = cell.brightness >= 1
+                                ? `hsl(${hue}, 100%, ${lightness}%)`
+                                : `hsla(${hue}, 100%, ${lightness}%, ${cell.brightness})`;
+                        }
+                        ctx!.font = `${FONT_SIZE}px 'JetBrains Mono', monospace`;
+                        ctx!.textBaseline = "top";
                         ctx!.fillText(cell.char, x, y);
                     }
                 }
