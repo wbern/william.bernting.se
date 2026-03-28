@@ -26,3 +26,11 @@ pnpm-debug.log*
 # test artifacts
 test-results/
 playwright-report/
+
+# Gas Town (added by gt)
+.runtime/
+.claude/
+.logs/
+__pycache__/
+state.json
+CLAUDE.md
