@@ -162,11 +162,6 @@ body {
     transform: translateY(-2px);
 }
 
-.pdf-btn:hover .pdf-btn-text::after {
-    content: ' ...fine.';
-    color: var(--text-muted);
-}
-
 .pdf-btn svg {
     width: 16px;
     height: 16px;

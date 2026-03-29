@@ -296,4 +296,13 @@ const decorLinesBottom = [
             </div>
         </div>
     </div>
+<script>
+    // Auto-print when redirected from the startpage with ?print=1
+    if (new URLSearchParams(location.search).has("print")) {
+        // Clean up URL so a refresh doesn't re-trigger print
+        history.replaceState(null, "", location.pathname);
+        // Wait for layout to finish rendering before triggering print
+        requestAnimationFrame(() => window.print());
+    }
+</script>
 </CvLayout>

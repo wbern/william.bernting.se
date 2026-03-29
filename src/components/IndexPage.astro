@@ -233,4 +233,23 @@ const t = useTranslations(lang);
             }
         });
     }
+
+    // Redirect print to the CV page (which has proper print styles)
+    const cvPath = document.querySelector<HTMLAnchorElement>(".pdf-btn")?.href;
+    if (cvPath) {
+        const cvPrintUrl = cvPath + "?print=1";
+
+        // Intercept Ctrl+P / Cmd+P
+        document.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+                e.preventDefault();
+                window.location.href = cvPrintUrl;
+            }
+        });
+
+        // Fallback for File > Print menu
+        window.addEventListener("beforeprint", () => {
+            window.location.href = cvPrintUrl;
+        });
+    }
 </script>
