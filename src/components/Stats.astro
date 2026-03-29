@@ -14,20 +14,24 @@ const t = useTranslations(lang);
 
     <div class="stats-grid">
         <div class="stat reveal reveal-delay-1">
-            <div class="stat-number">47</div>
+            <div class="stat-number">{t("stats.prototypes.value")}</div>
             <div class="stat-label">{t("stats.prototypes")}</div>
         </div>
         <div class="stat reveal reveal-delay-2">
-            <div class="stat-number">5k</div>
+            <div class="stat-number">{t("stats.users.value")}</div>
             <div class="stat-label">{t("stats.users")}</div>
         </div>
         <div class="stat reveal reveal-delay-3">
-            <div class="stat-number">14</div>
+            <div class="stat-number">{t("stats.teams.value")}</div>
             <div class="stat-label">{t("stats.teams")}</div>
         </div>
         <div class="stat reveal reveal-delay-4">
-            <div class="stat-number">15y</div>
+            <div class="stat-number">{t("stats.experience.value")}</div>
             <div class="stat-label">{t("stats.experience")}</div>
+        </div>
+        <div class="stat reveal reveal-delay-4">
+            <div class="stat-number">{t("stats.coderate.value")}</div>
+            <div class="stat-label">{t("stats.coderate")}</div>
         </div>
     </div>
 </div>
@@ -61,10 +65,12 @@ const t = useTranslations(lang);
 
     @media (max-width: 600px) {
         .stats-grid { grid-template-columns: 1fr 1fr; }
+        .stat:last-child { display: none; }
+        .stat-number { font-size: clamp(32px, 8vw, 48px); }
     }
 
     @media print {
-        .stats-grid { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .stats-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
         .stat { padding: 4px 4px; }
         .stat-number { font-size: 22px; margin-bottom: 1px; }
         .stat-label { font-size: 8px; }
