@@ -152,20 +152,38 @@ const skills = [
         fill: string;
         stroke: string;
         glow: string;
-        emoji: string;
+        highlight: string;
+        skills: string[];
     }
 
     const TIERS: TierDef[] = [
-        { radius: 18, fill: '#4a0018', stroke: '#ff3366', glow: 'rgba(255,51,102,0.4)', emoji: '🍒' },
-        { radius: 24, fill: '#4a2200', stroke: '#ff6600', glow: 'rgba(255,102,0,0.4)', emoji: '🍇' },
-        { radius: 32, fill: '#4a4000', stroke: '#ffcc00', glow: 'rgba(255,204,0,0.4)', emoji: '🍎' },
-        { radius: 40, fill: '#004a22', stroke: '#00ff88', glow: 'rgba(0,255,136,0.4)', emoji: '🍐' },
-        { radius: 50, fill: '#003a4a', stroke: '#00ccff', glow: 'rgba(0,204,255,0.4)', emoji: '🍊' },
-        { radius: 62, fill: '#2a0050', stroke: '#9b4dca', glow: 'rgba(155,77,202,0.4)', emoji: '🍈' },
-        { radius: 76, fill: '#4a004a', stroke: '#ff00ff', glow: 'rgba(255,0,255,0.4)', emoji: '🍉' },
+        { radius: 18, fill: '#cc1133', stroke: '#ff3366', glow: 'rgba(255,51,102,0.4)',
+          highlight: '#ff6688', skills: ['C#', 'Vue', 'Angular'] },
+        { radius: 24, fill: '#7733aa', stroke: '#aa66dd', glow: 'rgba(170,102,221,0.4)',
+          highlight: '#cc99ff', skills: ['Node.js', 'React', 'Next.js'] },
+        { radius: 32, fill: '#cc2222', stroke: '#ff4444', glow: 'rgba(255,68,68,0.4)',
+          highlight: '#ff8888', skills: ['TypeScript', 'DevOps / CI/CD'] },
+        { radius: 40, fill: '#88aa22', stroke: '#bbdd44', glow: 'rgba(187,221,68,0.4)',
+          highlight: '#ddee88', skills: ['AWS / Azure', 'Servant Leadership'] },
+        { radius: 50, fill: '#dd8800', stroke: '#ffaa22', glow: 'rgba(255,170,34,0.4)',
+          highlight: '#ffcc66', skills: ['Agentic AI', 'Claude / LLMs', 'Test-Driven Development'] },
+        { radius: 62, fill: '#228844', stroke: '#44cc77', glow: 'rgba(68,204,119,0.4)',
+          highlight: '#88eebb', skills: ['Agentic AI', 'Claude / LLMs'] },
+        { radius: 76, fill: '#226633', stroke: '#44aa66', glow: 'rgba(68,170,102,0.4)',
+          highlight: '#88cc99', skills: ['Agentic AI', 'Test-Driven Development'] },
     ];
 
     const MAX_SPAWN_TIER = 4; // tiers 0-4 are spawnable
+
+    // ─── Static skill-to-tier mapping ───
+    // Each tier cycles through its skill pool
+    const tierSpawnIdx: number[] = TIERS.map(() => 0);
+    function skillForTier(tier: number): string {
+        const pool = TIERS[tier].skills;
+        const label = pool[tierSpawnIdx[tier] % pool.length];
+        tierSpawnIdx[tier]++;
+        return label;
+    }
 
     // ─── Physics constants ───
     const GRAVITY   = 600;
@@ -230,7 +248,6 @@ const skills = [
     const fruits: Fruit[] = [];
     const particles: Particle[] = [];
     let bowl: Bowl = {} as Bowl;
-    let spawnIdx = 0;
     let animId: number | null = null;
     let running = false;
     let W = 0, H = 0;
@@ -253,9 +270,7 @@ const skills = [
     let prevMouseX = 0, prevMouseY = 0;
     let mouseVX = 0, mouseVY = 0;
 
-    function randomSkillLabel(): string {
-        return skillsData[spawnIdx++ % skillsData.length].label;
-    }
+    // randomSkillLabel no longer used — skills are assigned per-tier via skillForTier()
 
     function fontForTier(tier: number): string {
         if (tier <= 1) return FONT_SM;
@@ -273,11 +288,11 @@ const skills = [
         canvas.style.height = H + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // Compute bowl geometry
+        // Compute bowl geometry — taller and higher on desktop
         const bw = Math.min(480, W - 80);
-        const bh = Math.min(400, H * 0.55);
+        const bh = Math.min(460, H * 0.62);
         const bx = (W - bw) / 2;
-        const by = H - bh - 30; // 30px from bottom
+        const by = H - bh - 60; // more breathing room from bottom
         const wallT = 4;
         const corner = 20;
 
@@ -330,7 +345,7 @@ const skills = [
         const aliveCount = fruits.filter(f => f.alive && !f.merging).length;
         if (aliveCount >= MAX_FRUITS) return;
         const tier = Math.floor(Math.random() * (MAX_SPAWN_TIER + 1));
-        const label = randomSkillLabel();
+        const label = skillForTier(tier);
         const margin = TIERS[tier].radius + 20;
         const dropX = bowl.x + margin + Math.random() * (bowl.w - margin * 2);
         const f = createFruit(dropX, bowl.y - TIERS[tier].radius - 10, tier, label);
@@ -354,7 +369,7 @@ const skills = [
 
     function prepareNextDrop() {
         previewTier = Math.floor(Math.random() * (MAX_SPAWN_TIER + 1));
-        previewLabel = randomSkillLabel();
+        previewLabel = skillForTier(previewTier);
         nextDropReady = true;
     }
 
@@ -688,7 +703,7 @@ const skills = [
 
                         // Schedule spawn of merged fruit
                         const newTier = a.tier + 1;
-                        const newLabel = Math.random() < 0.5 ? a.label : b.label;
+                        const newLabel = skillForTier(newTier);
                         const strokeColor = TIERS[newTier].stroke;
 
                         setTimeout(() => {
@@ -776,62 +791,249 @@ const skills = [
         ctx.restore();
     }
 
-    // ─── Draw a fruit ───
-    function drawFruit(f: Fruit) {
+    // ─── Draw fruit shapes ───
+    function drawFruitShape(x: number, y: number, r: number, tier: number, alpha: number) {
+        const t = TIERS[tier];
         ctx.save();
-        ctx.globalAlpha = f.opacity;
+        ctx.globalAlpha = alpha;
 
-        const t = TIERS[f.tier];
-        const r = f.radius * f.scaleAnim;
+        // Clip to circle for all internal drawing
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.closePath();
 
         // Glow
         ctx.shadowColor = t.glow;
         ctx.shadowBlur = 15;
-
-        // Fill
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
         ctx.fillStyle = t.fill;
         ctx.fill();
-
-        // Neon stroke
-        ctx.strokeStyle = t.stroke;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
         ctx.shadowBlur = 0;
 
-        // Subtle fruit emoji silhouette (low opacity behind text)
-        ctx.globalAlpha = f.opacity * 0.15;
-        ctx.font = `${r * 1.1}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(t.emoji, f.x, f.y);
+        // Fruit-specific details
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
 
-        // Skill label
+        if (tier === 0) {
+            // Cherry: glossy highlight, paired cherry impression
+            const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.5, t.fill);
+            grad.addColorStop(1, '#660011');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Highlight spot
+            ctx.beginPath();
+            ctx.arc(x - r * 0.25, y - r * 0.25, r * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fill();
+        } else if (tier === 1) {
+            // Grape: cluster of small bumps
+            const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.6, t.fill);
+            grad.addColorStop(1, '#331155');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Small grape bumps
+            ctx.globalAlpha = alpha * 0.2;
+            const bumpR = r * 0.35;
+            const offsets = [[-0.3, -0.4], [0.3, -0.35], [-0.15, 0.1], [0.2, 0.15], [0, -0.15], [-0.3, 0.4], [0.3, 0.35]];
+            for (const [ox, oy] of offsets) {
+                ctx.beginPath();
+                ctx.arc(x + r * ox, y + r * oy, bumpR, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(200,150,255,0.25)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        } else if (tier === 2) {
+            // Apple: glossy red with slight indent at top
+            const grad = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.5, t.fill);
+            grad.addColorStop(1, '#771111');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Top indent shadow
+            ctx.beginPath();
+            ctx.ellipse(x, y - r * 0.75, r * 0.3, r * 0.15, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
+            // Highlight
+            ctx.beginPath();
+            ctx.arc(x - r * 0.2, y - r * 0.2, r * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fill();
+        } else if (tier === 3) {
+            // Pear: yellow-green gradient, wider at bottom
+            const grad = ctx.createRadialGradient(x - r * 0.15, y - r * 0.3, r * 0.2, x, y + r * 0.1, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.5, t.fill);
+            grad.addColorStop(1, '#445500');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Pear narrowing at top — darker overlay on upper part
+            ctx.beginPath();
+            ctx.ellipse(x, y - r * 0.45, r * 0.55, r * 0.45, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fill();
+            // Highlight
+            ctx.beginPath();
+            ctx.arc(x - r * 0.15, y - r * 0.1, r * 0.22, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fill();
+        } else if (tier === 4) {
+            // Orange: textured orange with dimpled surface
+            const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, r * 0.1, x, y, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.5, t.fill);
+            grad.addColorStop(1, '#994400');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Dimple texture
+            ctx.globalAlpha = alpha * 0.08;
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                const dist = r * (0.3 + Math.random() * 0.4);
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, r * 0.06, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+            }
+            ctx.globalAlpha = alpha;
+            // Navel
+            ctx.beginPath();
+            ctx.arc(x + r * 0.1, y + r * 0.6, r * 0.08, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fill();
+        } else if (tier === 5) {
+            // Melon: green with darker stripe arcs
+            const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+            grad.addColorStop(0, t.highlight);
+            grad.addColorStop(0.5, t.fill);
+            grad.addColorStop(1, '#0a4422');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Stripes
+            ctx.strokeStyle = 'rgba(0,80,30,0.35)';
+            ctx.lineWidth = r * 0.08;
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 6) * i;
+                ctx.beginPath();
+                ctx.arc(x, y, r * 0.7, angle - 0.15, angle + Math.PI + 0.15);
+                ctx.stroke();
+            }
+        } else if (tier === 6) {
+            // Watermelon: dark green rind, pink interior
+            // Rind ring
+            const grad = ctx.createRadialGradient(x, y, r * 0.7, x, y, r);
+            grad.addColorStop(0, '#ff5577');
+            grad.addColorStop(0.75, '#ff3355');
+            grad.addColorStop(0.82, '#ffffff');
+            grad.addColorStop(0.85, '#44aa66');
+            grad.addColorStop(1, '#226633');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            // Seeds
+            ctx.fillStyle = '#331111';
+            const seedCount = 8;
+            for (let i = 0; i < seedCount; i++) {
+                const angle = (Math.PI * 2 / seedCount) * i + 0.3;
+                const dist = r * 0.4;
+                ctx.save();
+                ctx.translate(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist);
+                ctx.rotate(angle + Math.PI / 2);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, r * 0.04, r * 0.07, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        ctx.restore(); // un-clip
+
+        // Neon stroke on top
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = t.stroke;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = t.glow;
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Stem/leaf for tiers 0-4
+        if (tier <= 4) {
+            ctx.beginPath();
+            ctx.moveTo(x, y - r);
+            ctx.quadraticCurveTo(x + r * 0.15, y - r - r * 0.3, x + r * 0.05, y - r - r * 0.2);
+            ctx.strokeStyle = '#5a3a1a';
+            ctx.lineWidth = Math.max(1.5, r * 0.06);
+            ctx.stroke();
+            // Tiny leaf
+            ctx.beginPath();
+            ctx.ellipse(x + r * 0.15, y - r - r * 0.15, r * 0.12, r * 0.06, 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#44aa44';
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    // ─── Draw a fruit with label ───
+    function drawFruit(f: Fruit) {
+        ctx.save();
+        ctx.globalAlpha = f.opacity;
+
+        const r = f.radius * f.scaleAnim;
+
+        // Draw the fruit shape
+        drawFruitShape(f.x, f.y, r, f.tier, f.opacity);
+
+        // Skill label with dark backdrop for readability
         ctx.globalAlpha = f.opacity;
         ctx.font = fontForTier(f.tier);
-        ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Word-wrap for small circles
         const maxWidth = r * 1.6;
         const label = f.label;
         const words = label.split(/\s+/);
 
+        let lines: string[];
         if (f.tier <= 1 && words.length > 1) {
-            // Try to split into two lines
-            const lineHeight = f.tier === 0 ? 11 : 13;
-            let line1 = '';
-            let line2 = '';
             const mid = Math.ceil(words.length / 2);
-            line1 = words.slice(0, mid).join(' ');
-            line2 = words.slice(mid).join(' ');
-            ctx.fillText(line1, f.x, f.y - lineHeight / 2, maxWidth);
-            ctx.fillText(line2, f.x, f.y + lineHeight / 2, maxWidth);
+            lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
         } else {
-            ctx.fillText(label, f.x, f.y, maxWidth);
+            lines = [label];
+        }
+
+        const lineHeight = f.tier <= 1 ? (f.tier === 0 ? 11 : 13) : 15;
+        const totalH = lines.length * lineHeight;
+        const startY = f.y - totalH / 2 + lineHeight / 2;
+
+        // Dark rounded backdrop behind text
+        const textMetrics = lines.map(l => ctx.measureText(l).width);
+        const maxTextW = Math.min(Math.max(...textMetrics) + 8, maxWidth + 8);
+        const padY = 3;
+        ctx.globalAlpha = f.opacity * 0.55;
+        ctx.fillStyle = '#000000';
+        const bgH = totalH + padY * 2;
+        const bgY = f.y - bgH / 2;
+        const bgR = Math.min(6, bgH / 2);
+        ctx.beginPath();
+        ctx.roundRect(f.x - maxTextW / 2, bgY, maxTextW, bgH, bgR);
+        ctx.fill();
+
+        // Text
+        ctx.globalAlpha = f.opacity;
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], f.x, startY + i * lineHeight, maxWidth);
         }
 
         ctx.restore();
@@ -841,12 +1043,12 @@ const skills = [
     function drawPreview() {
         if (previewX === null || !nextDropReady) return;
         ctx.save();
-        ctx.globalAlpha = 0.35;
 
         const t = TIERS[previewTier];
         const py = bowl.y - t.radius - 15;
 
         // Dashed drop line
+        ctx.globalAlpha = 0.25;
         ctx.setLineDash([4, 6]);
         ctx.strokeStyle = t.stroke;
         ctx.lineWidth = 1;
@@ -856,20 +1058,11 @@ const skills = [
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Ghost fruit
-        ctx.shadowColor = t.glow;
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(previewX, py, t.radius, 0, Math.PI * 2);
-        ctx.fillStyle = t.fill;
-        ctx.fill();
-        ctx.strokeStyle = t.stroke;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        // Ghost fruit shape
+        drawFruitShape(previewX, py, t.radius, previewTier, 0.3);
 
         // Label
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.4;
         ctx.font = fontForTier(previewTier);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
@@ -909,12 +1102,29 @@ const skills = [
         running = true;
         fruits.length = 0;
         particles.length = 0;
-        spawnIdx = 0;
         lastAutoDrop = 0;
         ageCounter = 0;
+        tierSpawnIdx.fill(0);
         userControlActive = false;
         prepareNextDrop();
         resize();
+
+        // Pre-populate bowl with a few fruits so it's not empty at start
+        const initialFruits = [
+            { tier: 0, xOff: -0.25 },
+            { tier: 1, xOff: 0.15 },
+            { tier: 2, xOff: -0.10 },
+            { tier: 0, xOff: 0.30 },
+            { tier: 3, xOff: -0.05 },
+        ];
+        for (const { tier, xOff } of initialFruits) {
+            const fx = bowl.cx + xOff * bowl.w;
+            const fy = bowl.y - TIERS[tier].radius - 20 - Math.random() * 30;
+            const f = createFruit(fx, fy, tier, skillForTier(tier));
+            f.vy = 40 + Math.random() * 30;
+            f.vx = (Math.random() - 0.5) * 40;
+            fruits.push(f);
+        }
 
         let prev = performance.now();
 
