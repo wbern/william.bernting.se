@@ -48,6 +48,17 @@ const t = useTranslations(lang);
     // Mac trackpads produce inertia tails with decaying deltas after a flick.
     // Strategy: lock after triggering, stay locked while deltas decay (inertia),
     // but unlock immediately if a fresh high-delta gesture breaks the pattern.
+    // Global flag: freeze all slide navigation when project detail is open
+    let sliderFrozen = false;
+    let sliderInstance: any = null;
+    document.addEventListener("detail-view-toggle", ((e: CustomEvent) => {
+        sliderFrozen = e.detail.active;
+        // Disable keen-slider's built-in touch drag
+        if (sliderInstance) {
+            sliderInstance.update({ ...sliderInstance.options, drag: !sliderFrozen });
+        }
+    }) as EventListener);
+
     function WheelControls(slider: any) {
         let locked = false;
         let unlockTimer: ReturnType<typeof setTimeout> | null = null;
@@ -89,6 +100,8 @@ const t = useTranslations(lang);
             slider.container.addEventListener(
                 "wheel",
                 (e: WheelEvent) => {
+                    if (sliderFrozen) return;
+
                     const slide = currentSlideEl();
                     const canScroll = slide && anyAncestorCanScroll(e.target as HTMLElement, slide, e.deltaY);
                     if (canScroll) {
@@ -175,7 +188,7 @@ const t = useTranslations(lang);
     // Initialize slider
     const sliderEl = document.getElementById("slider");
     if (sliderEl) {
-        const slider = new KeenSlider(
+        const slider = sliderInstance = new KeenSlider(
             sliderEl,
             {
                 vertical: true,
@@ -218,6 +231,7 @@ const t = useTranslations(lang);
         let lastKeySlideTime = 0;
         const KEY_COOLDOWN_MS = 600;
         document.addEventListener("keydown", (e) => {
+            if (sliderFrozen) return;
             if (e.key === "ArrowDown" || e.key === "PageDown") {
                 e.preventDefault();
                 const now = performance.now();
