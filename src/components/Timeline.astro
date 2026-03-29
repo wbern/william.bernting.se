@@ -231,7 +231,7 @@ const blocks = [...jobs].reverse();
          * Y=0 is "at rest in stack". Y<0 is "above rest".
          */
 
-        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events } = Matter;
+        const { Engine, Composite, Bodies, Mouse, MouseConstraint, Events } = Matter;
 
         const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
         const DT_CAP     = 0.05;
@@ -276,6 +276,7 @@ const blocks = [...jobs].reverse();
         let engine: Matter.Engine | null = null;
         let mConstraint: Matter.MouseConstraint | null = null;
         let mMouse: Matter.Mouse | null = null;
+        let walls: Matter.Body[] = [];
         let freed = false;
 
         interface S {
@@ -412,10 +413,12 @@ const blocks = [...jobs].reverse();
                 mMouse = null;
             }
             mConstraint = null;
+            walls = [];
             if (engine) {
                 Engine.clear(engine);
                 engine = null;
             }
+            window.removeEventListener('resize', updateWalls);
             stage.removeEventListener('touchmove', preventDefaultOnDrag);
 
             els.forEach(el => {
@@ -473,18 +476,12 @@ const blocks = [...jobs].reverse();
             }
 
             // 3) Create Matter.js engine and world
-            engine = Engine.create({
-                enableSleeping: true,
-                gravity: { x: 0, y: 1, scale: 0.001 },
-            });
+            engine = Engine.create({ enableSleeping: true });
 
             // 4) Create static walls (floor, left, right, ceiling)
-            const floor   = Bodies.rectangle(stageW / 2, stageH + WALL_THICKNESS / 2, stageW + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true });
-            const ceiling  = Bodies.rectangle(stageW / 2, -WALL_THICKNESS / 2, stageW + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true });
-            const leftWall = Bodies.rectangle(-WALL_THICKNESS / 2, stageH / 2, WALL_THICKNESS, stageH + WALL_THICKNESS * 2, { isStatic: true });
-            const rightWall = Bodies.rectangle(stageW + WALL_THICKNESS / 2, stageH / 2, WALL_THICKNESS, stageH + WALL_THICKNESS * 2, { isStatic: true });
-
-            Composite.add(engine.world, [floor, ceiling, leftWall, rightWall]);
+            walls = createWalls(stageW, stageH);
+            Composite.add(engine.world, walls);
+            window.addEventListener('resize', updateWalls);
 
             // 5) Create a Matter body for each freed block
             for (const { s } of snapshots) {
@@ -514,11 +511,8 @@ const blocks = [...jobs].reverse();
             });
             Composite.add(engine.world, mConstraint);
 
-            // Wake body when drag starts
-            Events.on(mConstraint, 'startdrag', (e: any) => {
-                Body.setStatic(e.body, false);
-                (e.body as any).isSleeping = false;
-            });
+            // Restart sync loop when user grabs a sleeping body
+            Events.on(mConstraint, 'startdrag', () => ensureSyncRunning());
 
             // Prevent default scroll/zoom on stage during drag
             stage.addEventListener('touchmove', preventDefaultOnDrag, { passive: false });
@@ -527,8 +521,26 @@ const blocks = [...jobs].reverse();
             startSyncLoop();
         }
 
+        function createWalls(w: number, h: number): Matter.Body[] {
+            return [
+                Bodies.rectangle(w / 2, h + WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true }),       // floor
+                Bodies.rectangle(w / 2, -WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true }),            // ceiling
+                Bodies.rectangle(-WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, { isStatic: true }),            // left
+                Bodies.rectangle(w + WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, { isStatic: true }),         // right
+            ];
+        }
+
+        function updateWalls() {
+            if (!engine) return;
+            const stageW = stage.offsetWidth;
+            const stageH = stage.offsetHeight;
+            Composite.remove(engine.world, walls);
+            walls = createWalls(stageW, stageH);
+            Composite.add(engine.world, walls);
+        }
+
         function preventDefaultOnDrag(e: TouchEvent) {
-            if (mConstraint && (mConstraint as any).body) {
+            if (mConstraint && mConstraint.body) {
                 e.preventDefault();
             }
         }
@@ -541,24 +553,39 @@ const blocks = [...jobs].reverse();
                 if (!engine) return;
                 Engine.update(engine, 1000 / 60);
 
+                let allSleeping = true;
                 for (const s of st) {
                     if (s.phase !== 'freed' || !s.body) continue;
+                    if (!s.body.isSleeping) allSleeping = false;
                     s.x = s.body.position.x - s.w / 2;
                     s.y = s.body.position.y - s.h / 2;
                     s.r = s.body.angle * (180 / Math.PI);
                     tx(s);
                 }
 
+                if (allSleeping && !mConstraint?.body) {
+                    // All bodies settled and no drag active — pause the loop.
+                    // MouseConstraint's internal event listeners will still fire;
+                    // we restart the loop on the next drag via 'startdrag'.
+                    animId = null;
+                    return;
+                }
                 animId = requestAnimationFrame(syncDOM);
             }
             animId = requestAnimationFrame(syncDOM);
         }
 
-        // Interaction: click/tap any settled block to free all and enter Matter.js mode
+        /** Resume the sync loop if it was paused due to all bodies sleeping */
+        function ensureSyncRunning() {
+            if (animId !== null || !engine) return;
+            startSyncLoop();
+        }
+
+        // Interaction: click/tap any settled block to free all and enter Matter.js mode.
+        // Don't stopPropagation — MouseConstraint needs to see this event on the stage.
         els.forEach((blockEl) => {
-            blockEl.addEventListener('pointerdown', (e) => {
+            blockEl.addEventListener('pointerdown', () => {
                 if (!blockEl.classList.contains('settled') && !blockEl.classList.contains('freed')) return;
-                e.stopPropagation();
                 freeAllBlocks();
             });
         });
