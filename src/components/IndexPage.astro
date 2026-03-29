@@ -60,7 +60,7 @@ const t = useTranslations(lang);
             return slider.slides[idx] ?? null;
         }
 
-        function slideCanScroll(el: HTMLElement, deltaY: number): boolean {
+        function elementCanScroll(el: HTMLElement, deltaY: number): boolean {
             const tolerance = 1;
             if (deltaY > 0) {
                 return el.scrollTop + el.clientHeight < el.scrollHeight - tolerance;
@@ -68,12 +68,25 @@ const t = useTranslations(lang);
             return el.scrollTop > tolerance;
         }
 
+        /** Walk from event target up to slide, checking for any scrollable ancestor. */
+        function anyAncestorCanScroll(target: HTMLElement, slide: HTMLElement, deltaY: number): boolean {
+            let node: HTMLElement | null = target;
+            while (node && node !== slider.container) {
+                const ov = getComputedStyle(node).overflowY;
+                if ((ov === "auto" || ov === "scroll") && elementCanScroll(node, deltaY)) {
+                    return true;
+                }
+                node = node.parentElement as HTMLElement | null;
+            }
+            return false;
+        }
+
         slider.on("created", () => {
             slider.container.addEventListener(
                 "wheel",
                 (e: WheelEvent) => {
                     const slide = currentSlideEl();
-                    if (slide && slideCanScroll(slide, e.deltaY)) {
+                    if (slide && anyAncestorCanScroll(e.target as HTMLElement, slide, e.deltaY)) {
                         recentDelta = 0;
                         locked = false;
                         return;
