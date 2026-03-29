@@ -175,7 +175,7 @@ body {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
-    #slider > .keen-slider__slide { padding: 40px 36px 40px 20px; }
+    #slider > .keen-slider__slide { padding: 40px 16px; }
     .slide-dots { right: 8px; gap: 8px; }
     .slide-dot { width: 8px; height: 8px; }
 }
