@@ -27,6 +27,13 @@ const greetingLen = greeting.length;
             style={`--greeting-width: ${greetingLen}ch; animation: typewriter 1s steps(${greetingLen}) 0.5s forwards, blink 0.7s step-end infinite, greetingFade 0.8s ease 1.8s forwards;`}
         >{greeting}</div>
         <h1>William Bernting</h1>
+        <div class="hero-contact">
+            <a href="https://www.linkedin.com/in/williambernting" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </a>
+            <a href="mailto:william@bernting.se">william@bernting.se</a>
+            <a href="tel:+46706676047">+46 706 67 60 47</a>
+        </div>
     </div>
 
     <div class="hero-marquee-wrap hero-marquee-bottom">
@@ -110,6 +117,34 @@ const greetingLen = greeting.length;
         animation: fadeUp 1s ease 1.8s forwards;
     }
 
+    .hero-contact {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 16px;
+        font-family: var(--mono);
+        font-size: 12px;
+        opacity: 0;
+        animation: fadeUp 1s ease 2.8s forwards;
+    }
+
+    .hero-contact a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .hero-contact a:hover {
+        color: var(--text-dim);
+    }
+
+    .hero-contact svg {
+        width: 14px;
+        height: 14px;
+    }
+
     .hero-marquee-top {
         animation: fadeDown 1s ease 2.4s forwards;
     }
@@ -176,6 +211,9 @@ const greetingLen = greeting.length;
             display: none;
         }
         .hero-scroll-hint {
+            display: none;
+        }
+        .hero-contact {
             display: none;
         }
         .sr-only.traits-keywords {
