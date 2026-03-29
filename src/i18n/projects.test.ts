@@ -3,12 +3,12 @@ import { getProjects, projectEntries, slugify, getProjectSlugs } from "./project
 
 describe("projects", () => {
   it("has 15 projects", () => {
-    expect(projectEntries).toHaveLength(15);
+    expect(projectEntries).toHaveLength(16);
   });
 
   it("returns 15 projects for each locale", () => {
-    expect(getProjects("sv")).toHaveLength(15);
-    expect(getProjects("en")).toHaveLength(15);
+    expect(getProjects("sv")).toHaveLength(16);
+    expect(getProjects("en")).toHaveLength(16);
   });
 
   it("each entry has both sv and en", () => {
