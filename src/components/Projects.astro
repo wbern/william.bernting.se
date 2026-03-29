@@ -355,6 +355,7 @@ for (const img of photoImages) {
 
     // Match the CSS media query for --slide-h: 76px on desktop, 60px on mobile
     const SLIDE_HEIGHT = window.matchMedia("(min-width: 901px)").matches ? 76 : 60;
+    const CENTER_OFFSET = window.matchMedia("(min-height: 600px)").matches ? 1.5 : 1;
 
     // Build slide elements
     PROJECTS.forEach((p, i) => {
@@ -397,13 +398,13 @@ for (const img of photoImages) {
                 return;
             }
 
-            // Position: centre slot sits at 1 × SLIDE_HEIGHT from top of viewport
-            const y = (diff + 1) * SLIDE_HEIGHT;
+            // Position: centre slot sits at CENTER_OFFSET × SLIDE_HEIGHT from top of viewport
+            const y = (diff + CENTER_OFFSET) * SLIDE_HEIGHT;
             el.style.transform = `translateY(${y}px)`;
             el.style.pointerEvents = "auto";
 
             // Smooth opacity falloff based on distance from centre
-            el.style.opacity = String(Math.max(0, 1 - absDiff * 0.35));
+            el.style.opacity = String(Math.max(0, 1 - absDiff * 0.25));
 
             // State classes (only assign roller-selected when fully settled)
             el.classList.remove("roller-slide--selected", "roller-slide--near", "roller-slide--far");
@@ -518,7 +519,7 @@ for (const img of photoImages) {
             // Determine which slot was tapped from the pointer Y position
             const rect = viewport.getBoundingClientRect();
             const relY = e.clientY - rect.top;
-            const slotOffset = Math.floor(relY / SLIDE_HEIGHT) - 1; // -1 because center slot = current
+            const slotOffset = Math.round(relY / SLIDE_HEIGHT - CENTER_OFFSET);
             const tappedIdx = mod(currentIdx + slotOffset, N);
 
             if (tappedIdx === currentIdx) {
@@ -797,6 +798,8 @@ for (const img of photoImages) {
        No position toggling → no layout shift during transition. */
     .roller-section {
         --slide-h: 60px;
+        --visible-slots: 3;
+        --center-offset: 1;
         display: grid;
         justify-items: center;
         width: 100%;
@@ -920,7 +923,7 @@ for (const img of photoImages) {
     /* ===== Viewport ===== */
     .roller-viewport {
         width: 380px;
-        height: calc(var(--slide-h) * 3);
+        height: calc(var(--slide-h) * var(--visible-slots));
         position: relative;
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -949,7 +952,7 @@ for (const img of photoImages) {
     /* Centre highlight overlay */
     .roller-highlight {
         position: absolute;
-        top: var(--slide-h);
+        top: calc(var(--slide-h) * var(--center-offset));
         left: 0;
         right: 0;
         height: var(--slide-h);
@@ -1012,7 +1015,7 @@ for (const img of photoImages) {
     }
 
     .roller-slide--near {
-        opacity: 0.6;
+        /* opacity handled by JS inline style */
     }
 
     .roller-slide--near .roller-slide__tag {
@@ -1025,11 +1028,11 @@ for (const img of photoImages) {
     }
 
     .roller-slide--far {
-        opacity: 0.25;
+        /* opacity handled by JS inline style */
     }
 
     .roller-slide--far .roller-slide__tag {
-        opacity: 0;
+        opacity: 0.5;
     }
 
     .roller-slide--far .roller-slide__title {
@@ -1253,6 +1256,11 @@ for (const img of photoImages) {
         animation: diorama-float-slow 5s ease-in-out 0.7s infinite;
     }
 
+    /* ===== Tall viewports: show 4 roulette items ===== */
+    @media (min-height: 600px) {
+        .roller-section { --visible-slots: 4; --center-offset: 1.5; }
+    }
+
     /* ===== Desktop ===== */
     @media (min-width: 901px) {
         .roller-section { --slide-h: 76px; }
@@ -1274,7 +1282,7 @@ for (const img of photoImages) {
         .roller-viewport { width: calc(100vw - 70px); }
         .roller-slide__title { font-size: 13px; }
         .roller-slide--selected .roller-slide__title { font-size: 15px; }
-        .detail-card { padding: 24px; }
+        .detail-card { padding: 16px; }
         .detail-card h3 { font-size: 22px; }
         .detail-card p { font-size: 15px; }
         .roller-actions { gap: 8px; }
