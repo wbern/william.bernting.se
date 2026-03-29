@@ -42,6 +42,7 @@ body {
 /* ===== PAGE CONTAINER ===== */
 .page {
     width: 210mm;
+    max-width: 100%;
     min-height: 297mm;
     margin: 20px auto;
     background: #fff;
@@ -49,6 +50,23 @@ body {
     position: relative;
     overflow: hidden;
     padding: 44px 56px 36px;
+}
+
+@media screen and (max-width: 800px) {
+    .page {
+        padding: 24px 20px 24px;
+        margin: 10px auto;
+        min-height: auto;
+    }
+
+    .body-columns {
+        flex-direction: column;
+    }
+
+    .col-left,
+    .col-right {
+        width: 100%;
+    }
 }
 
 .page + .page {
