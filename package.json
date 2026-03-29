@@ -21,7 +21,8 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
     "astro": "^6.0.8",
-    "keen-slider": "^6.8.6"
+    "keen-slider": "^6.8.6",
+    "matter-js": "^0.20.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

@@ -220,6 +220,8 @@ const blocks = [...jobs].reverse();
 </style>
 
 <script>
+    import Matter from 'matter-js';
+
     (function () {
         /*
          * Spring-damper physics: F = -K * displacement - B * velocity
@@ -228,6 +230,8 @@ const blocks = [...jobs].reverse();
          * All transforms are offsets from the block's natural flex position.
          * Y=0 is "at rest in stack". Y<0 is "above rest".
          */
+
+        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events } = Matter;
 
         const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
         const DT_CAP     = 0.05;
@@ -245,6 +249,8 @@ const blocks = [...jobs].reverse();
 
         const SETTLE_VEL = 1.0;
         const SETTLE_POS = 0.5;
+
+        const WALL_THICKNESS = 60;
 
         const stage = document.querySelector<HTMLElement>('.tower-stage');
         if (!stage) return;
@@ -266,6 +272,12 @@ const blocks = [...jobs].reverse();
         let animId: number | null = null;
         let running = false;
 
+        // Matter.js state
+        let engine: Matter.Engine | null = null;
+        let mConstraint: Matter.MouseConstraint | null = null;
+        let mMouse: Matter.Mouse | null = null;
+        let freed = false;
+
         interface S {
             el: HTMLElement; i: number;
             y: number; vy: number;
@@ -273,6 +285,8 @@ const blocks = [...jobs].reverse();
             r: number; vr: number;
             phase: 'wait' | 'fall' | 'settle' | 'done' | 'freed';
             t0: number;
+            body: Matter.Body | null;
+            w: number; h: number;
         }
         const st: S[] = [];
 
@@ -289,6 +303,8 @@ const blocks = [...jobs].reverse();
                     r: 0, vr: 0,
                     phase: 'wait',
                     t0: i * STAGGER_MS,
+                    body: null,
+                    w: 0, h: 0,
                 });
             });
         }
@@ -385,7 +401,23 @@ const blocks = [...jobs].reverse();
         function reset() {
             if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
             running = false;
-            dragState = null;
+            freed = false;
+
+            // Tear down Matter.js world
+            if (mConstraint && engine) {
+                Composite.remove(engine.world, mConstraint);
+            }
+            if (mMouse) {
+                Mouse.clearSourceEvents(mMouse);
+                mMouse = null;
+            }
+            mConstraint = null;
+            if (engine) {
+                Engine.clear(engine);
+                engine = null;
+            }
+            stage.removeEventListener('touchmove', preventDefaultOnDrag);
+
             els.forEach(el => {
                 el.style.opacity = '0';
                 el.style.transform = `translateY(${START_Y}px)`;
@@ -397,32 +429,38 @@ const blocks = [...jobs].reverse();
                 el.style.height = '';
                 el.classList.remove('settled', 'freed');
             });
+            for (const s of st) s.body = null;
         }
 
-        // ─── Drag-and-throw ───
-        let dragState: { s: S; offX: number; offY: number; prevX: number; prevY: number; vx: number; vy: number } | null = null;
+        // ─── Matter.js freed-block physics ───
 
-        /** Free ALL blocks — snapshot positions first, then switch to absolute.
-         *  This avoids cascading flex re-layout as each block leaves the flow. */
+        /** Free ALL blocks — snapshot positions, switch to absolute, create Matter.js world */
         function freeAllBlocks() {
+            if (freed) return;
+            freed = true;
+
             const stageRect = stage.getBoundingClientRect();
-            const toFree: { s: S; rect: DOMRect }[] = [];
+            const stageW = stage.offsetWidth;
+            const stageH = stage.offsetHeight;
+            const snapshots: { s: S; rect: DOMRect }[] = [];
 
             // 1) Snapshot every block's current visual rect while flex is intact
             for (const s of st) {
-                if (s.phase === 'freed') continue;
-                toFree.push({ s, rect: s.el.getBoundingClientRect() });
+                if (s.phase !== 'done') continue;
+                snapshots.push({ s, rect: s.el.getBoundingClientRect() });
             }
 
             // 2) Apply absolute positioning using the snapshotted rects
-            for (const { s, rect } of toFree) {
+            for (const { s, rect } of snapshots) {
                 s.phase = 'freed';
                 s.el.classList.remove('settled');
                 s.el.classList.add('freed');
 
+                s.w = rect.width;
+                s.h = rect.height;
                 s.x = rect.left - stageRect.left;
                 s.y = rect.top - stageRect.top;
-                s.vx = 0; s.vy = 0; s.vr = 0;
+                s.r = 0;
 
                 s.el.style.width = rect.width + 'px';
                 s.el.style.height = rect.height + 'px';
@@ -433,260 +471,97 @@ const blocks = [...jobs].reverse();
 
                 tx(s);
             }
+
+            // 3) Create Matter.js engine and world
+            engine = Engine.create({
+                enableSleeping: true,
+                gravity: { x: 0, y: 1, scale: 0.001 },
+            });
+
+            // 4) Create static walls (floor, left, right, ceiling)
+            const floor   = Bodies.rectangle(stageW / 2, stageH + WALL_THICKNESS / 2, stageW + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true });
+            const ceiling  = Bodies.rectangle(stageW / 2, -WALL_THICKNESS / 2, stageW + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true });
+            const leftWall = Bodies.rectangle(-WALL_THICKNESS / 2, stageH / 2, WALL_THICKNESS, stageH + WALL_THICKNESS * 2, { isStatic: true });
+            const rightWall = Bodies.rectangle(stageW + WALL_THICKNESS / 2, stageH / 2, WALL_THICKNESS, stageH + WALL_THICKNESS * 2, { isStatic: true });
+
+            Composite.add(engine.world, [floor, ceiling, leftWall, rightWall]);
+
+            // 5) Create a Matter body for each freed block
+            for (const { s } of snapshots) {
+                const cx = s.x + s.w / 2;
+                const cy = s.y + s.h / 2;
+
+                const body = Bodies.rectangle(cx, cy, s.w, s.h, {
+                    restitution: 0.2,
+                    friction: 0.6,
+                    frictionStatic: 1.0,
+                    frictionAir: 0.01,
+                    density: 0.002,
+                    sleepThreshold: 30,
+                });
+                s.body = body;
+                Composite.add(engine.world, body);
+            }
+
+            // 6) Set up MouseConstraint for drag-and-throw
+            mMouse = Mouse.create(stage);
+            mConstraint = MouseConstraint.create(engine, {
+                mouse: mMouse,
+                constraint: {
+                    stiffness: 0.8,
+                    render: { visible: false },
+                } as any,
+            });
+            Composite.add(engine.world, mConstraint);
+
+            // Wake body when drag starts
+            Events.on(mConstraint, 'startdrag', (e: any) => {
+                Body.setStatic(e.body, false);
+                (e.body as any).isSleeping = false;
+            });
+
+            // Prevent default scroll/zoom on stage during drag
+            stage.addEventListener('touchmove', preventDefaultOnDrag, { passive: false });
+
+            // 7) Start the sync loop
+            startSyncLoop();
         }
 
-        els.forEach((blockEl, blockIdx) => {
-            blockEl.addEventListener('pointerdown', (e) => {
-                if (!blockEl.classList.contains('settled') && !blockEl.classList.contains('freed')) return;
-                const s = st[blockIdx];
-                if (!s) return;
-
-                e.stopPropagation();
+        function preventDefaultOnDrag(e: TouchEvent) {
+            if (mConstraint && (mConstraint as any).body) {
                 e.preventDefault();
-                blockEl.setPointerCapture(e.pointerId);
+            }
+        }
 
-            // Free all blocks on first interaction
-            freeAllBlocks();
+        /** Sync Matter.js body positions → DOM transforms each frame */
+        function startSyncLoop() {
+            if (!engine) return;
 
-            const rect = blockEl.getBoundingClientRect();
-            const stageRect = stage.getBoundingClientRect();
+            function syncDOM() {
+                if (!engine) return;
+                Engine.update(engine, 1000 / 60);
 
-            dragState = {
-                s,
-                offX: e.clientX - rect.left,
-                offY: e.clientY - rect.top,
-                prevX: e.clientX,
-                prevY: e.clientY,
-                vx: 0, vy: 0,
-            };
-
-            tx(s);
-            });
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (!dragState) return;
-            const { s } = dragState;
-            const stageRect = stage.getBoundingClientRect();
-
-            dragState.vx = (e.clientX - dragState.prevX) * 60;
-            dragState.vy = (e.clientY - dragState.prevY) * 60;
-            dragState.prevX = e.clientX;
-            dragState.prevY = e.clientY;
-
-            s.x = e.clientX - stageRect.left - dragState.offX;
-            s.y = e.clientY - stageRect.top - dragState.offY;
-            s.vx = 0; s.vy = 0;
-            tx(s);
-        });
-
-        window.addEventListener('pointerup', () => {
-            if (!dragState) return;
-            const { s, vx, vy } = dragState;
-            s.vx = vx;
-            s.vy = vy;
-            s.vr = (Math.random() - 0.5) * 3 * Math.min(1, Math.abs(vx) / 400);
-            dragState = null;
-
-            if (!running) startPhysicsLoop();
-        });
-
-        // Touch equivalents
-        stage.addEventListener('touchstart', (e) => {
-            if (e.touches.length !== 1) return;
-            const touch = e.touches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tower-block') as HTMLElement | null;
-            if (!target || !target.classList.contains('settled')) return;
-            const idx = els.indexOf(target);
-            if (idx < 0) return;
-            const s = st[idx];
-            if (!s) return;
-
-            e.stopPropagation();
-            e.preventDefault();
-
-            // Free all blocks on first interaction
-            freeAllBlocks();
-
-            const rect = target.getBoundingClientRect();
-            const stageRect = stage.getBoundingClientRect();
-
-            dragState = {
-                s,
-                offX: touch.clientX - rect.left,
-                offY: touch.clientY - rect.top,
-                prevX: touch.clientX,
-                prevY: touch.clientY,
-                vx: 0, vy: 0,
-            };
-
-            tx(s);
-        }, { passive: false });
-
-        stage.addEventListener('touchmove', (e) => {
-            if (!dragState) return;
-            e.preventDefault();
-            e.stopPropagation();
-            const touch = e.touches[0];
-            const stageRect = stage.getBoundingClientRect();
-
-            dragState.vx = (touch.clientX - dragState.prevX) * 60;
-            dragState.vy = (touch.clientY - dragState.prevY) * 60;
-            dragState.prevX = touch.clientX;
-            dragState.prevY = touch.clientY;
-
-            dragState.s.x = touch.clientX - stageRect.left - dragState.offX;
-            dragState.s.y = touch.clientY - stageRect.top - dragState.offY;
-            dragState.s.vx = 0; dragState.s.vy = 0;
-            tx(dragState.s);
-        }, { passive: false });
-
-        stage.addEventListener('touchend', () => {
-            if (!dragState) return;
-            const { s, vx, vy } = dragState;
-            s.vx = vx;
-            s.vy = vy;
-            s.vr = (Math.random() - 0.5) * 3 * Math.min(1, Math.abs(vx) / 400);
-            dragState = null;
-            if (!running) startPhysicsLoop();
-        });
-
-        // Physics loop for freed blocks (gravity, walls, floor, block-block collision)
-        function startPhysicsLoop() {
-            if (running) return;
-            const freedBlocks = st.filter(s => s.phase === 'freed');
-            if (!freedBlocks.length) return;
-            running = true;
-            let prev = performance.now();
-
-            const FREED_GRAVITY = 600;
-            const FREED_BOUNCE = 0.35;
-            const FREED_FRICTION = 0.6;
-            const FREED_AIR_DRAG = 0.997;
-            const FREED_ROT_DRAG = 0.92;
-            const FREED_ROT_SPRING = 6;
-            const COL_GAP = 2;          // px margin between blocks
-            const COL_ITERATIONS = 3;   // resolve overlaps iteratively
-
-            function physTick(now: number) {
-                const dt = Math.min((now - prev) / 1000, DT_CAP);
-                prev = now;
-                const stageW = stage.offsetWidth;
-                const stageH = stage.offsetHeight;
-
-                // Integrate velocity → position
-                const active: S[] = [];
                 for (const s of st) {
-                    if (s.phase !== 'freed') continue;
-                    active.push(s);
-                    if (dragState?.s === s) continue; // being dragged
-
-                    s.vy += FREED_GRAVITY * dt;
-                    s.vx *= FREED_AIR_DRAG;
-                    s.vy *= FREED_AIR_DRAG;
-                    s.vr *= FREED_ROT_DRAG;
-                    s.vr += -FREED_ROT_SPRING * s.r * dt;
-
-                    s.x += s.vx * dt;
-                    s.y += s.vy * dt;
-                    s.r += s.vr * dt;
-                }
-
-                // Block-block AABB collision (multiple iterations to stabilise stacks)
-                for (let iter = 0; iter < COL_ITERATIONS; iter++) {
-                    for (let i = 0; i < active.length; i++) {
-                        const a = active[i];
-                        const aw = a.el.offsetWidth;
-                        const ah = a.el.offsetHeight;
-                        for (let j = i + 1; j < active.length; j++) {
-                            const b = active[j];
-                            const bw = b.el.offsetWidth;
-                            const bh = b.el.offsetHeight;
-
-                            const overlapX = (aw + bw) / 2 + COL_GAP - Math.abs((a.x + aw / 2) - (b.x + bw / 2));
-                            const overlapY = (ah + bh) / 2 + COL_GAP - Math.abs((a.y + ah / 2) - (b.y + bh / 2));
-                            if (overlapX <= 0 || overlapY <= 0) continue;
-
-                            const aDragged = dragState?.s === a;
-                            const bDragged = dragState?.s === b;
-
-                            if (overlapY < overlapX) {
-                                // Resolve vertically
-                                const sign = (a.y + ah / 2) < (b.y + bh / 2) ? -1 : 1;
-                                if (aDragged) {
-                                    b.y += sign * overlapY;
-                                } else if (bDragged) {
-                                    a.y -= sign * overlapY;
-                                } else {
-                                    a.y -= sign * overlapY * 0.5;
-                                    b.y += sign * overlapY * 0.5;
-                                }
-                                // Velocity exchange
-                                if (!aDragged && !bDragged) {
-                                    const avgVy = (a.vy + b.vy) * 0.5;
-                                    a.vy = avgVy * FREED_BOUNCE;
-                                    b.vy = avgVy * FREED_BOUNCE;
-                                } else if (aDragged) {
-                                    b.vy = -b.vy * FREED_BOUNCE + sign * 100;
-                                } else {
-                                    a.vy = -a.vy * FREED_BOUNCE - sign * 100;
-                                }
-                            } else {
-                                // Resolve horizontally
-                                const sign = (a.x + aw / 2) < (b.x + bw / 2) ? -1 : 1;
-                                if (aDragged) {
-                                    b.x += sign * overlapX;
-                                } else if (bDragged) {
-                                    a.x -= sign * overlapX;
-                                } else {
-                                    a.x -= sign * overlapX * 0.5;
-                                    b.x += sign * overlapX * 0.5;
-                                }
-                                if (!aDragged && !bDragged) {
-                                    const avgVx = (a.vx + b.vx) * 0.5;
-                                    a.vx = avgVx * FREED_BOUNCE;
-                                    b.vx = avgVx * FREED_BOUNCE;
-                                } else if (aDragged) {
-                                    b.vx = -b.vx * FREED_BOUNCE + sign * 100;
-                                } else {
-                                    a.vx = -a.vx * FREED_BOUNCE - sign * 100;
-                                }
-                            }
-                            // Add spin on collision
-                            if (!aDragged) a.vr += (Math.random() - 0.5) * 0.5;
-                            if (!bDragged) b.vr += (Math.random() - 0.5) * 0.5;
-                        }
-                    }
-                }
-
-                // Wall / floor / ceiling clamp
-                for (const s of active) {
-                    if (dragState?.s === s) continue;
-                    const w = s.el.offsetWidth;
-                    const h = s.el.offsetHeight;
-
-                    if (s.y + h > stageH) {
-                        s.y = stageH - h;
-                        s.vy = -s.vy * FREED_BOUNCE;
-                        s.vx *= FREED_FRICTION;
-                        if (Math.abs(s.vy) > 10) s.vr += (Math.random() - 0.5) * 1;
-                    }
-                    if (s.x < 0) { s.x = 0; s.vx = -s.vx * FREED_BOUNCE; }
-                    if (s.x + w > stageW) { s.x = stageW - w; s.vx = -s.vx * FREED_BOUNCE; }
-                    if (s.y < 0) { s.y = 0; s.vy = -s.vy * FREED_BOUNCE; }
-
+                    if (s.phase !== 'freed' || !s.body) continue;
+                    s.x = s.body.position.x - s.w / 2;
+                    s.y = s.body.position.y - s.h / 2;
+                    s.r = s.body.angle * (180 / Math.PI);
                     tx(s);
                 }
 
-                if (active.length > 0) {
-                    animId = requestAnimationFrame(physTick);
-                } else {
-                    animId = null;
-                    running = false;
-                }
+                animId = requestAnimationFrame(syncDOM);
             }
-            animId = requestAnimationFrame(physTick);
+            animId = requestAnimationFrame(syncDOM);
         }
+
+        // Interaction: click/tap any settled block to free all and enter Matter.js mode
+        els.forEach((blockEl) => {
+            blockEl.addEventListener('pointerdown', (e) => {
+                if (!blockEl.classList.contains('settled') && !blockEl.classList.contains('freed')) return;
+                e.stopPropagation();
+                freeAllBlocks();
+            });
+        });
 
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             showFinal(); return;
