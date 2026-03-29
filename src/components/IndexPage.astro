@@ -54,6 +54,8 @@ const t = useTranslations(lang);
         let recentDelta = 0; // smoothed recent absolute delta
         const QUIET_MS = 200;
         const SPIKE_RATIO = 1.5; // new delta must be 1.5× recent to count as fresh gesture
+        const SLIDE_COOLDOWN_MS = 600; // hard cooldown between slide transitions
+        let lastSlideTime = 0;
 
         function currentSlideEl(): HTMLElement | null {
             const idx = slider.track.details.rel;
@@ -114,9 +116,18 @@ const t = useTranslations(lang);
                         }
                     }
 
+                    // Hard cooldown: prevent rapid successive slide changes
+                    const now = performance.now();
+                    if (now - lastSlideTime < SLIDE_COOLDOWN_MS) {
+                        locked = true;
+                        recentDelta = absDelta;
+                        return;
+                    }
+
                     // Trigger slide change and lock
                     locked = true;
                     recentDelta = absDelta;
+                    lastSlideTime = now;
 
                     if (e.deltaY > 0) {
                         slider.next();
