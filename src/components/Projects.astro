@@ -520,7 +520,7 @@ for (const img of photoImages) {
             // Determine which slot was tapped from the pointer Y position
             const rect = viewport.getBoundingClientRect();
             const relY = e.clientY - rect.top;
-            const slotOffset = Math.round(relY / SLIDE_HEIGHT - CENTER_OFFSET);
+            const slotOffset = Math.floor(relY / SLIDE_HEIGHT - CENTER_OFFSET);
             const tappedIdx = mod(currentIdx + slotOffset, N);
 
             if (tappedIdx === currentIdx) {
@@ -1077,7 +1077,7 @@ for (const img of photoImages) {
     /* ===== Arrows ===== */
     .roller-arrow {
         background: none;
-        border: 1px solid var(--border);
+        border: 1px solid transparent;
         color: var(--text-dim);
         font-size: 14px;
         width: 36px;
@@ -1089,12 +1089,18 @@ for (const img of photoImages) {
         align-items: center;
         justify-content: center;
         margin: 6px 0;
+        outline: none;
     }
 
     .roller-arrow:hover {
         border-color: var(--purple);
         color: var(--purple);
         box-shadow: 0 0 16px var(--purple-glow);
+    }
+
+    .roller-arrow:active {
+        border-color: var(--purple);
+        color: var(--purple);
     }
 
     /* ===== Action Buttons Row ===== */
