@@ -490,8 +490,17 @@ for (const img of photoImages) {
     let isDragging = false;
 
     viewport?.addEventListener("pointerdown", (e: PointerEvent) => {
-        if (isSpinning || isDetailView) return;
+        if (isDetailView) return;
         e.stopPropagation();
+        // Cancel any active spin — user takes over
+        if (isSpinning) {
+            if (spinAnimId) { cancelAnimationFrame(spinAnimId); spinAnimId = null; }
+            isSpinning = false;
+            isSettling = false;
+            spinVelocity = 0;
+            viewport?.classList.remove("roller-spinning");
+            spinBtn?.classList.remove("spinning");
+        }
         if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
         isDragging = true;
         dragStartY = e.clientY;
