@@ -653,6 +653,9 @@ for (const img of photoImages) {
     function transitionToDetail() {
         if (isDetailView || isSpinning) return;
         isDetailView = true;
+        // Reset scroll position from any previous project
+        const detailView = section?.querySelector(".detail-view") as HTMLElement | null;
+        if (detailView) detailView.scrollTop = 0;
         const p = PROJECTS[currentIdx];
         if (detailCard) {
             const illustration = PROJECT_ILLUSTRATIONS[currentIdx] ?? "";
@@ -725,6 +728,10 @@ for (const img of photoImages) {
             return;
         }
 
+        // Reset accumulator on direction reversal to avoid sluggish response
+        if ((wheelAccum > 0 && e.deltaY < 0) || (wheelAccum < 0 && e.deltaY > 0)) {
+            wheelAccum = 0;
+        }
         // Accumulate small deltas (trackpad) before triggering a step
         wheelAccum += e.deltaY;
         const threshold = 60;
@@ -737,6 +744,15 @@ for (const img of photoImages) {
     document.addEventListener("keydown", (e: KeyboardEvent) => {
         if (e.key === "Escape" && isDetailView) { e.preventDefault(); transitionToRoller(); }
     });
+
+    // Prevent touch/mouse events on the detail view from propagating to
+    // keen-slider, which would interpret them as slide-change swipes.
+    const detailViewEl = section?.querySelector(".detail-view") as HTMLElement | null;
+    function stopIfDetail(e: Event) {
+        if (isDetailView) e.stopPropagation();
+    }
+    detailViewEl?.addEventListener("mousedown", stopIfDetail);
+    detailViewEl?.addEventListener("touchstart", stopIfDetail, { passive: true });
 
     // Browser back/forward: close detail if hash no longer matches
     window.addEventListener("popstate", () => {
@@ -762,6 +778,7 @@ for (const img of photoImages) {
         spinVelocity = 28 + Math.random() * 8;
         currentFriction = FRICTION_MAX;
         isSpinning = true;
+        spinStartIdx = currentIdx;
         lastSpinTime = performance.now();
         viewport?.classList.add("roller-spinning");
         spinBtn?.classList.add("spinning");
