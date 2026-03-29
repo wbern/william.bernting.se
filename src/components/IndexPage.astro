@@ -56,6 +56,8 @@ const t = useTranslations(lang);
         const SPIKE_RATIO = 1.5; // new delta must be 1.5× recent to count as fresh gesture
         const SLIDE_COOLDOWN_MS = 600; // hard cooldown between slide transitions
         let lastSlideTime = 0;
+        const BOUNDARY_GRACE_MS = 300; // grace period after hitting scroll boundary
+        let lastScrollableTime = 0; // last time content was actually scrollable
 
         function currentSlideEl(): HTMLElement | null {
             const idx = slider.track.details.rel;
@@ -88,13 +90,22 @@ const t = useTranslations(lang);
                 "wheel",
                 (e: WheelEvent) => {
                     const slide = currentSlideEl();
-                    if (slide && anyAncestorCanScroll(e.target as HTMLElement, slide, e.deltaY)) {
+                    const canScroll = slide && anyAncestorCanScroll(e.target as HTMLElement, slide, e.deltaY);
+                    if (canScroll) {
                         recentDelta = 0;
                         locked = false;
+                        lastScrollableTime = performance.now();
                         return;
                     }
 
                     e.preventDefault();
+
+                    // Grace period: if content was just scrollable, absorb
+                    // events briefly so hitting a scroll boundary doesn't
+                    // immediately trigger a slide change.
+                    if (performance.now() - lastScrollableTime < BOUNDARY_GRACE_MS) {
+                        return;
+                    }
 
                     const absDelta = Math.abs(e.deltaY);
 
@@ -203,13 +214,21 @@ const t = useTranslations(lang);
             });
         });
 
-        // Keyboard navigation
+        // Keyboard navigation (with cooldown to prevent rapid-fire from key repeat)
+        let lastKeySlideTime = 0;
+        const KEY_COOLDOWN_MS = 600;
         document.addEventListener("keydown", (e) => {
             if (e.key === "ArrowDown" || e.key === "PageDown") {
                 e.preventDefault();
+                const now = performance.now();
+                if (now - lastKeySlideTime < KEY_COOLDOWN_MS) return;
+                lastKeySlideTime = now;
                 slider.next();
             } else if (e.key === "ArrowUp" || e.key === "PageUp") {
                 e.preventDefault();
+                const now = performance.now();
+                if (now - lastKeySlideTime < KEY_COOLDOWN_MS) return;
+                lastKeySlideTime = now;
                 slider.prev();
             }
         });

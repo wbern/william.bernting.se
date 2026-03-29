@@ -695,13 +695,14 @@ for (const img of photoImages) {
         }
     });
 
-    // Keyboard nav
+    // Keyboard nav — stopPropagation prevents the global keen-slider
+    // ArrowUp/Down handler from also firing a slide change.
     viewport?.setAttribute("tabindex", "0");
     viewport?.addEventListener("keydown", (e: KeyboardEvent) => {
         if (isSpinning || isDetailView) return;
-        if (e.key === "ArrowUp") { e.preventDefault(); prev(); }
-        if (e.key === "ArrowDown") { e.preventDefault(); next(); }
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spin(); }
+        if (e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); prev(); }
+        if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); next(); }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); spin(); }
     });
 
     let wheelAccum = 0;
@@ -709,7 +710,10 @@ for (const img of photoImages) {
         if (!viewport?.contains(e.target as Node)) return;
         e.stopPropagation();
         e.preventDefault();
-        if (isSpinning || isDetailView) return;
+        if (isSpinning || isDetailView) {
+            wheelAccum = 0;
+            return;
+        }
 
         // Accumulate small deltas (trackpad) before triggering a step
         wheelAccum += e.deltaY;
