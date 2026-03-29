@@ -450,7 +450,9 @@ const skills = [
     }
 
     // ─── Pointer handlers ───
-    function onPointerDown(mx: number, my: number) {
+    let touchDropPending = false; // touch-only: preview before drop
+
+    function onPointerDown(mx: number, my: number, isTouch = false) {
         // Check if clicking a fruit in the bowl first
         const hit = hitTest(mx, my);
         if (hit) {
@@ -470,7 +472,14 @@ const skills = [
         if (isInDropZone(my) && mx >= bowl.x && mx <= bowl.x + bowl.w && nextDropReady) {
             userControlActive = true;
             lastUserAction = performance.now();
-            userDropFruit(mx);
+            if (isTouch) {
+                // Touch: show preview, drop on release
+                touchDropPending = true;
+                previewX = mx;
+            } else {
+                // Mouse: drop immediately (click)
+                userDropFruit(mx);
+            }
             return true;
         }
         return false;
@@ -505,6 +514,14 @@ const skills = [
     }
 
     function onPointerUp() {
+        if (touchDropPending) {
+            touchDropPending = false;
+            if (previewX !== null && nextDropReady) {
+                userDropFruit(previewX);
+            }
+            previewX = null;
+            return;
+        }
         if (!dragFruit) return;
         dragFruit.vx = mouseVX;
         dragFruit.vy = mouseVY;
@@ -514,6 +531,7 @@ const skills = [
 
     function onPointerLeave() {
         previewX = null;
+        touchDropPending = false;
         if (dragFruit) {
             dragFruit.vx = mouseVX;
             dragFruit.vy = mouseVY;
@@ -560,20 +578,26 @@ const skills = [
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) return;
         const pos = getCanvasPos(e.touches[0]);
-        if (onPointerDown(pos.x, pos.y)) {
+        if (onPointerDown(pos.x, pos.y, true)) {
             e.preventDefault();
             e.stopPropagation();
         }
     }, { passive: false });
     canvas.addEventListener('touchmove', (e) => {
-        if (!dragFruit) return;
+        if (!dragFruit && !touchDropPending) return;
         e.preventDefault();
         e.stopPropagation();
         const pos = getCanvasPos(e.touches[0]);
-        onPointerMove(pos.x, pos.y);
+        if (touchDropPending) {
+            // Update preview position as finger moves
+            previewX = Math.max(bowl.x + TIERS[previewTier].radius + 5,
+                               Math.min(bowl.x + bowl.w - TIERS[previewTier].radius - 5, pos.x));
+        } else {
+            onPointerMove(pos.x, pos.y);
+        }
     }, { passive: false });
     canvas.addEventListener('touchend', (e) => {
-        if (dragFruit) e.stopPropagation();
+        if (dragFruit || touchDropPending) e.stopPropagation();
         onPointerUp();
     });
     canvas.addEventListener('touchcancel', () => {
