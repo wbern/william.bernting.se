@@ -82,6 +82,8 @@ const skills = [
   "Angular",
   "CI/CD",
   "Project Delivery",
+  "TanStack",
+  "Astro.js",
 ];
 
 const books: CvBook[] = [
@@ -131,7 +133,7 @@ const cv: Record<Lang, CvData> = {
         company: "Akka",
         dateRange: "08/2025 – Pågående",
         location: "Göteborg, Sverige",
-        techStack: [],
+        techStack: ["React", "TanStack"],
         bullets: [],
       },
       {
@@ -266,7 +268,7 @@ const cv: Record<Lang, CvData> = {
         company: "Akka",
         dateRange: "08/2025 – Present",
         location: "Gothenburg, Sweden",
-        techStack: [],
+        techStack: ["React", "TanStack"],
         bullets: [],
       },
       {

@@ -93,7 +93,7 @@ describe("cv data", () => {
   });
 
   it("has 12 skills", () => {
-    expect(getCvSkills()).toHaveLength(12);
+    expect(getCvSkills()).toHaveLength(14);
     for (const skill of getCvSkills()) {
       expect(skill.trim()).toBeTruthy();
     }
