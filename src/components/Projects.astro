@@ -882,11 +882,21 @@ for (const img of photoImages) {
            pushing the keen-slider slide past 100dvh (which blocks swiping). */
         max-height: calc(100dvh - 120px);
         overflow-y: auto;
-        scrollbar-width: none;
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-muted) transparent;
     }
 
     .detail-active .detail-view::-webkit-scrollbar {
-        display: none;
+        width: 4px;
+    }
+
+    .detail-active .detail-view::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .detail-active .detail-view::-webkit-scrollbar-thumb {
+        background: var(--text-muted);
+        border-radius: 4px;
     }
 
     .back-button {
