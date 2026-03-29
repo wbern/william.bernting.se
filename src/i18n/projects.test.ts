@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { getProjects, projectEntries, slugify, getProjectSlugs } from "./projects";
 
 describe("projects", () => {
-  it("has 13 projects", () => {
-    expect(projectEntries).toHaveLength(13);
+  it("has 15 projects", () => {
+    expect(projectEntries).toHaveLength(15);
   });
 
-  it("returns 13 projects for each locale", () => {
-    expect(getProjects("sv")).toHaveLength(13);
-    expect(getProjects("en")).toHaveLength(13);
+  it("returns 15 projects for each locale", () => {
+    expect(getProjects("sv")).toHaveLength(15);
+    expect(getProjects("en")).toHaveLength(15);
   });
 
   it("each entry has both sv and en", () => {
