@@ -81,7 +81,7 @@ const skills = [
   "Vue",
   "Angular",
   "CI/CD",
-  "Servant Leadership",
+  "Project Delivery",
 ];
 
 const books: CvBook[] = [
@@ -112,7 +112,7 @@ const cv: Record<Lang, CvData> = {
   sv: {
     profile: {
       name: "William Bernting",
-      subtitle: "Utvecklare / Föreläsare / Frilansare",
+      subtitle: "Enmansbyrå – Fullstack & AI-förstärkt utveckling",
       contacts: [
         { icon: "phone", text: "(+46) 0706676047", href: "tel:+46706676047" },
         { icon: "email", text: "william@bernting.se", href: "mailto:william@bernting.se" },
@@ -121,8 +121,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "Social frilansande konsult, bäst lämpad för team med stora tydliga och otydliga utmaningar framför sig. Gräver fram dolda problem genom djupt engagemang i det dagliga arbetet.",
-        "Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong> genom hela karriären.",
+        "Jag räddar legacykodbaser, bygger nya produkter och förstärker befintliga team med <strong>AI-augmenterad utveckling</strong>. Ett internt verktyg jag byggde hos ett Fortune 500-företag växte organiskt till <strong>5 000 aktiva användare</strong> — jag levererar mjukvara som folk faktiskt använder.",
+        "Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong>. Jag tar uppdrag fasvis eller löpande — hör av dig så pratar vi om vad som passar.",
       ],
     },
     jobs: [
@@ -158,7 +158,7 @@ const cv: Record<Lang, CvData> = {
           "Gav <strong>personlig coachning</strong> till teamets utvecklare, vilket ledde till att de tog mer ägarskap och ställde rätt frågor.",
           "Deltog i <strong>rekrytering och onboarding av 4 nya teammedlemmar</strong>.",
           "Introducerade en <strong>headless CMS-arkitektur</strong> med en <strong>content-first-strategi</strong> som accelererade utvecklingen på ett hållbart sätt.",
-          "Stod för <strong>31% av kodkommits</strong> i <strong>teamets repo med 11 utvecklare</strong>.",
+          "Högsta individuella output i ett <strong>11-personersteam</strong> — levererade headless CMS, sökfunktioner och kampanjsidor i hög takt.",
         ],
       },
       {
@@ -169,10 +169,9 @@ const cv: Record<Lang, CvData> = {
         location: "Göteborg, Sverige",
         techStack: ["Angular", "Next.js", "TypeScript", "WordPress", "AWS", "PHP", "DevOps"],
         bullets: [
-          "<strong>Rekryterade 6 skickliga utvecklare och/eller UX-proffs inom 6 månader</strong>, från jobbannons till signerat kontrakt.",
-          "Ledde den <strong>tekniska strategin över 7 olika klienters produktlandskap</strong>, från underhållsläge till MVP-startup-mentalitet.",
-          "Hade personalansvar för <strong>10 fullstack-utvecklare</strong> i 2 utvecklingsteam.",
-          "Hög nivå av samarbete mellan produktägare, utvecklare, UX-designers och andra.",
+          "Byggde upp utvecklingsavdelningen: <strong>rekryterade 6 utvecklare/UX-proffs inom 6 månader</strong>, från jobbannons till signerat kontrakt.",
+          "Drev <strong>teknisk strategi över 7 klientprodukter</strong> parallellt — från underhåll till MVP-lanseringar.",
+          "Levererade resultat genom <strong>10 fullstack-utvecklare</strong> i 2 team med högt samarbete mellan produkt, utveckling och UX.",
         ],
       },
       {
@@ -208,8 +207,8 @@ const cv: Record<Lang, CvData> = {
         location: "Göteborg, Sverige",
         techStack: ["Node.js", "TypeScript", "Angular", "Vue", "React"],
         bullets: [
-          "Djupdykning i webbramverken <strong>React, Angular och Vue</strong> för flera klienter.",
-          "Hos en klient, på egen hand enligt uppdrag skrev om en hel kodbas från ett <strong>egenutvecklat ramverk som inte var byggt för skala, till React</strong>.",
+          "Levererade frontend-lösningar i <strong>React, Angular och Vue</strong> åt flera klienter.",
+          "Räddade en legacy-kodbas: ensam skrev om hela systemet från ett <strong>egenutvecklat ramverk som inte skalade, till React</strong>.",
         ],
       },
       {
@@ -220,9 +219,8 @@ const cv: Record<Lang, CvData> = {
         location: "Göteborg, Sverige",
         techStack: ["C#", "TypeScript", "AutoIt", "PHP"],
         bullets: [
-          "Utvecklade <strong>8 interna verktyg</strong> för att förbättra produktiviteten för kundtjänst och andra avdelningar.",
-          "Tjänstgjorde som <strong>teamledare för 10 kundtjänstagenter</strong> på den nordiska marknaden.",
-          "Bidrog aktivt till <strong>processutveckling</strong> och <strong>kunskapsöverföring</strong>.",
+          "Byggde <strong>8 interna verktyg</strong> som ökade produktiviteten — ett av dem växte till <strong>5 000 aktiva användare</strong> och nominerades till ett internt företagspris.",
+          "Ledde <strong>10 kundtjänstagenter</strong> på den nordiska marknaden.",
         ],
       },
     ],
@@ -249,7 +247,7 @@ const cv: Record<Lang, CvData> = {
   en: {
     profile: {
       name: "William Bernting",
-      subtitle: "Developer / Public Speaker / Freelancer",
+      subtitle: "One-Man Agency – Fullstack & AI-Augmented Development",
       contacts: [
         { icon: "phone", text: "(+46) 0706676047", href: "tel:+46706676047" },
         { icon: "email", text: "william@bernting.se", href: "mailto:william@bernting.se" },
@@ -258,8 +256,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "Socially skilled freelance consultant, best suited for teams with big clear and unclear challenges ahead. Unearths hidden problems through deep engagement in day-to-day work.",
-        "Strongest in <strong>Engineering</strong>, with hands-on experience gained in <strong>Product</strong> and <strong>UX</strong> throughout my career.",
+        "I rescue legacy codebases, build new products, and augment existing teams with <strong>AI-powered development</strong>. An internal tool I built at a Fortune 500 company grew organically to <strong>5,000 active users</strong> — I ship software people actually use.",
+        "Strongest in <strong>Engineering</strong>, with hands-on experience in <strong>Product</strong> and <strong>UX</strong>. I take on projects in phases or on a continuous basis — reach out and let\u2019s talk about what fits.",
       ],
     },
     jobs: [
@@ -295,7 +293,7 @@ const cv: Record<Lang, CvData> = {
           "Provided <strong>personal coaching</strong> to the team\u2019s developers, which led them to take more ownership and ask the right questions.",
           "Participated in <strong>recruitment and onboarding of 4 new team members</strong>.",
           "Introduced a <strong>headless CMS architecture</strong> with a <strong>content-first strategy</strong> that accelerated development in a sustainable way.",
-          "Accounted for <strong>31% of code commits</strong> to the <strong>team\u2019s repo of 11 developers</strong>.",
+          "Highest individual output in an <strong>11-person team</strong> — shipped headless CMS, search features, and campaign pages at a rapid pace.",
         ],
       },
       {
@@ -306,10 +304,9 @@ const cv: Record<Lang, CvData> = {
         location: "Gothenburg, Sweden",
         techStack: ["Angular", "Next.js", "TypeScript", "WordPress", "AWS", "PHP", "DevOps"],
         bullets: [
-          "<strong>Recruited 6 skilled developers and/or UX professionals within 6 months</strong>, from job posting to signed contract.",
-          "Led the <strong>technical strategy across 7 different client product landscapes</strong>, ranging from maintenance mode to MVP startup mindset.",
-          "Held personnel responsibility for <strong>10 full-stack developers</strong> across 2 development teams.",
-          "High level of collaborative work between product owners, developers, UX designers, and others.",
+          "Built the dev department: <strong>recruited 6 developers/UX professionals within 6 months</strong>, from job posting to signed contract.",
+          "Drove <strong>technical strategy across 7 client products</strong> in parallel — from maintenance to MVP launches.",
+          "Delivered results through <strong>10 full-stack developers</strong> across 2 teams with tight collaboration between product, engineering, and UX.",
         ],
       },
       {
@@ -345,8 +342,8 @@ const cv: Record<Lang, CvData> = {
         location: "Gothenburg, Sweden",
         techStack: ["Node.js", "TypeScript", "Angular", "Vue", "React"],
         bullets: [
-          "Deep dive into the web frameworks <strong>React, Angular, and Vue</strong> for multiple clients.",
-          "At one client, single-handedly as per assignment rewrote an entire codebase from a <strong>custom-built framework not built for scale, to React</strong>.",
+          "Delivered frontend solutions in <strong>React, Angular, and Vue</strong> for multiple clients.",
+          "Rescued a legacy codebase: single-handedly rewrote the entire system from a <strong>custom framework that didn\u2019t scale, to React</strong>.",
         ],
       },
       {
@@ -357,9 +354,8 @@ const cv: Record<Lang, CvData> = {
         location: "Gothenburg, Sweden",
         techStack: ["C#", "TypeScript", "AutoIt", "PHP"],
         bullets: [
-          "Developed <strong>8 internal tools</strong> to improve productivity for customer support and other departments.",
-          "Served as <strong>team lead for 10 customer support agents</strong> serving the Nordic markets.",
-          "Actively contributed to <strong>process development</strong> and <strong>knowledge transfer</strong>.",
+          "Built <strong>8 internal tools</strong> that boosted productivity — one grew to <strong>5,000 active users</strong> and earned a company-wide presidential nomination.",
+          "Led <strong>10 customer support agents</strong> serving the Nordic markets.",
         ],
       },
     ],
