@@ -531,6 +531,11 @@ const blocks = [...jobs].reverse();
 
         function stopSliderPropagation(e: Event) {
             if (!blocksInteractive) return;
+            // Stop propagation only when interacting with a block or
+            // actively dragging a Matter.js body (pointer may leave the block)
+            const onBlock = (e.target as HTMLElement)?.closest?.('.tower-block');
+            const draggingBody = mConstraint && mConstraint.body;
+            if (!onBlock && !draggingBody) return;
             e.stopPropagation();
         }
 
