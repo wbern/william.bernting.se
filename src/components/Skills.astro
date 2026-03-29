@@ -195,9 +195,9 @@ const skills = [
     const AUTO_DROP_INTERVAL = 2500;
     const IDLE_TIMEOUT = 8000;
     const MERGE_DURATION = 150;
-    const FONT_SM   = '600 10px "JetBrains Mono", monospace';
-    const FONT_MD   = '600 12px "JetBrains Mono", monospace';
-    const FONT_LG   = '600 14px "JetBrains Mono", monospace';
+    const FONT_SM   = '600 11px "JetBrains Mono", monospace';
+    const FONT_MD   = '600 13px "JetBrains Mono", monospace';
+    const FONT_LG   = '600 16px "JetBrains Mono", monospace';
     const BOWL_STROKE = '#9b4dca';
     const BOWL_GLOW  = 'rgba(155, 77, 202, 0.35)';
 
@@ -1185,28 +1185,33 @@ const skills = [
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const maxWidth = r * 1.8;
-        const label = f.label;
-        const words = label.split(/\s+/);
+        const maxWidth = r * 1.9;
 
-        let lines: string[];
-        if (f.tier <= 2 && words.length > 1) {
-            const mid = Math.ceil(words.length / 2);
-            lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
-        } else {
-            lines = [label];
+        // Word-wrap: greedily fill lines within maxWidth
+        const words = f.label.split(' ');
+        const lines: string[] = [];
+        let currentLine = words[0] || '';
+        for (let w = 1; w < words.length; w++) {
+            const candidate = currentLine + ' ' + words[w];
+            if (ctx.measureText(candidate).width <= maxWidth) {
+                currentLine = candidate;
+            } else {
+                lines.push(currentLine);
+                currentLine = words[w];
+            }
         }
+        lines.push(currentLine);
 
-        const lineHeight = f.tier <= 1 ? (f.tier === 0 ? 11 : 12) : 14;
+        const lineHeight = f.tier <= 1 ? 13 : (f.tier <= 3 ? 15 : 18);
         const totalH = lines.length * lineHeight;
         const labelY = f.y;
         const startY = labelY - totalH / 2 + lineHeight / 2;
 
         // Dark rounded backdrop behind text
         const textMetrics = lines.map(l => ctx.measureText(l).width);
-        const maxTextW = Math.min(Math.max(...textMetrics) + 10, maxWidth + 10);
-        const padY = 3;
-        ctx.globalAlpha = f.opacity * 0.6;
+        const maxTextW = Math.min(Math.max(...textMetrics) + 12, maxWidth + 12);
+        const padY = 4;
+        ctx.globalAlpha = f.opacity * 0.82;
         ctx.fillStyle = '#000000';
         const bgH = totalH + padY * 2;
         const bgY = labelY - bgH / 2;
