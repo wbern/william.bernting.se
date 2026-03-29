@@ -191,6 +191,7 @@ const skills = [
     const AIR_DRAG  = 0.998;
     const DT_CAP    = 0.033;
     const MAX_FRUITS = 25;
+    const MAX_SPEED = 800; // velocity cap to prevent tunneling
     const AUTO_DROP_INTERVAL = 2500;
     const IDLE_TIMEOUT = 8000;
     const MERGE_DURATION = 150;
@@ -241,6 +242,7 @@ const skills = [
         // Wall segments for collision (inner edges)
         leftWall:  { x1: number; y1: number; x2: number; y2: number };
         rightWall: { x1: number; y1: number; x2: number; y2: number };
+        bottomWall: { x1: number; y1: number; x2: number; y2: number };
         bottom:    number; // y of inner bottom
         dropZoneTop: number; // y above which is the "drop zone"
     }
@@ -311,6 +313,10 @@ const skills = [
             rightWall: {
                 x1: bx + bw - taperInset, y1: by + bh - corner,
                 x2: bx + bw, y2: by
+            },
+            bottomWall: {
+                x1: bx + taperInset, y1: by + bh - corner,
+                x2: bx + bw - taperInset, y2: by + bh - corner
             },
             bottom: by + bh - corner,
             dropZoneTop: by - 60,
@@ -617,18 +623,19 @@ const skills = [
             }
         }
 
-        // Physics for non-merging alive fruits
-        for (const f of fruits) {
-            if (!f.alive || f.merging || f.grabbed) continue;
+        // ─── Clamp velocity to prevent tunneling ───
+        function clampVelocity(f: Fruit) {
+            const speed = Math.sqrt(f.vx * f.vx + f.vy * f.vy);
+            if (speed > MAX_SPEED) {
+                const scale = MAX_SPEED / speed;
+                f.vx *= scale;
+                f.vy *= scale;
+            }
+        }
 
-            f.vy += GRAVITY * dt;
-            f.vx *= AIR_DRAG;
-            f.vy *= AIR_DRAG;
-
-            f.x += f.vx * dt;
-            f.y += f.vy * dt;
-
-            // Bowl collision: left wall
+        // ─── Resolve bowl wall collisions for a single fruit ───
+        function resolveBowlCollision(f: Fruit) {
+            // Left wall
             const lw = bowl.leftWall;
             const lhit = circleLineCollision(f.x, f.y, f.radius, lw.x1, lw.y1, lw.x2, lw.y2);
             if (lhit) {
@@ -641,7 +648,7 @@ const skills = [
                 }
             }
 
-            // Bowl collision: right wall
+            // Right wall
             const rw = bowl.rightWall;
             const rhit = circleLineCollision(f.x, f.y, f.radius, rw.x1, rw.y1, rw.x2, rw.y2);
             if (rhit) {
@@ -654,7 +661,21 @@ const skills = [
                 }
             }
 
-            // Bowl collision: bottom
+            // Bottom wall (line segment across bottom)
+            const bw = bowl.bottomWall;
+            const bhit = circleLineCollision(f.x, f.y, f.radius, bw.x1, bw.y1, bw.x2, bw.y2);
+            if (bhit) {
+                f.x += bhit.nx * bhit.depth;
+                f.y += bhit.ny * bhit.depth;
+                const vDotN = f.vx * bhit.nx + f.vy * bhit.ny;
+                if (vDotN < 0) {
+                    f.vx -= (1 + BOUNCE) * vDotN * bhit.nx;
+                    f.vy -= (1 + BOUNCE) * vDotN * bhit.ny;
+                }
+                f.vx *= 0.9; // friction on bottom
+            }
+
+            // Hard bottom clamp (safety)
             const bottomY = bowl.bottom;
             if (f.y + f.radius > bottomY) {
                 f.y = bottomY - f.radius;
@@ -662,10 +683,29 @@ const skills = [
                 f.vx *= 0.9;
             }
 
-            // Keep in canvas bounds (safety)
+            // Keep in canvas bounds (safety — kill if way out)
+            if (f.x - f.radius < -100 || f.x + f.radius > W + 100 || f.y + f.radius > H + 100) {
+                f.alive = false;
+                return;
+            }
             if (f.x - f.radius < 0) { f.x = f.radius; f.vx = Math.abs(f.vx) * BOUNCE; }
             if (f.x + f.radius > W) { f.x = W - f.radius; f.vx = -Math.abs(f.vx) * BOUNCE; }
             if (f.y + f.radius > H) { f.y = H - f.radius; f.vy = -Math.abs(f.vy) * BOUNCE; }
+        }
+
+        // Physics for non-merging alive fruits
+        for (const f of fruits) {
+            if (!f.alive || f.merging || f.grabbed) continue;
+
+            f.vy += GRAVITY * dt;
+            f.vx *= AIR_DRAG;
+            f.vy *= AIR_DRAG;
+            clampVelocity(f);
+
+            f.x += f.vx * dt;
+            f.y += f.vy * dt;
+
+            resolveBowlCollision(f);
         }
 
         // Fruit-fruit collisions with merge detection
@@ -756,6 +796,14 @@ const skills = [
                     }
                 }
             }
+        }
+
+        // Second pass: re-check bowl collisions after fruit-fruit resolution
+        // Prevents fruits pushed through walls by overlap correction
+        for (const f of fruits) {
+            if (!f.alive || f.merging || f.grabbed) continue;
+            clampVelocity(f);
+            resolveBowlCollision(f);
         }
     }
 
