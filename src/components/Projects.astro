@@ -653,9 +653,6 @@ for (const img of photoImages) {
     function transitionToDetail() {
         if (isDetailView || isSpinning) return;
         isDetailView = true;
-        // Reset scroll position from any previous project
-        const detailView = section?.querySelector(".detail-view") as HTMLElement | null;
-        if (detailView) detailView.scrollTop = 0;
         const p = PROJECTS[currentIdx];
         if (detailCard) {
             const illustration = PROJECT_ILLUSTRATIONS[currentIdx] ?? "";
@@ -664,10 +661,22 @@ for (const img of photoImages) {
                 <div class="project-tag">${p.tag}</div>
                 <h3>${p.title}</h3>
                 <p>${p.description}</p>
+                <button class="back-button back-button--bottom" aria-label="${backBtn?.getAttribute("aria-label") ?? "Back"}">
+                    <span class="back-arrow">&#x2190;</span> ${backBtn?.textContent?.trim() ?? "Back"}
+                </button>
             `;
+            // Wire up the bottom back button
+            detailCard.querySelector(".back-button--bottom")?.addEventListener("click", () => transitionToRoller());
         }
         section?.classList.add("detail-active");
         document.getElementById("slide-dots")?.classList.add("hidden");
+        // Reset scroll positions so detail shows from the top
+        const detailView = section?.querySelector(".detail-view") as HTMLElement | null;
+        if (detailView) detailView.scrollTop = 0;
+        const parentSlide = section?.closest(".keen-slider__slide") as HTMLElement | null;
+        if (parentSlide) parentSlide.scrollTop = 0;
+        // Tell keen-slider to freeze
+        document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: true } }));
         // Update URL hash for deep linking
         const slug = PROJECT_SLUGS[currentIdx];
         if (slug) {
@@ -683,6 +692,8 @@ for (const img of photoImages) {
         // Reset parent slide scroll so roulette is centered, not offset
         const parentSlide = section?.closest(".keen-slider__slide");
         if (parentSlide) parentSlide.scrollTop = 0;
+        // Tell keen-slider to unfreeze
+        document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: false } }));
         // Clear URL hash
         history.replaceState(null, "", location.pathname);
     }
@@ -930,6 +941,11 @@ for (const img of photoImages) {
         align-items: center;
         gap: 8px;
         margin-bottom: 24px;
+    }
+
+    .back-button--bottom {
+        margin-top: 24px;
+        margin-bottom: 0;
     }
 
     .back-button:hover {
