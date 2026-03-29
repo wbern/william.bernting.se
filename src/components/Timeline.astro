@@ -55,6 +55,7 @@ const blocks = [...jobs].reverse();
     .tower-section {
         display: flex;
         flex-direction: column;
+        justify-content: center;
         align-items: flex-start;
         width: 100%;
         height: 100%;
@@ -63,7 +64,8 @@ const blocks = [...jobs].reverse();
     .tower-stage {
         position: relative;
         width: 100%;
-        flex: 1;
+        flex: 1 1 0;
+        max-height: 70vh;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -379,6 +381,7 @@ const blocks = [...jobs].reverse();
                             s.phase = 'done';
                             s.y = 0; s.x = xr; s.r = rr;
                             s.el.classList.add('settled');
+                            blocksInteractive = true;
                         }
                         tx(s);
                     }
@@ -397,12 +400,14 @@ const blocks = [...jobs].reverse();
                     `translateY(0) translateX(${REST_X[i]}px) rotate(${REST_R[i]}deg)`;
                 el.classList.add('settled');
             });
+            blocksInteractive = true;
         }
 
         function reset() {
             if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
             running = false;
             freed = false;
+            blocksInteractive = false;
 
             // Tear down Matter.js world
             if (mConstraint && engine) {
@@ -521,11 +526,11 @@ const blocks = [...jobs].reverse();
             startSyncLoop();
         }
 
+        // Cached flag — avoids iterating st[] on every mousemove/touchmove
+        let blocksInteractive = false;
+
         function stopSliderPropagation(e: Event) {
-            // Only stop propagation when blocks are interactive (settled/freed).
-            // Before blocks settle, let keen-slider handle gestures normally.
-            const hasInteractiveBlocks = st.some(s => s.phase === 'done' || s.phase === 'freed');
-            if (!hasInteractiveBlocks) return;
+            if (!blocksInteractive) return;
             e.stopPropagation();
         }
 
@@ -564,7 +569,8 @@ const blocks = [...jobs].reverse();
                 let allSleeping = true;
                 for (const s of st) {
                     if (s.phase !== 'freed' || !s.body) continue;
-                    if (!s.body.isSleeping) allSleeping = false;
+                    if (s.body.isSleeping) continue; // skip DOM write for sleeping bodies
+                    allSleeping = false;
                     s.x = s.body.position.x - s.w / 2;
                     s.y = s.body.position.y - s.h / 2;
                     s.r = s.body.angle * (180 / Math.PI);
@@ -572,9 +578,6 @@ const blocks = [...jobs].reverse();
                 }
 
                 if (allSleeping && !mConstraint?.body) {
-                    // All bodies settled and no drag active — pause the loop.
-                    // MouseConstraint's internal event listeners will still fire;
-                    // we restart the loop on the next drag via 'startdrag'.
                     animId = null;
                     return;
                 }
