@@ -46,10 +46,10 @@ for (const locale of LOCALES) {
       const roller = page.locator("[data-testid='roller']");
       await expect(roller).toBeVisible();
 
-      // All 13 project slides are in the DOM
+      // All 14 project slides are in the DOM
       const bars = roller.locator(".roller-slide");
       const count = await bars.count();
-      expect(count).toBe(13);
+      expect(count).toBe(14);
     });
 
     test("displays a highlighted current selection", async ({ page }) => {
