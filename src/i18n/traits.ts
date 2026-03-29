@@ -17,7 +17,7 @@ interface TraitRowEntry {
 
 const traitRowEntries: TraitRowEntry[] = [
   {
-    sv: ["Snabb prototypare", "Teambyggare", "Fels\u00F6kare", "\u201CLegacy-dykare\u201D"],
+    sv: ["Snabb prototypare", "Teambyggare", "Fels\u00F6kare", "\u201CLegacy-diver\u201D"],
     en: ["Rapid Prototyper", "Team-builder", "Debugger", "\u201CLegacy Diver\u201D"],
     speed: "slow", size: "lg", style: "accent",
   },
@@ -27,8 +27,8 @@ const traitRowEntries: TraitRowEntry[] = [
     speed: "mid", size: "md", style: "dim",
   },
   {
-    sv: ["Leverera ofta", "Bygg bra team", "Djupdykare", "Moderniserare"],
-    en: ["Ship Often", "Build Great Teams", "Deep Diver", "Modernizer"],
+    sv: ["Leverera ofta", "Bygg bra team", "Djupdykare", "Evangelist"],
+    en: ["Ship Often", "Build Great Teams", "Deep Diver", "Evangelist"],
     speed: "fast", size: "lg", style: "bright",
   },
   {
@@ -37,8 +37,8 @@ const traitRowEntries: TraitRowEntry[] = [
     speed: "mid2", size: "sm", style: "dim",
   },
   {
-    sv: ["Automatisering", "Enat avdelningar", "Omskrivnings-viskare", "Legacy-expert"],
-    en: ["Automation", "Unified Departments", "Rewrite Whisperer", "Legacy Expert"],
+    sv: ["Automatisering", "M\u00E4nniskok\u00E4nnare", "AI-enablad utvecklare", "Legacy-expert"],
+    en: ["Automation", "People-person", "AI-Enabled Coder", "Legacy Expert"],
     speed: "slow2", size: "md", style: "accent",
   },
 ];
