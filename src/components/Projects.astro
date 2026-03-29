@@ -551,6 +551,7 @@ for (const img of photoImages) {
     const FRICTION_MAX = 0.975;
     const SETTLE_THRESHOLD = 0.3;
     let currentFriction = 0.97;
+    let spinStartIdx = 0;
 
     function spin() {
         if (isDetailView) return;
@@ -564,6 +565,7 @@ for (const img of photoImages) {
 
         if (!isSpinning) {
             isSpinning = true;
+            spinStartIdx = currentIdx;
             lastSpinTime = performance.now();
             viewport?.classList.add("roller-spinning");
             spinBtn?.classList.add("spinning");
@@ -626,6 +628,10 @@ for (const img of photoImages) {
             settleStart = now;
             settleFrom = scrollPos;
             settleTo = Math.round(scrollPos);
+            // Never land on the same item we started on
+            if (mod(settleTo, N) === mod(spinStartIdx, N)) {
+                settleTo += (scrollPos >= spinStartIdx) ? 1 : -1;
+            }
             spinVelocity = 0;
         }
 
