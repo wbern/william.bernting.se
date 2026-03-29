@@ -791,146 +791,112 @@ const skills = [
         ctx.restore();
     }
 
-    // ─── Draw fruit shapes — each visually distinct ───
+    // ─── Draw fruit shapes — Suika-style round circles ───
     function drawCherry(x: number, y: number, r: number) {
-        // Twin cherries: two small red circles connected by stems
-        const cherryR = r * 0.55;
-        const gap = r * 0.45;
-        // Stems meeting at top
+        // Cherry: solid round red ball with stem + tiny leaf
+        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+        grad.addColorStop(0, '#ff6666');
+        grad.addColorStop(0.5, '#dd1133');
+        grad.addColorStop(1, '#880011');
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        // Stem
         ctx.strokeStyle = '#3a6622';
-        ctx.lineWidth = Math.max(1.5, r * 0.08);
+        ctx.lineWidth = Math.max(1.5, r * 0.07);
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x - gap, y + r * 0.1);
-        ctx.quadraticCurveTo(x - gap * 0.3, y - r * 0.9, x, y - r * 0.7);
+        ctx.moveTo(x, y - r * 0.85);
+        ctx.quadraticCurveTo(x + r * 0.15, y - r * 1.15, x + r * 0.1, y - r * 1.05);
         ctx.stroke();
+        // Tiny leaf
         ctx.beginPath();
-        ctx.moveTo(x + gap, y + r * 0.05);
-        ctx.quadraticCurveTo(x + gap * 0.3, y - r * 0.8, x, y - r * 0.7);
-        ctx.stroke();
-        // Leaf at junction
-        ctx.beginPath();
-        ctx.ellipse(x + r * 0.15, y - r * 0.75, r * 0.2, r * 0.1, 0.4, 0, Math.PI * 2);
+        ctx.ellipse(x + r * 0.18, y - r * 0.95, r * 0.15, r * 0.06, 0.4, 0, Math.PI * 2);
         ctx.fillStyle = '#44aa44';
         ctx.fill();
-        // Left cherry
-        const grad1 = ctx.createRadialGradient(x - gap - cherryR * 0.3, y + r * 0.1 - cherryR * 0.3, cherryR * 0.1, x - gap, y + r * 0.1, cherryR);
-        grad1.addColorStop(0, '#ff6666');
-        grad1.addColorStop(0.6, '#cc1133');
-        grad1.addColorStop(1, '#880011');
+        // Highlight
         ctx.beginPath();
-        ctx.arc(x - gap, y + r * 0.1, cherryR, 0, Math.PI * 2);
-        ctx.fillStyle = grad1;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x - gap - cherryR * 0.2, y + r * 0.1 - cherryR * 0.2, cherryR * 0.25, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.fill();
-        // Right cherry
-        const grad2 = ctx.createRadialGradient(x + gap - cherryR * 0.3, y + r * 0.05 - cherryR * 0.3, cherryR * 0.1, x + gap, y + r * 0.05, cherryR);
-        grad2.addColorStop(0, '#ff6666');
-        grad2.addColorStop(0.6, '#cc1133');
-        grad2.addColorStop(1, '#880011');
-        ctx.beginPath();
-        ctx.arc(x + gap, y + r * 0.05, cherryR, 0, Math.PI * 2);
-        ctx.fillStyle = grad2;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + gap - cherryR * 0.2, y + r * 0.05 - cherryR * 0.2, cherryR * 0.25, 0, Math.PI * 2);
+        ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.2, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.fill();
     }
 
     function drawStrawberry(x: number, y: number, r: number) {
-        // Strawberry: wider at top, pointed at bottom, with seeds and green cap
-        // Body (teardrop shape — wide top, narrow bottom)
-        ctx.beginPath();
-        ctx.moveTo(x, y + r * 0.9); // bottom point
-        ctx.bezierCurveTo(x - r * 1.0, y + r * 0.1, x - r * 0.85, y - r * 0.7, x, y - r * 0.55);
-        ctx.bezierCurveTo(x + r * 0.85, y - r * 0.7, x + r * 1.0, y + r * 0.1, x, y + r * 0.9);
-        ctx.closePath();
-        const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y + r * 0.1, r);
-        grad.addColorStop(0, '#ff6677');
+        // Strawberry: round red/pink ball with yellow seed dots + green cap
+        const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+        grad.addColorStop(0, '#ff7788');
         grad.addColorStop(0.5, '#ee2244');
         grad.addColorStop(1, '#aa1133');
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
-        // Seeds (small yellow ovals)
+        // Seeds — tiny yellow dots scattered on surface
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
         ctx.fillStyle = '#ffdd66';
         const seedPositions = [
-            [-0.2, -0.15], [0.2, -0.1], [-0.1, 0.15], [0.15, 0.2],
-            [0, 0.0], [-0.25, 0.3], [0.22, 0.35], [0, 0.45],
+            [-0.35, -0.3], [0.3, -0.35], [-0.5, 0.05], [0.45, 0.1],
+            [-0.15, 0.1], [0.15, -0.1], [-0.3, 0.4], [0.35, 0.35],
+            [0.0, 0.5], [0.0, -0.5], [-0.5, -0.15], [0.5, -0.1],
         ];
         for (const [sx, sy] of seedPositions) {
-            ctx.save();
-            ctx.translate(x + r * sx, y + r * sy);
-            ctx.rotate(Math.atan2(sy, sx) + 0.3);
             ctx.beginPath();
-            ctx.ellipse(0, 0, r * 0.04, r * 0.025, 0, 0, Math.PI * 2);
+            ctx.arc(x + r * sx, y + r * sy, r * 0.04, 0, Math.PI * 2);
             ctx.fill();
-            ctx.restore();
         }
-        // Green cap (sepals) — spiky leaf crown at top
+        ctx.restore();
+        // Green cap at top — small spiky leaves
         ctx.fillStyle = '#33aa44';
         for (let i = 0; i < 5; i++) {
-            const angle = -Math.PI / 2 + (i - 2) * 0.35;
+            const angle = -Math.PI / 2 + (i - 2) * 0.4;
             ctx.beginPath();
             ctx.ellipse(
-                x + Math.cos(angle) * r * 0.15,
-                y - r * 0.6 + Math.sin(angle) * r * 0.05,
-                r * 0.22, r * 0.08,
+                x + Math.cos(angle) * r * 0.1,
+                y - r * 0.85 + Math.sin(angle) * r * 0.05,
+                r * 0.2, r * 0.07,
                 angle + Math.PI / 2, 0, Math.PI * 2
             );
             ctx.fill();
         }
         // Highlight
         ctx.beginPath();
-        ctx.arc(x - r * 0.2, y - r * 0.25, r * 0.15, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.18, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
         ctx.fill();
     }
 
     function drawGrape(x: number, y: number, r: number) {
-        // Grape cluster: pyramid of small purple spheres + stem
-        const grapeR = r * 0.28;
-        // Grape positions in a triangular cluster
-        const positions = [
-            [0, -0.55],           // top
-            [-0.32, -0.2], [0.32, -0.2],  // row 2
-            [-0.48, 0.15], [0, 0.15], [0.48, 0.15],  // row 3
-            [-0.32, 0.5], [0.32, 0.5],  // row 4
-        ];
+        // Grape: round purple ball with subtle shine + tiny stem
+        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.05, x, y, r);
+        grad.addColorStop(0, '#cc88ff');
+        grad.addColorStop(0.4, '#8844cc');
+        grad.addColorStop(1, '#441166');
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
         // Stem
         ctx.strokeStyle = '#5a3a1a';
         ctx.lineWidth = Math.max(1.5, r * 0.06);
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x, y - r * 0.55);
-        ctx.lineTo(x + r * 0.05, y - r * 0.85);
+        ctx.moveTo(x, y - r * 0.9);
+        ctx.lineTo(x + r * 0.05, y - r * 1.1);
         ctx.stroke();
-        // Leaf
+        // Highlight — glossy reflection
         ctx.beginPath();
-        ctx.ellipse(x + r * 0.18, y - r * 0.8, r * 0.18, r * 0.08, 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#44aa44';
+        ctx.ellipse(x - r * 0.25, y - r * 0.3, r * 0.15, r * 0.25, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
         ctx.fill();
-        // Individual grapes
-        for (const [gx, gy] of positions) {
-            const grad = ctx.createRadialGradient(
-                x + r * gx - grapeR * 0.3, y + r * gy - grapeR * 0.3, grapeR * 0.05,
-                x + r * gx, y + r * gy, grapeR
-            );
-            grad.addColorStop(0, '#cc88ff');
-            grad.addColorStop(0.5, '#7733aa');
-            grad.addColorStop(1, '#441166');
-            ctx.beginPath();
-            ctx.arc(x + r * gx, y + r * gy, grapeR, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
-            // Highlight on each grape
-            ctx.beginPath();
-            ctx.arc(x + r * gx - grapeR * 0.2, y + r * gy - grapeR * 0.2, grapeR * 0.3, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fill();
-        }
+        // Secondary small highlight
+        ctx.beginPath();
+        ctx.arc(x - r * 0.15, y - r * 0.45, r * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fill();
     }
 
     function drawOrange(x: number, y: number, r: number) {
@@ -963,15 +929,15 @@ const skills = [
         ctx.arc(x, y + r * 0.7, r * 0.1, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(180,100,0,0.3)';
         ctx.fill();
-        // Small leaf + stem at top
+        // Small leaf + stem at top (kept within circle area)
         ctx.strokeStyle = '#3a6622';
         ctx.lineWidth = Math.max(1.5, r * 0.06);
         ctx.beginPath();
-        ctx.moveTo(x, y - r);
-        ctx.lineTo(x, y - r - r * 0.15);
+        ctx.moveTo(x, y - r * 0.85);
+        ctx.lineTo(x, y - r * 0.95);
         ctx.stroke();
         ctx.beginPath();
-        ctx.ellipse(x + r * 0.12, y - r - r * 0.05, r * 0.15, r * 0.07, 0.4, 0, Math.PI * 2);
+        ctx.ellipse(x + r * 0.1, y - r * 0.9, r * 0.12, r * 0.06, 0.4, 0, Math.PI * 2);
         ctx.fillStyle = '#44aa44';
         ctx.fill();
         // Highlight
@@ -982,8 +948,7 @@ const skills = [
     }
 
     function drawApple(x: number, y: number, r: number) {
-        // Apple: classic red with indent at top, green leaf, highlight
-        // Body — slightly taller than wide with dimple
+        // Apple: round red ball with top indent shadow, small stem + leaf inside circle
         const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.2, r * 0.1, x, y + r * 0.1, r);
         grad.addColorStop(0, '#ff6666');
         grad.addColorStop(0.4, '#dd2233');
@@ -1008,28 +973,21 @@ const skills = [
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fill();
         ctx.restore();
-        // Stem
+        // Stem (short, inside circle)
         ctx.strokeStyle = '#5a3a1a';
         ctx.lineWidth = Math.max(2, r * 0.05);
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(x, y - r * 0.8);
-        ctx.quadraticCurveTo(x + r * 0.08, y - r * 1.1, x + r * 0.03, y - r * 1.05);
+        ctx.lineTo(x + r * 0.03, y - r * 0.92);
         ctx.stroke();
-        // Leaf — larger, angled
+        // Leaf (small, inside circle)
         ctx.beginPath();
-        ctx.moveTo(x + r * 0.05, y - r * 0.95);
-        ctx.quadraticCurveTo(x + r * 0.45, y - r * 1.2, x + r * 0.35, y - r * 0.85);
-        ctx.quadraticCurveTo(x + r * 0.2, y - r * 0.95, x + r * 0.05, y - r * 0.95);
+        ctx.moveTo(x + r * 0.05, y - r * 0.85);
+        ctx.quadraticCurveTo(x + r * 0.3, y - r * 0.98, x + r * 0.25, y - r * 0.78);
+        ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.85, x + r * 0.05, y - r * 0.85);
         ctx.fillStyle = '#33aa33';
         ctx.fill();
-        // Leaf vein
-        ctx.strokeStyle = '#228822';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(x + r * 0.08, y - r * 0.95);
-        ctx.quadraticCurveTo(x + r * 0.25, y - r * 1.05, x + r * 0.32, y - r * 0.9);
-        ctx.stroke();
         // Highlight
         ctx.beginPath();
         ctx.ellipse(x - r * 0.3, y - r * 0.2, r * 0.15, r * 0.25, -0.3, 0, Math.PI * 2);
@@ -1038,31 +996,28 @@ const skills = [
     }
 
     function drawPineapple(x: number, y: number, r: number) {
-        // Pineapple: golden body with diamond crosshatch, green spiky crown
-        // Body (slightly oval — taller)
-        const grad = ctx.createRadialGradient(x - r * 0.15, y, r * 0.2, x, y + r * 0.1, r);
+        // Pineapple: round golden ball with crosshatch pattern, green crown inside circle
+        const grad = ctx.createRadialGradient(x - r * 0.15, y - r * 0.1, r * 0.2, x, y, r);
         grad.addColorStop(0, '#ffdd55');
         grad.addColorStop(0.5, '#ddaa22');
         grad.addColorStop(1, '#aa7711');
         ctx.beginPath();
-        ctx.ellipse(x, y + r * 0.1, r * 0.85, r * 0.95, 0, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
         // Diamond crosshatch pattern
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(x, y + r * 0.1, r * 0.85, r * 0.95, 0, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.clip();
         ctx.strokeStyle = 'rgba(150,90,10,0.3)';
         ctx.lineWidth = 1;
-        // Diagonal lines one way
         for (let i = -6; i <= 6; i++) {
             ctx.beginPath();
             ctx.moveTo(x + i * r * 0.25 - r, y - r);
             ctx.lineTo(x + i * r * 0.25 + r, y + r * 1.2);
             ctx.stroke();
         }
-        // Diagonal lines other way
         for (let i = -6; i <= 6; i++) {
             ctx.beginPath();
             ctx.moveTo(x + i * r * 0.25 + r, y - r);
@@ -1070,77 +1025,78 @@ const skills = [
             ctx.stroke();
         }
         ctx.restore();
-        // Crown — spiky green leaves at top
-        const crownLeaves = 7;
+        // Crown — small green leaves at top, kept inside circle
+        const crownLeaves = 5;
         for (let i = 0; i < crownLeaves; i++) {
-            const angle = -Math.PI / 2 + (i - (crownLeaves - 1) / 2) * 0.22;
-            const leafLen = r * (0.5 + (i % 2) * 0.15);
+            const angle = -Math.PI / 2 + (i - (crownLeaves - 1) / 2) * 0.25;
+            const leafLen = r * (0.35 + (i % 2) * 0.1);
             ctx.beginPath();
-            ctx.moveTo(x + Math.cos(angle + 0.08) * r * 0.15, y - r * 0.75);
-            ctx.quadraticCurveTo(
-                x + Math.cos(angle) * leafLen * 0.6,
-                y - r * 0.75 + Math.sin(angle) * leafLen * 0.6,
-                x + Math.cos(angle) * leafLen,
-                y - r * 0.75 + Math.sin(angle) * leafLen
-            );
+            ctx.moveTo(x + Math.cos(angle + 0.06) * r * 0.1, y - r * 0.85);
             ctx.quadraticCurveTo(
                 x + Math.cos(angle) * leafLen * 0.5,
-                y - r * 0.75 + Math.sin(angle) * leafLen * 0.5 + r * 0.06,
-                x + Math.cos(angle - 0.08) * r * 0.15,
-                y - r * 0.75
+                y - r * 0.85 + Math.sin(angle) * leafLen * 0.5,
+                x + Math.cos(angle) * leafLen,
+                y - r * 0.85 + Math.sin(angle) * leafLen
+            );
+            ctx.quadraticCurveTo(
+                x + Math.cos(angle) * leafLen * 0.4,
+                y - r * 0.85 + Math.sin(angle) * leafLen * 0.4 + r * 0.04,
+                x + Math.cos(angle - 0.06) * r * 0.1,
+                y - r * 0.85
             );
             ctx.fillStyle = i % 2 === 0 ? '#33aa33' : '#44bb44';
             ctx.fill();
         }
+        // Highlight
+        ctx.beginPath();
+        ctx.arc(x - r * 0.2, y - r * 0.15, r * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fill();
     }
 
     function drawWatermelon(x: number, y: number, r: number) {
-        // Watermelon: dark green with lighter green stripes on outside, pink interior shown as highlight
-        // Outer rind
-        const rindGrad = ctx.createRadialGradient(x, y, r * 0.75, x, y, r);
-        rindGrad.addColorStop(0, '#ff6688');  // pink interior
-        rindGrad.addColorStop(0.72, '#ff4466');
-        rindGrad.addColorStop(0.76, '#eeffee'); // thin white rind
-        rindGrad.addColorStop(0.80, '#44aa55'); // light green
-        rindGrad.addColorStop(1, '#226633');    // dark green
+        // Watermelon EXTERIOR: dark green base with lighter green stripes
+        // Base — dark green
+        const baseGrad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+        baseGrad.addColorStop(0, '#3a8a4a');
+        baseGrad.addColorStop(0.5, '#2a6e35');
+        baseGrad.addColorStop(1, '#1a4a22');
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = rindGrad;
+        ctx.fillStyle = baseGrad;
         ctx.fill();
-        // Dark green stripes on the rind
+        // Lighter green stripes curving from top to bottom
         ctx.save();
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.clip();
-        ctx.strokeStyle = 'rgba(20,60,20,0.35)';
-        ctx.lineWidth = r * 0.07;
-        for (let i = 0; i < 8; i++) {
-            const angle = (Math.PI * 2 / 8) * i;
+        ctx.strokeStyle = '#4aaa5a';
+        ctx.lineWidth = r * 0.12;
+        ctx.lineCap = 'round';
+        const stripeCount = 8;
+        for (let i = 0; i < stripeCount; i++) {
+            const baseAngle = (Math.PI * 2 / stripeCount) * i;
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.quadraticCurveTo(
-                x + Math.cos(angle) * r * 0.6,
-                y + Math.sin(angle) * r * 0.6,
-                x + Math.cos(angle) * r * 1.1,
-                y + Math.sin(angle) * r * 1.1
-            );
+            ctx.moveTo(x, y - r * 0.15);
+            // Curve outward from near-top toward bottom
+            const cx1 = x + Math.cos(baseAngle) * r * 0.7;
+            const cy1 = y + Math.sin(baseAngle) * r * 0.7;
+            const ex = x + Math.cos(baseAngle) * r * 1.15;
+            const ey = y + Math.sin(baseAngle) * r * 1.15;
+            ctx.quadraticCurveTo(cx1, cy1, ex, ey);
             ctx.stroke();
         }
         ctx.restore();
-        // Seeds in the pink interior
-        ctx.fillStyle = '#331111';
-        const seedCount = 10;
-        for (let i = 0; i < seedCount; i++) {
-            const angle = (Math.PI * 2 / seedCount) * i + 0.2;
-            const dist = r * (0.25 + (i % 3) * 0.12);
-            ctx.save();
-            ctx.translate(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist);
-            ctx.rotate(angle + Math.PI / 2);
-            ctx.beginPath();
-            ctx.ellipse(0, 0, r * 0.03, r * 0.055, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
+        // Small stem dimple at top
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.85, r * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(90,60,20,0.5)';
+        ctx.fill();
+        // Highlight
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.3, y - r * 0.25, r * 0.15, r * 0.22, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fill();
     }
 
     function drawFruitShape(x: number, y: number, r: number, tier: number, alpha: number) {
@@ -1148,14 +1104,9 @@ const skills = [
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        // Neon glow behind
+        // Subtle glow behind fruit
         ctx.shadowColor = t.glow;
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(x, y, r * 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur = 12;
 
         // Draw the specific fruit
         if (tier === 0) drawCherry(x, y, r);
@@ -1166,17 +1117,7 @@ const skills = [
         else if (tier === 5) drawPineapple(x, y, r);
         else if (tier === 6) drawWatermelon(x, y, r);
 
-        // Neon outline (circle hitbox indicator — subtle)
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = t.stroke;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = alpha * 0.3;
-        ctx.shadowColor = t.glow;
-        ctx.shadowBlur = 10;
-        ctx.stroke();
         ctx.shadowBlur = 0;
-
         ctx.restore();
     }
 
@@ -1210,8 +1151,7 @@ const skills = [
 
         const lineHeight = f.tier <= 1 ? (f.tier === 0 ? 11 : 12) : 14;
         const totalH = lines.length * lineHeight;
-        // Position label below center for strawberry (pointed bottom), otherwise center
-        const labelY = f.tier === 1 ? f.y - r * 0.15 : f.y;
+        const labelY = f.y;
         const startY = labelY - totalH / 2 + lineHeight / 2;
 
         // Dark rounded backdrop behind text
