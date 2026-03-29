@@ -566,7 +566,10 @@ for (const img of photoImages) {
     let currentFriction = 0.97;
     let spinStartIdx = 0;
     let isFirstSpin = true;
-    const TDD_IDX = slugToIndex["tdd-command-generator"] ?? -1;
+    const SKIP_FIRST_SPIN = new Set([
+        slugToIndex["tdd-command-generator"],
+        slugToIndex["tdd-with-ai-presentation"],
+    ].filter(i => i != null));
 
     function spin() {
         if (isDetailView) return;
@@ -647,8 +650,8 @@ for (const img of photoImages) {
             if (mod(settleTo, N) === mod(spinStartIdx, N)) {
                 settleTo += (scrollPos >= spinStartIdx) ? 1 : -1;
             }
-            // Don't land on TDD project on the very first spin
-            if (isFirstSpin && TDD_IDX >= 0 && mod(settleTo, N) === TDD_IDX) {
+            // Don't land on TDD projects on the very first spin
+            if (isFirstSpin && SKIP_FIRST_SPIN.has(mod(settleTo, N))) {
                 settleTo += 1;
             }
             if (isFirstSpin) isFirstSpin = false;
