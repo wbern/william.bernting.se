@@ -46,10 +46,10 @@ for (const locale of LOCALES) {
       const roller = page.locator("[data-testid='roller']");
       await expect(roller).toBeVisible();
 
-      // All 12 project slides are in the DOM
+      // All 13 project slides are in the DOM
       const bars = roller.locator(".roller-slide");
       const count = await bars.count();
-      expect(count).toBe(12);
+      expect(count).toBe(13);
     });
 
     test("displays a highlighted current selection", async ({ page }) => {
@@ -635,6 +635,62 @@ for (const locale of LOCALES) {
       });
 
       expect(result.ok, `Projects slide overflows after closing detail: ${result.reason}`).toBe(true);
+    });
+
+    test("roulette is centered after scrolling detail card and navigating away then back", async ({ page }, testInfo) => {
+      if (testInfo.project.name !== "mobile") {
+        test.skip();
+        return;
+      }
+
+      // Deep-link directly to Chess Reel (long content) to open its detail view
+      await page.goto(locale.prefix + "/#chess-reel", { waitUntil: "networkidle" });
+      await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
+
+      // Wait for detail view to open via deep link
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
+      await page.waitForTimeout(600);
+
+      // Scroll down inside the slide to simulate reading the long card content
+      const slide = page.locator("#slider > .keen-slider__slide").nth(1);
+      await slide.evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
+      await page.waitForTimeout(300);
+
+      // Verify the slide is actually scrolled
+      const scrollTopBefore = await slide.evaluate((el) => el.scrollTop);
+      expect(scrollTopBefore).toBeGreaterThan(0);
+
+      // Navigate to next slide (ArrowDown triggers keen-slider since slide is at scroll bottom)
+      // Use evaluate to dispatch wheel event to trigger keen-slider navigation
+      await slide.evaluate((el) => {
+        el.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+      });
+      await page.waitForTimeout(1000);
+
+      // Navigate back to projects slide
+      await page.keyboard.press("ArrowUp");
+      await page.waitForTimeout(1500);
+
+      // The slide's scrollTop should be reset to 0
+      const scrollTopAfter = await slide.evaluate((el) => el.scrollTop);
+      expect(scrollTopAfter, "Slide scrollTop should reset to 0 after returning").toBe(0);
+
+      // The roller section should be vertically centered in the viewport
+      const rollerSection = page.locator("[data-testid='projects-section']");
+      const sectionBox = (await rollerSection.boundingBox())!;
+      const viewport = page.viewportSize()!;
+
+      // The roller section should be fully visible (not offset below the viewport)
+      expect(sectionBox.y, "Roller section should not be pushed below viewport top").toBeGreaterThanOrEqual(-10);
+      expect(
+        sectionBox.y + sectionBox.height,
+        "Roller section bottom should be within viewport",
+      ).toBeLessThanOrEqual(viewport.height + 10);
     });
   });
 }

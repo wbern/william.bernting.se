@@ -666,6 +666,9 @@ for (const img of photoImages) {
         isDetailView = false;
         section?.classList.remove("detail-active");
         document.getElementById("slide-dots")?.classList.remove("hidden");
+        // Reset parent slide scroll so roulette is centered, not offset
+        const parentSlide = section?.closest(".keen-slider__slide");
+        if (parentSlide) parentSlide.scrollTop = 0;
         // Clear URL hash
         history.replaceState(null, "", location.pathname);
     }
@@ -761,6 +764,12 @@ for (const img of photoImages) {
         viewport?.classList.remove("roller-spinning");
         spinBtn?.classList.remove("spinning");
         document.getElementById("slide-dots")?.classList.remove("hidden");
+        // Clear URL hash so returning to the projects slide doesn't re-open detail
+        if (location.hash) history.replaceState(null, "", location.pathname);
+        // Reset parent keen-slider slide's scroll position so the roulette
+        // isn't offset when returning after viewing a scrolled detail card
+        const parentSlide = section?.closest(".keen-slider__slide");
+        if (parentSlide) parentSlide.scrollTop = 0;
         // Scramble position so next visit looks different
         const randomStart = Math.floor(Math.random() * N);
         scrollPos = randomStart;
