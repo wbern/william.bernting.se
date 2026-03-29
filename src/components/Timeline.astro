@@ -521,6 +521,14 @@ const blocks = [...jobs].reverse();
             startSyncLoop();
         }
 
+        function stopSliderPropagation(e: Event) {
+            // Only stop propagation when blocks are interactive (settled/freed).
+            // Before blocks settle, let keen-slider handle gestures normally.
+            const hasInteractiveBlocks = st.some(s => s.phase === 'done' || s.phase === 'freed');
+            if (!hasInteractiveBlocks) return;
+            e.stopPropagation();
+        }
+
         function createWalls(w: number, h: number): Matter.Body[] {
             return [
                 Bodies.rectangle(w / 2, h + WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true }),       // floor
@@ -582,13 +590,27 @@ const blocks = [...jobs].reverse();
         }
 
         // Interaction: click/tap any settled block to free all and enter Matter.js mode.
-        // Don't stopPropagation — MouseConstraint needs to see this event on the stage.
-        els.forEach((blockEl) => {
-            blockEl.addEventListener('pointerdown', () => {
-                if (!blockEl.classList.contains('settled') && !blockEl.classList.contains('freed')) return;
-                freeAllBlocks();
-            });
+        // Use pointerdown (fires BEFORE mousedown) so that freeAllBlocks() creates
+        // the Matter.js Mouse + MouseConstraint in time to catch the subsequent
+        // mousedown event and start dragging the block under the cursor.
+        stage.addEventListener('pointerdown', (e) => {
+            const target = (e.target as HTMLElement)?.closest?.('.tower-block') as HTMLElement | null;
+            if (!target) return;
+            if (!target.classList.contains('settled') && !target.classList.contains('freed')) return;
+            freeAllBlocks();
         });
+
+        // Prevent mouse/touch events from bubbling to keen-slider when blocks
+        // are interactive. keen-slider listens for mousedown/mousemove/mouseup
+        // and touch events — if they bubble up, it interprets block drags as
+        // slide swipes. These listeners are permanent; stopSliderPropagation
+        // only actually stops propagation when blocks are settled or freed.
+        stage.addEventListener('mousedown', stopSliderPropagation);
+        stage.addEventListener('mousemove', stopSliderPropagation);
+        stage.addEventListener('mouseup', stopSliderPropagation);
+        stage.addEventListener('touchstart', stopSliderPropagation);
+        stage.addEventListener('touchmove', stopSliderPropagation);
+        stage.addEventListener('touchend', stopSliderPropagation);
 
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             showFinal(); return;
