@@ -27,7 +27,7 @@ const traitRowEntries: TraitRowEntry[] = [
     speed: "mid", size: "md", style: "dim",
   },
   {
-    sv: ["Leverera ofta", "Bygg bra team", "Djupdykare", "Evangelist"],
+    sv: ["Levererar", "Hemsidebyggare", "Djupdykare", "Evangelist"],
     en: ["Ship Often", "Build Great Teams", "Deep Diver", "Evangelist"],
     speed: "fast", size: "lg", style: "bright",
   },
