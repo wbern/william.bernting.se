@@ -924,6 +924,7 @@ for (const img of photoImages) {
            pushing the keen-slider slide past 100dvh (which blocks swiping). */
         max-height: calc(100dvh - 120px);
         overflow-y: auto;
+        overscroll-behavior: contain;
         scrollbar-width: thin;
         scrollbar-color: var(--text-muted) transparent;
     }
