@@ -863,6 +863,15 @@ for (const img of photoImages) {
         opacity: 1;
         pointer-events: auto;
         position: relative;
+        /* Constrain height so the detail card scrolls internally instead of
+           pushing the keen-slider slide past 100dvh (which blocks swiping). */
+        max-height: calc(100dvh - 120px);
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .detail-active .detail-view::-webkit-scrollbar {
+        display: none;
     }
 
     .back-button {
@@ -1297,6 +1306,7 @@ for (const img of photoImages) {
         .roller-viewport { width: calc(100vw - 70px); }
         .roller-slide__title { font-size: 13px; }
         .roller-slide--selected .roller-slide__title { font-size: 15px; }
+        .detail-active .detail-view { max-height: calc(100dvh - 80px); }
         .detail-card { padding: 16px; }
         .detail-card h3 { font-size: 22px; }
         .detail-card p { font-size: 15px; }
