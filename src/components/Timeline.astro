@@ -132,7 +132,12 @@ const blocks = [...jobs].reverse();
         transition: opacity 0.3s ease;
     }
 
-    .tower-block.settled .block-date {
+    .tower-block.settled {
+        cursor: grab;
+    }
+
+    .tower-block.settled .block-date,
+    .tower-block.freed .block-date {
         opacity: 1;
     }
 
@@ -150,7 +155,8 @@ const blocks = [...jobs].reverse();
         pointer-events: none;
     }
 
-    .tower-block.settled .tower-label {
+    .tower-block.settled .tower-label,
+    .tower-block.freed .tower-label {
         opacity: 1;
     }
 
@@ -265,7 +271,7 @@ const blocks = [...jobs].reverse();
             y: number; vy: number;
             x: number; vx: number;
             r: number; vr: number;
-            phase: 'wait' | 'fall' | 'settle' | 'done';
+            phase: 'wait' | 'fall' | 'settle' | 'done' | 'freed';
             t0: number;
         }
         const st: S[] = [];
@@ -306,7 +312,7 @@ const blocks = [...jobs].reverse();
                 let allDone = true;
 
                 for (const s of st) {
-                    if (s.phase === 'done') continue;
+                    if (s.phase === 'done' || s.phase === 'freed') continue;
                     allDone = false;
 
                     if (s.phase === 'wait') {
@@ -379,11 +385,307 @@ const blocks = [...jobs].reverse();
         function reset() {
             if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
             running = false;
+            dragState = null;
             els.forEach(el => {
                 el.style.opacity = '0';
                 el.style.transform = `translateY(${START_Y}px)`;
-                el.classList.remove('settled');
+                el.style.position = '';
+                el.style.left = '';
+                el.style.top = '';
+                el.style.flex = '';
+                el.style.width = '';
+                el.style.height = '';
+                el.classList.remove('settled', 'freed');
             });
+        }
+
+        // ─── Drag-and-throw ───
+        let dragState: { s: S; offX: number; offY: number; prevX: number; prevY: number; vx: number; vy: number } | null = null;
+
+        /** Free ALL blocks — snapshot positions first, then switch to absolute.
+         *  This avoids cascading flex re-layout as each block leaves the flow. */
+        function freeAllBlocks() {
+            const stageRect = stage.getBoundingClientRect();
+            const toFree: { s: S; rect: DOMRect }[] = [];
+
+            // 1) Snapshot every block's current visual rect while flex is intact
+            for (const s of st) {
+                if (s.phase === 'freed') continue;
+                toFree.push({ s, rect: s.el.getBoundingClientRect() });
+            }
+
+            // 2) Apply absolute positioning using the snapshotted rects
+            for (const { s, rect } of toFree) {
+                s.phase = 'freed';
+                s.el.classList.remove('settled');
+                s.el.classList.add('freed');
+
+                s.x = rect.left - stageRect.left;
+                s.y = rect.top - stageRect.top;
+                s.vx = 0; s.vy = 0; s.vr = 0;
+
+                s.el.style.width = rect.width + 'px';
+                s.el.style.height = rect.height + 'px';
+                s.el.style.position = 'absolute';
+                s.el.style.left = '0';
+                s.el.style.top = '0';
+                s.el.style.flex = 'none';
+
+                tx(s);
+            }
+        }
+
+        els.forEach((blockEl, blockIdx) => {
+            blockEl.addEventListener('pointerdown', (e) => {
+                if (!blockEl.classList.contains('settled') && !blockEl.classList.contains('freed')) return;
+                const s = st[blockIdx];
+                if (!s) return;
+
+                e.stopPropagation();
+                e.preventDefault();
+                blockEl.setPointerCapture(e.pointerId);
+
+            // Free all blocks on first interaction
+            freeAllBlocks();
+
+            const rect = blockEl.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+
+            dragState = {
+                s,
+                offX: e.clientX - rect.left,
+                offY: e.clientY - rect.top,
+                prevX: e.clientX,
+                prevY: e.clientY,
+                vx: 0, vy: 0,
+            };
+
+            tx(s);
+            });
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!dragState) return;
+            const { s } = dragState;
+            const stageRect = stage.getBoundingClientRect();
+
+            dragState.vx = (e.clientX - dragState.prevX) * 60;
+            dragState.vy = (e.clientY - dragState.prevY) * 60;
+            dragState.prevX = e.clientX;
+            dragState.prevY = e.clientY;
+
+            s.x = e.clientX - stageRect.left - dragState.offX;
+            s.y = e.clientY - stageRect.top - dragState.offY;
+            s.vx = 0; s.vy = 0;
+            tx(s);
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (!dragState) return;
+            const { s, vx, vy } = dragState;
+            s.vx = vx;
+            s.vy = vy;
+            s.vr = (Math.random() - 0.5) * 3 * Math.min(1, Math.abs(vx) / 400);
+            dragState = null;
+
+            if (!running) startPhysicsLoop();
+        });
+
+        // Touch equivalents
+        stage.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.tower-block') as HTMLElement | null;
+            if (!target || !target.classList.contains('settled')) return;
+            const idx = els.indexOf(target);
+            if (idx < 0) return;
+            const s = st[idx];
+            if (!s) return;
+
+            e.stopPropagation();
+            e.preventDefault();
+
+            // Free all blocks on first interaction
+            freeAllBlocks();
+
+            const rect = target.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+
+            dragState = {
+                s,
+                offX: touch.clientX - rect.left,
+                offY: touch.clientY - rect.top,
+                prevX: touch.clientX,
+                prevY: touch.clientY,
+                vx: 0, vy: 0,
+            };
+
+            tx(s);
+        }, { passive: false });
+
+        stage.addEventListener('touchmove', (e) => {
+            if (!dragState) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const touch = e.touches[0];
+            const stageRect = stage.getBoundingClientRect();
+
+            dragState.vx = (touch.clientX - dragState.prevX) * 60;
+            dragState.vy = (touch.clientY - dragState.prevY) * 60;
+            dragState.prevX = touch.clientX;
+            dragState.prevY = touch.clientY;
+
+            dragState.s.x = touch.clientX - stageRect.left - dragState.offX;
+            dragState.s.y = touch.clientY - stageRect.top - dragState.offY;
+            dragState.s.vx = 0; dragState.s.vy = 0;
+            tx(dragState.s);
+        }, { passive: false });
+
+        stage.addEventListener('touchend', () => {
+            if (!dragState) return;
+            const { s, vx, vy } = dragState;
+            s.vx = vx;
+            s.vy = vy;
+            s.vr = (Math.random() - 0.5) * 3 * Math.min(1, Math.abs(vx) / 400);
+            dragState = null;
+            if (!running) startPhysicsLoop();
+        });
+
+        // Physics loop for freed blocks (gravity, walls, floor, block-block collision)
+        function startPhysicsLoop() {
+            if (running) return;
+            const freedBlocks = st.filter(s => s.phase === 'freed');
+            if (!freedBlocks.length) return;
+            running = true;
+            let prev = performance.now();
+
+            const FREED_GRAVITY = 600;
+            const FREED_BOUNCE = 0.35;
+            const FREED_FRICTION = 0.6;
+            const FREED_AIR_DRAG = 0.997;
+            const FREED_ROT_DRAG = 0.92;
+            const FREED_ROT_SPRING = 6;
+            const COL_GAP = 2;          // px margin between blocks
+            const COL_ITERATIONS = 3;   // resolve overlaps iteratively
+
+            function physTick(now: number) {
+                const dt = Math.min((now - prev) / 1000, DT_CAP);
+                prev = now;
+                const stageW = stage.offsetWidth;
+                const stageH = stage.offsetHeight;
+
+                // Integrate velocity → position
+                const active: S[] = [];
+                for (const s of st) {
+                    if (s.phase !== 'freed') continue;
+                    active.push(s);
+                    if (dragState?.s === s) continue; // being dragged
+
+                    s.vy += FREED_GRAVITY * dt;
+                    s.vx *= FREED_AIR_DRAG;
+                    s.vy *= FREED_AIR_DRAG;
+                    s.vr *= FREED_ROT_DRAG;
+                    s.vr += -FREED_ROT_SPRING * s.r * dt;
+
+                    s.x += s.vx * dt;
+                    s.y += s.vy * dt;
+                    s.r += s.vr * dt;
+                }
+
+                // Block-block AABB collision (multiple iterations to stabilise stacks)
+                for (let iter = 0; iter < COL_ITERATIONS; iter++) {
+                    for (let i = 0; i < active.length; i++) {
+                        const a = active[i];
+                        const aw = a.el.offsetWidth;
+                        const ah = a.el.offsetHeight;
+                        for (let j = i + 1; j < active.length; j++) {
+                            const b = active[j];
+                            const bw = b.el.offsetWidth;
+                            const bh = b.el.offsetHeight;
+
+                            const overlapX = (aw + bw) / 2 + COL_GAP - Math.abs((a.x + aw / 2) - (b.x + bw / 2));
+                            const overlapY = (ah + bh) / 2 + COL_GAP - Math.abs((a.y + ah / 2) - (b.y + bh / 2));
+                            if (overlapX <= 0 || overlapY <= 0) continue;
+
+                            const aDragged = dragState?.s === a;
+                            const bDragged = dragState?.s === b;
+
+                            if (overlapY < overlapX) {
+                                // Resolve vertically
+                                const sign = (a.y + ah / 2) < (b.y + bh / 2) ? -1 : 1;
+                                if (aDragged) {
+                                    b.y += sign * overlapY;
+                                } else if (bDragged) {
+                                    a.y -= sign * overlapY;
+                                } else {
+                                    a.y -= sign * overlapY * 0.5;
+                                    b.y += sign * overlapY * 0.5;
+                                }
+                                // Velocity exchange
+                                if (!aDragged && !bDragged) {
+                                    const avgVy = (a.vy + b.vy) * 0.5;
+                                    a.vy = avgVy * FREED_BOUNCE;
+                                    b.vy = avgVy * FREED_BOUNCE;
+                                } else if (aDragged) {
+                                    b.vy = -b.vy * FREED_BOUNCE + sign * 100;
+                                } else {
+                                    a.vy = -a.vy * FREED_BOUNCE - sign * 100;
+                                }
+                            } else {
+                                // Resolve horizontally
+                                const sign = (a.x + aw / 2) < (b.x + bw / 2) ? -1 : 1;
+                                if (aDragged) {
+                                    b.x += sign * overlapX;
+                                } else if (bDragged) {
+                                    a.x -= sign * overlapX;
+                                } else {
+                                    a.x -= sign * overlapX * 0.5;
+                                    b.x += sign * overlapX * 0.5;
+                                }
+                                if (!aDragged && !bDragged) {
+                                    const avgVx = (a.vx + b.vx) * 0.5;
+                                    a.vx = avgVx * FREED_BOUNCE;
+                                    b.vx = avgVx * FREED_BOUNCE;
+                                } else if (aDragged) {
+                                    b.vx = -b.vx * FREED_BOUNCE + sign * 100;
+                                } else {
+                                    a.vx = -a.vx * FREED_BOUNCE - sign * 100;
+                                }
+                            }
+                            // Add spin on collision
+                            if (!aDragged) a.vr += (Math.random() - 0.5) * 0.5;
+                            if (!bDragged) b.vr += (Math.random() - 0.5) * 0.5;
+                        }
+                    }
+                }
+
+                // Wall / floor / ceiling clamp
+                for (const s of active) {
+                    if (dragState?.s === s) continue;
+                    const w = s.el.offsetWidth;
+                    const h = s.el.offsetHeight;
+
+                    if (s.y + h > stageH) {
+                        s.y = stageH - h;
+                        s.vy = -s.vy * FREED_BOUNCE;
+                        s.vx *= FREED_FRICTION;
+                        if (Math.abs(s.vy) > 10) s.vr += (Math.random() - 0.5) * 1;
+                    }
+                    if (s.x < 0) { s.x = 0; s.vx = -s.vx * FREED_BOUNCE; }
+                    if (s.x + w > stageW) { s.x = stageW - w; s.vx = -s.vx * FREED_BOUNCE; }
+                    if (s.y < 0) { s.y = 0; s.vy = -s.vy * FREED_BOUNCE; }
+
+                    tx(s);
+                }
+
+                if (active.length > 0) {
+                    animId = requestAnimationFrame(physTick);
+                } else {
+                    animId = null;
+                    running = false;
+                }
+            }
+            animId = requestAnimationFrame(physTick);
         }
 
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

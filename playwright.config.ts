@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: "list",
 
   use: {
-    baseURL: "http://localhost:4321",
+    baseURL: process.env.TEST_BASE_URL || "http://localhost:4321",
     screenshot: "off",
   },
 
