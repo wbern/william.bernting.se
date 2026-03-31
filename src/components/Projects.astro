@@ -120,8 +120,14 @@ for (const img of photoImages) {
         </div>`;
     }
 
-    /* ── Diorama illustrations (keyed by project index) ── */
+    /* ── Diorama illustrations (keyed by project index) ──
+     *  0: Community Assistant    4: Decision Records     8: TDD Presentation    12: Knowledge Bot
+     *  1: Pi-PAI                 5: This CV              9: LinkedIn Analysis   13: Telia.se
+     *  2: DLL Decompilation      6: TDD Command Gen     10: Blueprint to 3D    14: kendev.se
+     *  3: Chess Tool Rewrite     7: Chess Reel          11: Pixi Platformer    15: Sembo.se Startpage
+     */
     const PROJECT_ILLUSTRATIONS: Record<number, string> = {
+        /* 0: Community Assistant */
         0: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back layer: tag labels -->
@@ -149,6 +155,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 1: Pi-PAI */
         1: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back layer: connection lines (control plane) -->
@@ -187,6 +194,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 2: DLL Decompilation */
         2: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: pipeline connection -->
@@ -226,7 +234,9 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 3: Chess Tool Rewrite */
         3: photoDiorama("/chess-tool.jpg", "Legacy chess seeding tool — tournament settings dialog"),
+        /* 4: Decision Records */
         4: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: subtle grid lines -->
@@ -263,6 +273,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 5: This CV */
         5: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: recursive frame lines -->
@@ -294,6 +305,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 6: TDD Command Generator */
         6: `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: cycle connection arcs -->
@@ -330,12 +342,19 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
+        /* 7: Chess Reel */
         7: photoDiorama("/chess-reel.jpg", "Chess Reel — a meme-oriented chess board"),
+        /* 8: TDD Presentation */
         8: photoDiorama("/tdd-presentation.jpg", "TDD with AI — How to do your job and stop writing code"),
+        /* 10: Blueprint to 3D */
         10: photoDiorama("/3d-visualization.jpg", "Architectural Blueprint to 3D — rendered building from CAD data"),
+        /* 11: Pixi Platformer */
         11: photoDiorama("/pixi-platformer.jpg", "Pixi Platformer — a Doodle Jump-style game built with web technology"),
+        /* 13: Telia.se */
+        13: photoDiorama("/telia-se.png", "Telia.se — legacy migration to modern frontend"),
+        /* 14: kendev.se */
         14: photoDiorama("/kendev.png", "kendev.se — IT consultancy"),
-        12: photoDiorama("/telia-se.png", "Telia.se — legacy migration to modern frontend"),
+        /* 15: Sembo.se Startpage */
         15: photoDiorama("/sembo-startpage.jpg", "Sembo.se — travel booking startpage"),
     };
 

@@ -47,15 +47,17 @@ const t = useTranslations(lang);
         text-align: center;
         padding: 20px;
         min-width: 0;
+        container-type: inline-size;
     }
 
     .stat-number {
-        font-size: clamp(48px, 6vw, 72px);
+        font-size: clamp(32px, 18cqw, 72px);
         font-weight: 900;
         color: var(--purple);
         line-height: 1;
         margin-bottom: 8px;
         font-family: var(--mono);
+        white-space: nowrap;
     }
 
     .stat-label {
@@ -66,7 +68,7 @@ const t = useTranslations(lang);
     @media (max-width: 600px) {
         .stats-grid { grid-template-columns: 1fr 1fr; }
         .stat:last-child { display: none; }
-        .stat-number { font-size: clamp(32px, 8vw, 48px); }
+        .stat-number { font-size: clamp(32px, 18cqw, 48px); }
     }
 
     @media print {
