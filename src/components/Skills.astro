@@ -198,7 +198,7 @@ const skills = [
     const DT_CAP    = 0.033;
     const MAX_FRUITS = 25;
     const MAX_SPEED = 800; // velocity cap to prevent tunneling
-    const AUTO_DROP_INTERVAL = 2500;
+    const AUTO_DROP_INTERVAL = 1800;
     const IDLE_TIMEOUT = 8000;
     const MERGE_DURATION = 150;
     const FONT_SM   = '600 11px "JetBrains Mono", monospace';
@@ -245,6 +245,7 @@ const skills = [
         cx: number;           // center x
         wallThickness: number;
         cornerRadius: number;
+        taperInset: number;   // how much narrower the bottom is on each side
         // Wall segments for collision (inner edges)
         leftWall:  { x1: number; y1: number; x2: number; y2: number };
         rightWall: { x1: number; y1: number; x2: number; y2: number };
@@ -312,6 +313,7 @@ const skills = [
             cx: W / 2,
             wallThickness: wallT,
             cornerRadius: corner,
+            taperInset: taperInset,
             leftWall: {
                 x1: bx + taperInset, y1: by + bh - corner,
                 x2: bx, y2: by
@@ -711,6 +713,23 @@ const skills = [
                 f.y = bottomY - f.radius;
                 if (f.vy > 0) f.vy = -f.vy * BOUNCE;
                 f.vx *= 0.9;
+            }
+
+            // ─── Hard wall clamp using interpolated taper (prevents escape) ───
+            // At any y inside the bowl, compute exact left/right inner bounds
+            if (f.y + f.radius > bowl.y && f.y - f.radius < bowl.bottom) {
+                const wallRange = bowl.bottom - bowl.y;
+                const t = Math.max(0, Math.min(1, (f.y - bowl.y) / wallRange));
+                const leftBound = bowl.x + bowl.taperInset * t + f.radius;
+                const rightBound = bowl.x + bowl.w - bowl.taperInset * t - f.radius;
+                if (f.x < leftBound) {
+                    f.x = leftBound;
+                    if (f.vx < 0) f.vx = -f.vx * BOUNCE;
+                }
+                if (f.x > rightBound) {
+                    f.x = rightBound;
+                    if (f.vx > 0) f.vx = -f.vx * BOUNCE;
+                }
             }
 
             // Keep in canvas bounds (safety — kill if way out)
