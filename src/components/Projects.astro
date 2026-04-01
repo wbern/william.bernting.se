@@ -703,9 +703,11 @@ for (const img of photoImages) {
         isDetailView = false;
         section?.classList.remove("detail-active");
         document.getElementById("slide-dots")?.classList.remove("hidden");
-        // Reset parent slide scroll so roulette is centered, not offset
+        // Reset scroll positions so swiping works immediately
         const parentSlide = section?.closest(".keen-slider__slide");
         if (parentSlide) parentSlide.scrollTop = 0;
+        const dv = section?.querySelector(".detail-view") as HTMLElement | null;
+        if (dv) dv.scrollTop = 0;
         // Tell keen-slider to unfreeze
         document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: false } }));
         // Clear URL hash
@@ -876,6 +878,13 @@ for (const img of photoImages) {
         justify-items: center;
         width: 100%;
         overflow: hidden;
+        /* Establish containing block so the absolutely-positioned .detail-view
+           (when inactive) is clipped by overflow:hidden.  Without this, the
+           detail-view's populated content extends into the keen-slider slide's
+           overflow area, making scrollHeight > clientHeight, which causes
+           keen-slider to yield touch events to native scroll instead of
+           triggering a slide transition. */
+        position: relative;
     }
 
     .roller-view,
