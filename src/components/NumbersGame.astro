@@ -1,0 +1,463 @@
+---
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const fallbackStats = [
+    { key: "prototypes", value: t("stats.prototypes.value"), label: t("stats.prototypes"), short: t("stats.prototypes.short") },
+    { key: "users",      value: t("stats.users.value"),      label: t("stats.users"),      short: t("stats.users.short") },
+    { key: "teams",      value: t("stats.teams.value"),      label: t("stats.teams"),      short: t("stats.teams.short") },
+    { key: "experience", value: t("stats.experience.value"), label: t("stats.experience"), short: t("stats.experience.short") },
+    { key: "coderate",   value: t("stats.coderate.value"),   label: t("stats.coderate"),   short: t("stats.coderate.short") },
+];
+---
+
+<div class="section-inner numbers-section">
+    <div class="section-label reveal">{t("stats.label")}</div>
+    <h2 class="section-heading reveal reveal-delay-1">
+        {t("stats.heading.before")}<span class="highlight">{t("stats.heading.highlight")}</span>{t("stats.heading.after")}
+    </h2>
+
+    <div class="numbers-game reveal reveal-delay-2" data-numbers-game>
+        <div class="numbers-status">
+            <div class="numbers-score">
+                <span class="numbers-score-label">{t("numbers.score")}</span>
+                <span class="numbers-score-value" data-score>0</span>
+            </div>
+            <button class="numbers-reset" type="button" data-reset>{t("numbers.reset")}</button>
+        </div>
+
+        <div
+            class="numbers-board"
+            tabindex="0"
+            role="application"
+            aria-label={t("numbers.aria.board")}
+            data-board
+        ></div>
+
+        <div class="numbers-hint numbers-hint-desktop">{t("numbers.hint.desktop")}</div>
+        <div class="numbers-hint numbers-hint-touch">{t("numbers.hint.touch")}</div>
+        <div class="numbers-gameover" data-gameover hidden>{t("numbers.gameover")}</div>
+    </div>
+
+    <div class="numbers-fallback" data-fallback-stats>
+        {fallbackStats.map((stat) => (
+            <div class="stat" data-stat-key={stat.key} data-stat-short={stat.short}>
+                <div class="stat-number">{stat.value}</div>
+                <div class="stat-label">{stat.label}</div>
+            </div>
+        ))}
+    </div>
+</div>
+
+<script>
+    import {
+        move,
+        spawnTile,
+        isGameOver,
+        getStatForTile,
+    } from "../utils/merge-game";
+    import type { Board, Direction, StatKey } from "../utils/merge-game";
+
+    const BOARD_SIZE = 4;
+    const SWIPE_THRESHOLD = 24;
+
+    type StatMeta = { value: string; label: string; short: string };
+
+    function createBoard(): Board {
+        return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
+    }
+
+    function keyToDirection(key: string): Direction | null {
+        switch (key) {
+            case "ArrowLeft": return "left";
+            case "ArrowRight": return "right";
+            case "ArrowUp": return "up";
+            case "ArrowDown": return "down";
+            default: return null;
+        }
+    }
+
+    function tierFor(value: number): number {
+        return Math.min(12, Math.max(0, Math.round(Math.log2(value / 3))));
+    }
+
+    function readStatLabels(root: HTMLElement): Partial<Record<StatKey, StatMeta>> {
+        const result: Partial<Record<StatKey, StatMeta>> = {};
+        root.querySelectorAll<HTMLElement>("[data-fallback-stats] .stat").forEach((el) => {
+            const key = el.dataset.statKey as StatKey | undefined;
+            if (!key) return;
+            result[key] = {
+                value: el.querySelector(".stat-number")?.textContent?.trim() ?? "",
+                label: el.querySelector(".stat-label")?.textContent?.trim() ?? "",
+                short: el.dataset.statShort ?? "",
+            };
+        });
+        return result;
+    }
+
+    function initGame(root: HTMLElement) {
+        const boardEl = root.querySelector<HTMLElement>("[data-board]");
+        const scoreEl = root.querySelector<HTMLElement>("[data-score]");
+        const resetBtn = root.querySelector<HTMLButtonElement>("[data-reset]");
+        const gameoverEl = root.querySelector<HTMLElement>("[data-gameover]");
+        const section = root.closest<HTMLElement>(".numbers-section") ?? root;
+        if (!boardEl || !scoreEl || !resetBtn || !gameoverEl) return;
+
+        const statLabels = readStatLabels(section);
+
+        let board: Board = createBoard();
+        let score = 0;
+
+        function render() {
+            scoreEl!.textContent = String(score);
+            boardEl!.innerHTML = "";
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const cell = document.createElement("div");
+                    cell.className = "numbers-cell";
+                    const value = board[r][c];
+                    if (value !== 0) {
+                        const tile = document.createElement("div");
+                        tile.className = "numbers-tile";
+                        tile.dataset.value = String(value);
+                        tile.dataset.tier = String(tierFor(value));
+                        const stat = getStatForTile(value);
+                        if (stat) {
+                            tile.dataset.stat = stat;
+                            tile.dataset.milestone = "true";
+                            const meta = statLabels[stat];
+                            const displayValue = meta?.value ?? String(value);
+                            const short = meta?.short ?? "";
+                            const valueEl = document.createElement("span");
+                            valueEl.className = "numbers-tile-value";
+                            valueEl.textContent = `~${displayValue}`;
+                            const labelEl = document.createElement("span");
+                            labelEl.className = "numbers-tile-stat";
+                            labelEl.textContent = short;
+                            tile.append(valueEl, labelEl);
+                        } else {
+                            tile.textContent = String(value);
+                        }
+                        cell.appendChild(tile);
+                    }
+                    boardEl!.appendChild(cell);
+                }
+            }
+        }
+
+        function start() {
+            board = spawnTile(spawnTile(createBoard()));
+            score = 0;
+            gameoverEl!.hidden = true;
+            render();
+        }
+
+        function attempt(direction: Direction) {
+            const result = move(board, direction);
+            if (!result.moved) return;
+            board = spawnTile(result.board);
+            score += result.gained;
+            render();
+            if (isGameOver(board)) gameoverEl!.hidden = false;
+        }
+
+        document.addEventListener(
+            "keydown",
+            (e) => {
+                if (document.activeElement !== boardEl) return;
+                const dir = keyToDirection(e.key);
+                if (!dir) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                attempt(dir);
+            },
+            true,
+        );
+
+        let touchStart: { x: number; y: number } | null = null;
+        boardEl.addEventListener(
+            "touchstart",
+            (e) => {
+                const t = e.changedTouches[0];
+                touchStart = { x: t.clientX, y: t.clientY };
+            },
+            { passive: true },
+        );
+        boardEl.addEventListener(
+            "touchmove",
+            (e) => {
+                e.stopPropagation();
+            },
+            { passive: true },
+        );
+        boardEl.addEventListener("touchend", (e) => {
+            if (!touchStart) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchStart.x;
+            const dy = t.clientY - touchStart.y;
+            touchStart = null;
+            const absX = Math.abs(dx);
+            const absY = Math.abs(dy);
+            if (Math.max(absX, absY) < SWIPE_THRESHOLD) return;
+            const dir: Direction =
+                absX > absY ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+            e.stopPropagation();
+            attempt(dir);
+        });
+
+        boardEl.addEventListener("click", () => boardEl.focus());
+
+        resetBtn.addEventListener("click", () => {
+            start();
+            boardEl.focus();
+        });
+
+        start();
+
+        (window as unknown as { __numbersGame?: unknown }).__numbersGame = {
+            setBoard(next: Board) {
+                board = next.map((row) => [...row]);
+                score = 0;
+                gameoverEl!.hidden = true;
+                render();
+            },
+            getBoard: () => board.map((row) => [...row]),
+            attempt,
+        };
+    }
+
+    function initAll() {
+        document.querySelectorAll<HTMLElement>("[data-numbers-game]").forEach(initGame);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAll);
+    } else {
+        initAll();
+    }
+</script>
+
+<style is:global>
+    .numbers-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .numbers-game {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        grid-template-areas:
+            "status board"
+            "status board"
+            "hint   board"
+            "over   board";
+        gap: 16px 28px;
+        align-items: start;
+    }
+
+    .numbers-status {
+        grid-area: status;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .numbers-score {
+        font-family: var(--mono);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        padding: 10px 14px;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .numbers-score-label {
+        display: block;
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+    }
+
+    .numbers-score-value {
+        font-size: 26px;
+        color: var(--purple);
+        font-weight: 800;
+    }
+
+    .numbers-reset {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .numbers-reset:hover {
+        border-color: var(--purple);
+        color: var(--purple);
+    }
+
+    .numbers-board {
+        grid-area: board;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(4, 1fr);
+        gap: 10px;
+        aspect-ratio: 1;
+        width: 100%;
+        max-width: 440px;
+        justify-self: start;
+        outline: none;
+        touch-action: none;
+    }
+
+    .numbers-board:focus-visible {
+        border-color: var(--purple);
+        box-shadow: 0 0 0 2px var(--purple-glow);
+    }
+
+    .numbers-cell {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        position: relative;
+        min-width: 0;
+    }
+
+    .numbers-tile {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: clamp(13px, 2.2vw, 22px);
+        border-radius: 8px;
+        background: var(--purple-dim);
+        color: #fff;
+        animation: tile-pop 0.18s ease-out;
+    }
+
+    .numbers-tile[data-milestone="true"] {
+        animation: tile-pop 0.18s ease-out, tile-pulse 1.6s ease-in-out infinite;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px;
+        text-align: center;
+    }
+
+    .numbers-tile-value {
+        font-size: clamp(16px, 2.6vw, 22px);
+        font-weight: 800;
+        line-height: 1;
+        color: #fff;
+    }
+
+    .numbers-tile-stat {
+        font-family: var(--mono);
+        font-size: clamp(9px, 1.2vw, 11px);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.85;
+        line-height: 1.2;
+    }
+
+    @keyframes tile-pop {
+        from { transform: scale(0.6); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
+    }
+
+    @keyframes tile-pulse {
+        0%, 100% { box-shadow: 0 0 16px var(--purple-glow-strong); }
+        50%      { box-shadow: 0 0 28px var(--purple-glow-strong); }
+    }
+
+    .numbers-tile[data-tier="0"]  { background: #2a1a3a; color: #d0b4e8; }
+    .numbers-tile[data-tier="1"]  { background: #3b2650; color: #e0c4f2; }
+    .numbers-tile[data-tier="2"]  { background: #4d2f66; }
+    .numbers-tile[data-tier="3"]  { background: #5f387c; }
+    .numbers-tile[data-tier="4"]  { background: #724091; }
+    .numbers-tile[data-tier="5"]  { background: #8549a7; }
+    .numbers-tile[data-tier="6"]  { background: #9b4dca; }
+    .numbers-tile[data-tier="7"]  { background: #b25fdb; }
+    .numbers-tile[data-tier="8"]  { background: #c670ec; }
+    .numbers-tile[data-tier="9"]  { background: linear-gradient(135deg, #d070ff, #9b4dca); font-size: clamp(11px, 2vw, 18px); }
+    .numbers-tile[data-tier="10"],
+    .numbers-tile[data-tier="11"],
+    .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #f090ff, #9b4dca); font-size: clamp(10px, 1.8vw, 16px); }
+
+    .numbers-hint {
+        grid-area: hint;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+
+    .numbers-hint-touch { display: none; }
+
+    .numbers-gameover {
+        grid-area: over;
+        color: var(--purple);
+        font-family: var(--mono);
+        font-size: 13px;
+    }
+
+    .numbers-fallback { display: none; }
+
+    @media (max-width: 700px) {
+        .numbers-game {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "status"
+                "board"
+                "hint"
+                "over";
+        }
+        .numbers-status {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .numbers-score { flex: 1; padding: 8px 12px; }
+        .numbers-board { max-width: 100%; justify-self: stretch; }
+        .numbers-hint-desktop { display: none; }
+        .numbers-hint-touch { display: block; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .numbers-tile { animation: none; }
+        .numbers-tile[data-milestone="true"] { animation: none; }
+    }
+
+    @media print {
+        .numbers-game { display: none !important; }
+        .numbers-fallback {
+            display: grid !important;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+        .numbers-fallback .stat { text-align: center; padding: 4px; }
+        .numbers-fallback .stat-number {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--purple);
+            font-family: var(--mono);
+            line-height: 1;
+        }
+        .numbers-fallback .stat-label { font-size: 8px; color: var(--text-dim); }
+    }
+</style>

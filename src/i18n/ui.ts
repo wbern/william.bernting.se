@@ -29,6 +29,19 @@ export const ui = {
     "stats.coderate": "kodrader skrivna per dag",
     "stats.coderate.value": "1 500",
 
+    "stats.prototypes.short": "prototyper",
+    "stats.users.short": "användare",
+    "stats.teams.short": "team",
+    "stats.experience.short": "års erfarenhet",
+    "stats.coderate.short": "rader/dag",
+
+    "numbers.hint.desktop": "Slå ihop siffror med piltangenterna \u2190 \u2191 \u2193 \u2192",
+    "numbers.hint.touch": "Svep för att slå ihop siffror",
+    "numbers.score": "Poäng",
+    "numbers.reset": "Starta om",
+    "numbers.gameover": "Inget mer att slå ihop.",
+    "numbers.aria.board": "Siffer-spel, 4x4 rutnät",
+
     "skills.label": "Verktyg i lådan",
     "skills.heading.before": "",
     "skills.heading.highlight": "Stacken",
@@ -104,6 +117,19 @@ export const ui = {
     "stats.experience.value": "15yr",
     "stats.coderate": "lines of code written per day",
     "stats.coderate.value": "1,500",
+
+    "stats.prototypes.short": "prototypes",
+    "stats.users.short": "users",
+    "stats.teams.short": "teams",
+    "stats.experience.short": "years exp.",
+    "stats.coderate.short": "lines/day",
+
+    "numbers.hint.desktop": "Merge numbers with your arrow keys \u2190 \u2191 \u2193 \u2192",
+    "numbers.hint.touch": "Swipe to merge numbers",
+    "numbers.score": "Score",
+    "numbers.reset": "Reset",
+    "numbers.gameover": "Nothing left to merge.",
+    "numbers.aria.board": "Number merge game, 4x4 grid",
 
     "skills.label": "Tools of the trade",
     "skills.heading.before": "The ",
