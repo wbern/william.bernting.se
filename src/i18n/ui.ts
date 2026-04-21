@@ -35,8 +35,7 @@ export const ui = {
     "stats.experience.short": "års erfarenhet",
     "stats.coderate.short": "rader/dag",
 
-    "numbers.hint.desktop": "Slå ihop siffror med piltangenterna \u2190 \u2191 \u2193 \u2192",
-    "numbers.hint.touch": "Svep för att slå ihop siffror",
+    "numbers.hint.drag": "Dra en bricka till en likadan granne för att slå ihop",
     "numbers.score": "Poäng",
     "numbers.reset": "Starta om",
     "numbers.gameover": "Inget mer att slå ihop.",
@@ -124,8 +123,7 @@ export const ui = {
     "stats.experience.short": "years exp.",
     "stats.coderate.short": "lines/day",
 
-    "numbers.hint.desktop": "Merge numbers with your arrow keys \u2190 \u2191 \u2193 \u2192",
-    "numbers.hint.touch": "Swipe to merge numbers",
+    "numbers.hint.drag": "Drag a tile onto an equal neighbor to merge",
     "numbers.score": "Score",
     "numbers.reset": "Reset",
     "numbers.gameover": "Nothing left to merge.",

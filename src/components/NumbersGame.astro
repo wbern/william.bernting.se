@@ -31,14 +31,12 @@ const fallbackStats = [
 
         <div
             class="numbers-board"
-            tabindex="0"
             role="application"
             aria-label={t("numbers.aria.board")}
             data-board
         ></div>
 
-        <div class="numbers-hint numbers-hint-desktop">{t("numbers.hint.desktop")}</div>
-        <div class="numbers-hint numbers-hint-touch">{t("numbers.hint.touch")}</div>
+        <div class="numbers-hint">{t("numbers.hint.drag")}</div>
         <div class="numbers-gameover" data-gameover hidden>{t("numbers.gameover")}</div>
     </div>
 
@@ -54,15 +52,17 @@ const fallbackStats = [
 
 <script>
     import {
-        move,
+        mergeTilesAt,
         spawnTile,
         isGameOver,
         getStatForTile,
+        STARTING_TILE,
     } from "../utils/merge-game";
-    import type { Board, Direction, StatKey } from "../utils/merge-game";
+    import type { Board, Position, StatKey } from "../utils/merge-game";
 
     const BOARD_SIZE = 4;
-    const SWIPE_THRESHOLD = 24;
+    const INITIAL_TILES = 6;
+    const DRAG_THRESHOLD = 6;
 
     type StatMeta = { value: string; label: string; short: string };
 
@@ -70,18 +70,29 @@ const fallbackStats = [
         return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
     }
 
-    function keyToDirection(key: string): Direction | null {
-        switch (key) {
-            case "ArrowLeft": return "left";
-            case "ArrowRight": return "right";
-            case "ArrowUp": return "up";
-            case "ArrowDown": return "down";
-            default: return null;
+    function seedBoard(): Board {
+        let b = createBoard();
+        for (let i = 0; i < INITIAL_TILES; i++) {
+            b = spawnTile(b);
+            // Occasionally upgrade a tile to a 6 so early merges land on 12 (teams milestone) faster
+            if (i % 2 === 1) {
+                const empties: Array<[number, number]> = [];
+                b.forEach((row, r) => row.forEach((v, c) => { if (v === STARTING_TILE) empties.push([r, c]); }));
+                if (empties.length > 0) {
+                    const [r, c] = empties[Math.floor(Math.random() * empties.length)];
+                    b = b.map((row, ri) => ri === r ? row.map((v, ci) => ci === c ? 6 : v) : row);
+                }
+            }
         }
+        return b;
     }
 
     function tierFor(value: number): number {
         return Math.min(12, Math.max(0, Math.round(Math.log2(value / 3))));
+    }
+
+    function areAdjacent(a: Position, b: Position): boolean {
+        return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
     }
 
     function readStatLabels(root: HTMLElement): Partial<Record<StatKey, StatMeta>> {
@@ -111,110 +122,183 @@ const fallbackStats = [
         let board: Board = createBoard();
         let score = 0;
 
-        function render() {
-            scoreEl!.textContent = String(score);
+        const cellEls: HTMLElement[][] = [];
+
+        function buildGrid() {
             boardEl!.innerHTML = "";
+            cellEls.length = 0;
             for (let r = 0; r < BOARD_SIZE; r++) {
+                cellEls.push([]);
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement("div");
                     cell.className = "numbers-cell";
-                    const value = board[r][c];
-                    if (value !== 0) {
-                        const tile = document.createElement("div");
-                        tile.className = "numbers-tile";
-                        tile.dataset.value = String(value);
-                        tile.dataset.tier = String(tierFor(value));
-                        const stat = getStatForTile(value);
-                        if (stat) {
-                            tile.dataset.stat = stat;
-                            tile.dataset.milestone = "true";
-                            const meta = statLabels[stat];
-                            const displayValue = meta?.value ?? String(value);
-                            const short = meta?.short ?? "";
-                            const valueEl = document.createElement("span");
-                            valueEl.className = "numbers-tile-value";
-                            valueEl.textContent = `~${displayValue}`;
-                            const labelEl = document.createElement("span");
-                            labelEl.className = "numbers-tile-stat";
-                            labelEl.textContent = short;
-                            tile.append(valueEl, labelEl);
-                        } else {
-                            tile.textContent = String(value);
-                        }
-                        cell.appendChild(tile);
-                    }
+                    cell.dataset.row = String(r);
+                    cell.dataset.col = String(c);
                     boardEl!.appendChild(cell);
+                    cellEls[r].push(cell);
+                }
+            }
+        }
+
+        function renderTile(value: number): HTMLElement {
+            const tile = document.createElement("div");
+            tile.className = "numbers-tile";
+            tile.dataset.value = String(value);
+            tile.dataset.tier = String(tierFor(value));
+            const stat = getStatForTile(value);
+            if (stat) {
+                tile.dataset.stat = stat;
+                tile.dataset.milestone = "true";
+                const meta = statLabels[stat];
+                const displayValue = meta?.value ?? String(value);
+                const short = meta?.short ?? "";
+                const valueEl = document.createElement("span");
+                valueEl.className = "numbers-tile-value";
+                valueEl.textContent = `~${displayValue}`;
+                const labelEl = document.createElement("span");
+                labelEl.className = "numbers-tile-stat";
+                labelEl.textContent = short;
+                tile.append(valueEl, labelEl);
+            } else {
+                tile.textContent = String(value);
+            }
+            return tile;
+        }
+
+        function render() {
+            scoreEl!.textContent = String(score);
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const cell = cellEls[r][c];
+                    cell.innerHTML = "";
+                    const value = board[r][c];
+                    if (value !== 0) cell.appendChild(renderTile(value));
                 }
             }
         }
 
         function start() {
-            board = spawnTile(spawnTile(createBoard()));
+            board = seedBoard();
             score = 0;
             gameoverEl!.hidden = true;
             render();
         }
 
-        function attempt(direction: Direction) {
-            const result = move(board, direction);
-            if (!result.moved) return;
+        function attemptMerge(from: Position, to: Position) {
+            const result = mergeTilesAt(board, from, to);
+            if (!result.merged) return false;
             board = spawnTile(result.board);
             score += result.gained;
             render();
             if (isGameOver(board)) gameoverEl!.hidden = false;
+            return true;
         }
 
-        document.addEventListener(
-            "keydown",
-            (e) => {
-                if (document.activeElement !== boardEl) return;
-                const dir = keyToDirection(e.key);
-                if (!dir) return;
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                attempt(dir);
-            },
-            true,
-        );
+        function positionFromCell(cell: HTMLElement | null): Position | null {
+            if (!cell) return null;
+            const r = Number(cell.dataset.row);
+            const c = Number(cell.dataset.col);
+            if (Number.isNaN(r) || Number.isNaN(c)) return null;
+            return { row: r, col: c };
+        }
 
-        let touchStart: { x: number; y: number } | null = null;
-        boardEl.addEventListener(
-            "touchstart",
-            (e) => {
-                const t = e.changedTouches[0];
-                touchStart = { x: t.clientX, y: t.clientY };
-            },
-            { passive: true },
-        );
-        boardEl.addEventListener(
-            "touchmove",
-            (e) => {
-                e.stopPropagation();
-            },
-            { passive: true },
-        );
-        boardEl.addEventListener("touchend", (e) => {
-            if (!touchStart) return;
-            const t = e.changedTouches[0];
-            const dx = t.clientX - touchStart.x;
-            const dy = t.clientY - touchStart.y;
-            touchStart = null;
-            const absX = Math.abs(dx);
-            const absY = Math.abs(dy);
-            if (Math.max(absX, absY) < SWIPE_THRESHOLD) return;
-            const dir: Direction =
-                absX > absY ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+        function cellAtPoint(x: number, y: number): HTMLElement | null {
+            const el = document.elementFromPoint(x, y) as HTMLElement | null;
+            return el?.closest<HTMLElement>(".numbers-cell") ?? null;
+        }
+
+        function clearDropHighlights() {
+            boardEl!.querySelectorAll<HTMLElement>(".numbers-cell").forEach((c) => {
+                c.classList.remove("drop-valid", "drop-hover");
+            });
+        }
+
+        function markValidDropTargets(from: Position) {
+            const value = board[from.row][from.col];
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (r === from.row && c === from.col) continue;
+                    if (board[r][c] !== value) continue;
+                    if (!areAdjacent(from, { row: r, col: c })) continue;
+                    cellEls[r][c].classList.add("drop-valid");
+                }
+            }
+        }
+
+        type DragState = {
+            pointerId: number;
+            origin: Position;
+            startX: number;
+            startY: number;
+            tileEl: HTMLElement;
+            activated: boolean;
+        };
+        let drag: DragState | null = null;
+
+        boardEl.addEventListener("pointerdown", (e) => {
+            const tileEl = (e.target as HTMLElement).closest<HTMLElement>(".numbers-tile");
+            if (!tileEl) return;
+            const cell = tileEl.parentElement as HTMLElement | null;
+            const origin = positionFromCell(cell);
+            if (!origin) return;
             e.stopPropagation();
-            attempt(dir);
+            drag = {
+                pointerId: e.pointerId,
+                origin,
+                startX: e.clientX,
+                startY: e.clientY,
+                tileEl,
+                activated: false,
+            };
         });
 
-        boardEl.addEventListener("click", () => boardEl.focus());
+        // Stop touch events from reaching the keen-slider (it listens for swipe drags)
+        boardEl.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+        boardEl.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: true });
+        boardEl.addEventListener("touchend", (e) => e.stopPropagation(), { passive: true });
 
-        resetBtn.addEventListener("click", () => {
-            start();
-            boardEl.focus();
-        });
+        window.addEventListener("pointermove", (e) => {
+            if (!drag || e.pointerId !== drag.pointerId) return;
+            const dx = e.clientX - drag.startX;
+            const dy = e.clientY - drag.startY;
+            if (!drag.activated) {
+                if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+                drag.activated = true;
+                drag.tileEl.classList.add("dragging");
+                markValidDropTargets(drag.origin);
+                boardEl!.setPointerCapture?.(e.pointerId);
+            }
+            drag.tileEl.style.transform = `translate(${dx}px, ${dy}px)`;
+            const hoverCell = cellAtPoint(e.clientX, e.clientY);
+            boardEl!.querySelectorAll<HTMLElement>(".numbers-cell.drop-hover").forEach((c) => {
+                c.classList.remove("drop-hover");
+            });
+            if (hoverCell?.classList.contains("drop-valid")) {
+                hoverCell.classList.add("drop-hover");
+            }
+            e.preventDefault();
+        }, { passive: false });
 
+        function endDrag(e: PointerEvent, attempted: boolean) {
+            if (!drag || e.pointerId !== drag.pointerId) return;
+            const current = drag;
+            drag = null;
+            current.tileEl.classList.remove("dragging");
+            current.tileEl.style.transform = "";
+            clearDropHighlights();
+            if (attempted && current.activated) {
+                const hoverCell = cellAtPoint(e.clientX, e.clientY);
+                const target = positionFromCell(hoverCell);
+                if (target) attemptMerge(current.origin, target);
+            }
+        }
+
+        window.addEventListener("pointerup", (e) => endDrag(e, true));
+        window.addEventListener("pointercancel", (e) => endDrag(e, false));
+
+        resetBtn.addEventListener("click", () => start());
+
+        buildGrid();
         start();
 
         (window as unknown as { __numbersGame?: unknown }).__numbersGame = {
@@ -225,7 +309,7 @@ const fallbackStats = [
                 render();
             },
             getBoard: () => board.map((row) => [...row]),
-            attempt,
+            attemptMerge,
         };
     }
 
@@ -320,13 +404,7 @@ const fallbackStats = [
         width: 100%;
         max-width: 440px;
         justify-self: start;
-        outline: none;
         touch-action: none;
-    }
-
-    .numbers-board:focus-visible {
-        border-color: var(--purple);
-        box-shadow: 0 0 0 2px var(--purple-glow);
     }
 
     .numbers-cell {
@@ -334,6 +412,17 @@ const fallbackStats = [
         border-radius: 8px;
         position: relative;
         min-width: 0;
+        transition: background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .numbers-cell.drop-valid {
+        background: rgba(155, 77, 202, 0.18);
+        box-shadow: inset 0 0 0 2px var(--purple);
+    }
+
+    .numbers-cell.drop-hover {
+        background: rgba(155, 77, 202, 0.35);
+        box-shadow: inset 0 0 0 2px var(--purple), 0 0 16px var(--purple-glow);
     }
 
     .numbers-tile {
@@ -348,7 +437,25 @@ const fallbackStats = [
         border-radius: 8px;
         background: var(--purple-dim);
         color: #fff;
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
         animation: tile-pop 0.18s ease-out;
+        transition: box-shadow 0.15s ease, transform 0.12s ease;
+        will-change: transform;
+    }
+
+    .numbers-tile:hover {
+        transform: scale(1.04);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .numbers-tile.dragging {
+        animation: none;
+        cursor: grabbing;
+        z-index: 10;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--purple);
+        transition: box-shadow 0.1s ease;
     }
 
     .numbers-tile[data-milestone="true"] {
@@ -358,6 +465,7 @@ const fallbackStats = [
         padding: 6px;
         text-align: center;
     }
+
 
     .numbers-tile-value {
         font-size: clamp(16px, 2.6vw, 22px);
@@ -407,8 +515,6 @@ const fallbackStats = [
         line-height: 1.4;
     }
 
-    .numbers-hint-touch { display: none; }
-
     .numbers-gameover {
         grid-area: over;
         color: var(--purple);
@@ -434,8 +540,6 @@ const fallbackStats = [
         }
         .numbers-score { flex: 1; padding: 8px 12px; }
         .numbers-board { max-width: 100%; justify-self: stretch; }
-        .numbers-hint-desktop { display: none; }
-        .numbers-hint-touch { display: block; }
     }
 
     @media (prefers-reduced-motion: reduce) {
