@@ -1,119 +1,49 @@
 import { describe, it, expect } from "vitest";
 import {
-  slideRowLeft,
-  move,
+  mergeTilesAt,
   isGameOver,
   spawnTile,
   getStatForTile,
 } from "./merge-game";
 
-describe("slideRowLeft", () => {
-  it("compacts empty cells to the right", () => {
-    expect(slideRowLeft([0, 3, 0, 6])).toEqual([3, 6, 0, 0]);
-  });
-
-  it("merges a pair of equal adjacent tiles into their double", () => {
-    expect(slideRowLeft([3, 3, 0, 0])).toEqual([6, 0, 0, 0]);
-  });
-
-  it("merges only the leftmost pair when three equal tiles line up", () => {
-    expect(slideRowLeft([3, 3, 3, 0])).toEqual([6, 3, 0, 0]);
-  });
-
-  it("does not chain a freshly-merged tile into another merge", () => {
-    expect(slideRowLeft([3, 3, 6, 0])).toEqual([6, 6, 0, 0]);
-  });
-});
-
-describe("move", () => {
-  it("flags moved=true when any tile shifts", () => {
+describe("mergeTilesAt", () => {
+  it("doubles the destination tile and empties the source when two adjacent equal tiles merge", () => {
     const board = [
-      [0, 3, 0, 0],
+      [3, 3, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    expect(move(board, "left").moved).toBe(true);
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(result.merged).toBe(true);
+    expect(result.board[0][0]).toBe(0);
+    expect(result.board[0][1]).toBe(6);
+    expect(result.gained).toBe(6);
   });
 
-  it("flags moved=false when the board does not change", () => {
+  it("refuses to merge two adjacent tiles with different values", () => {
     const board = [
-      [6, 3, 0, 0],
+      [3, 6, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    expect(move(board, "left").moved).toBe(false);
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(result.merged).toBe(false);
+    expect(result.board).toEqual(board);
   });
 
-  it("reports the sum of merged tile values as gained score", () => {
-    const board = [
-      [3, 3, 6, 6],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
-    expect(move(board, "left").gained).toBe(18);
-  });
-
-  it("slides every column down when direction is down", () => {
-    const board = [
-      [12, 0, 6, 0],
-      [0, 0, 0, 0],
-      [3, 0, 6, 0],
-      [3, 0, 0, 0],
-    ];
-    expect(move(board, "down").board).toEqual([
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [12, 0, 0, 0],
-      [6, 0, 12, 0],
-    ]);
-  });
-
-  it("slides every column up when direction is up", () => {
-    const board = [
-      [0, 0, 0, 0],
-      [3, 0, 6, 0],
-      [3, 0, 0, 0],
-      [0, 0, 6, 12],
-    ];
-    expect(move(board, "up").board).toEqual([
-      [6, 0, 12, 12],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ]);
-  });
-
-  it("slides every row right when direction is right", () => {
+  it("refuses to merge tiles that are not orthogonally adjacent", () => {
     const board = [
       [3, 0, 3, 0],
       [0, 0, 0, 0],
-      [0, 6, 0, 6],
-      [12, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ];
-    expect(move(board, "right").board).toEqual([
-      [0, 0, 0, 6],
-      [0, 0, 0, 0],
-      [0, 0, 0, 12],
-      [0, 0, 0, 12],
-    ]);
-  });
-
-  it("slides every row left when direction is left", () => {
-    const board = [
-      [0, 3, 0, 3],
-      [0, 0, 0, 0],
-      [6, 0, 6, 0],
-      [0, 0, 0, 12],
-    ];
-    expect(move(board, "left").board).toEqual([
-      [6, 0, 0, 0],
-      [0, 0, 0, 0],
-      [12, 0, 0, 0],
-      [12, 0, 0, 0],
-    ]);
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 2 });
+    expect(result.merged).toBe(false);
+    expect(result.board).toEqual(board);
+    expect(result.gained).toBe(0);
   });
 });
 
@@ -172,13 +102,13 @@ describe("isGameOver", () => {
     expect(isGameOver(board)).toBe(false);
   });
 
-  it("is false while any cell is empty", () => {
+  it("is true when empty cells exist but no adjacent tiles match", () => {
     const board = [
-      [3, 6, 12, 24],
-      [6, 12, 24, 48],
-      [12, 24, 48, 96],
-      [24, 48, 96, 0],
+      [3, 6, 12, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
     ];
-    expect(isGameOver(board)).toBe(false);
+    expect(isGameOver(board)).toBe(true);
   });
 });

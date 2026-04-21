@@ -15,19 +15,24 @@ async function gotoStatsSlide(page: Page) {
   }
 }
 
+type MergeApi = {
+  setBoard(b: number[][]): void;
+  attemptMerge(from: { row: number; col: number }, to: { row: number; col: number }): void;
+};
+
 test.describe("numbers game", () => {
-  test("renders a 4x4 board with two starting tiles", async ({ page }) => {
+  test("renders a 4x4 board seeded with several starting tiles", async ({ page }) => {
     await gotoStatsSlide(page);
     const cellCount = await page.locator("[data-board] .numbers-cell").count();
     const tileCount = await page.locator("[data-board] .numbers-tile").count();
     expect(cellCount).toBe(16);
-    expect(tileCount).toBe(2);
+    expect(tileCount).toBeGreaterThanOrEqual(4);
   });
 
-  test("ArrowLeft on focused board merges adjacent equal tiles and updates score", async ({ page }) => {
+  test("attemptMerge on two adjacent equal tiles merges them and updates score", async ({ page }) => {
     await gotoStatsSlide(page);
     await page.evaluate(() => {
-      const api = (window as unknown as { __numbersGame?: { setBoard(b: number[][]): void } }).__numbersGame;
+      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
       if (!api) throw new Error("numbers game test hook not exposed");
       api.setBoard([
         [3, 3, 0, 0],
@@ -35,21 +40,41 @@ test.describe("numbers game", () => {
         [0, 0, 0, 0],
         [0, 0, 0, 0],
       ]);
+      api.attemptMerge({ row: 0, col: 0 }, { row: 0, col: 1 });
     });
-    await page.locator("[data-board]").focus();
-    await page.keyboard.press("ArrowLeft");
-    const tileValues = await page.locator("[data-board] .numbers-tile").evaluateAll(
-      (els) => els.map((el) => (el as HTMLElement).dataset.value),
-    );
-    // Two starting 3s merge into a 6; spawn adds one more tile (value 3).
-    expect(tileValues).toContain("6");
+    const mergedTile = page.locator('[data-board] .numbers-tile[data-value="6"]');
+    await expect(mergedTile).toHaveCount(1);
     expect(await page.locator("[data-score]").textContent()).toBe("6");
+  });
+
+  test("dragging a tile onto an adjacent equal neighbor merges them", async ({ page }) => {
+    await gotoStatsSlide(page);
+    await page.evaluate(() => {
+      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
+      api!.setBoard([
+        [3, 3, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ]);
+    });
+    const sourceTile = page.locator('[data-board] .numbers-cell[data-row="0"][data-col="0"] .numbers-tile');
+    const targetCell = page.locator('[data-board] .numbers-cell[data-row="0"][data-col="1"]');
+    const sourceBox = await sourceTile.boundingBox();
+    const targetBox = await targetCell.boundingBox();
+    if (!sourceBox || !targetBox) throw new Error("tile bounding box missing");
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 20, sourceBox.y + sourceBox.height / 2, { steps: 5 });
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await expect(page.locator('[data-board] .numbers-tile[data-value="6"]')).toHaveCount(1);
   });
 
   test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {
     await gotoStatsSlide(page);
     await page.evaluate(() => {
-      const api = (window as unknown as { __numbersGame?: { setBoard(b: number[][]): void } }).__numbersGame;
+      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
       api!.setBoard([
         [48, 0, 0, 0],
         [0, 0, 0, 0],
