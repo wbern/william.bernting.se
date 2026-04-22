@@ -1,18 +1,22 @@
 import { test, expect, type Page } from "@playwright/test";
 
 const STATS_SLIDE = 2;
-const HERO_WAIT_MS = 4200;
-const SLIDE_TRANSITION_MS = 2300;
 
 async function gotoStatsSlide(page: Page) {
   await page.goto("/");
   await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-  await page.click("body");
-  await page.waitForTimeout(HERO_WAIT_MS);
-  for (let i = 0; i < STATS_SLIDE; i++) {
-    await page.keyboard.press("ArrowDown");
-    await page.waitForTimeout(SLIDE_TRANSITION_MS);
-  }
+  await page.locator(`.slide-dot[data-slide="${STATS_SLIDE}"]`).click();
+  await page.waitForFunction(
+    (idx) => {
+      const slides = document.querySelectorAll<HTMLElement>(".keen-slider__slide");
+      const slide = slides[idx];
+      if (!slide) return false;
+      return Math.abs(slide.getBoundingClientRect().top) < 2;
+    },
+    STATS_SLIDE,
+    { timeout: 5_000 },
+  );
+  await page.waitForSelector("[data-board] .numbers-tile", { timeout: 5_000 });
 }
 
 type MergeApi = {

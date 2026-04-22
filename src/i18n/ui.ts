@@ -35,9 +35,7 @@ export const ui = {
     "stats.experience.short": "års erfarenhet",
     "stats.coderate.short": "rader/dag",
 
-    "numbers.hint.drag": "Dra en bricka till en likadan granne för att slå ihop",
     "numbers.score": "Poäng",
-    "numbers.reset": "Starta om",
     "numbers.gameover": "Inget mer att slå ihop.",
     "numbers.aria.board": "Siffer-spel, 4x4 rutnät",
 
@@ -123,9 +121,7 @@ export const ui = {
     "stats.experience.short": "years exp.",
     "stats.coderate.short": "lines/day",
 
-    "numbers.hint.drag": "Drag a tile onto an equal neighbor to merge",
     "numbers.score": "Score",
-    "numbers.reset": "Reset",
     "numbers.gameover": "Nothing left to merge.",
     "numbers.aria.board": "Number merge game, 4x4 grid",
 

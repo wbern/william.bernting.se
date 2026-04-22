@@ -26,7 +26,6 @@ const fallbackStats = [
                 <span class="numbers-score-label">{t("numbers.score")}</span>
                 <span class="numbers-score-value" data-score>0</span>
             </div>
-            <button class="numbers-reset" type="button" data-reset>{t("numbers.reset")}</button>
         </div>
 
         <div
@@ -36,7 +35,6 @@ const fallbackStats = [
             data-board
         ></div>
 
-        <div class="numbers-hint">{t("numbers.hint.drag")}</div>
         <div class="numbers-gameover" data-gameover hidden>{t("numbers.gameover")}</div>
     </div>
 
@@ -112,10 +110,9 @@ const fallbackStats = [
     function initGame(root: HTMLElement) {
         const boardEl = root.querySelector<HTMLElement>("[data-board]");
         const scoreEl = root.querySelector<HTMLElement>("[data-score]");
-        const resetBtn = root.querySelector<HTMLButtonElement>("[data-reset]");
         const gameoverEl = root.querySelector<HTMLElement>("[data-gameover]");
         const section = root.closest<HTMLElement>(".numbers-section") ?? root;
-        if (!boardEl || !scoreEl || !resetBtn || !gameoverEl) return;
+        if (!boardEl || !scoreEl || !gameoverEl) return;
 
         const statLabels = readStatLabels(section);
 
@@ -252,9 +249,21 @@ const fallbackStats = [
             };
         });
 
-        // Stop touch events from reaching the keen-slider (it listens for swipe drags)
-        boardEl.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
-        boardEl.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: true });
+        // Keep touch drags inside the board — don't let the keen-slider treat
+        // them as a page swipe, and don't let the browser scroll the page
+        // while the user is dragging a tile.
+        boardEl.addEventListener("touchstart", (e) => {
+            if ((e.target as HTMLElement).closest(".numbers-tile")) {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+            }
+        }, { passive: false });
+        boardEl.addEventListener("touchmove", (e) => {
+            if (drag) {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+            }
+        }, { passive: false });
         boardEl.addEventListener("touchend", (e) => e.stopPropagation(), { passive: true });
 
         window.addEventListener("pointermove", (e) => {
@@ -296,8 +305,6 @@ const fallbackStats = [
         window.addEventListener("pointerup", (e) => endDrag(e, true));
         window.addEventListener("pointercancel", (e) => endDrag(e, false));
 
-        resetBtn.addEventListener("click", () => start());
-
         buildGrid();
         start();
 
@@ -335,8 +342,6 @@ const fallbackStats = [
         grid-template-columns: 180px minmax(0, 1fr);
         grid-template-areas:
             "status board"
-            "status board"
-            "hint   board"
             "over   board";
         gap: 16px 28px;
         align-items: start;
@@ -371,23 +376,6 @@ const fallbackStats = [
         font-size: 26px;
         color: var(--purple);
         font-weight: 800;
-    }
-
-    .numbers-reset {
-        background: transparent;
-        border: 1px solid var(--border);
-        color: var(--text-dim);
-        font-family: var(--mono);
-        font-size: 12px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .numbers-reset:hover {
-        border-color: var(--purple);
-        color: var(--purple);
     }
 
     .numbers-board {
@@ -519,14 +507,6 @@ const fallbackStats = [
     .numbers-tile[data-tier="11"],
     .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #f090ff, #9b4dca); font-size: clamp(10px, 1.8vw, 16px); }
 
-    .numbers-hint {
-        grid-area: hint;
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--text-muted);
-        line-height: 1.4;
-    }
-
     .numbers-gameover {
         grid-area: over;
         color: var(--purple);
@@ -542,7 +522,6 @@ const fallbackStats = [
             grid-template-areas:
                 "status"
                 "board"
-                "hint"
                 "over";
         }
         .numbers-status {
