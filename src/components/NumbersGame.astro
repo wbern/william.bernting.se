@@ -415,14 +415,25 @@ const fallbackStats = [
         transition: background 0.15s ease, box-shadow 0.15s ease;
     }
 
+    .numbers-cell:has(.numbers-tile.dragging) {
+        z-index: 20;
+    }
+
     .numbers-cell.drop-valid {
-        background: rgba(155, 77, 202, 0.18);
-        box-shadow: inset 0 0 0 2px var(--purple);
+        box-shadow: 0 0 0 2px var(--purple), 0 0 12px var(--purple-glow);
     }
 
     .numbers-cell.drop-hover {
-        background: rgba(155, 77, 202, 0.35);
-        box-shadow: inset 0 0 0 2px var(--purple), 0 0 16px var(--purple-glow);
+        box-shadow: 0 0 0 3px var(--purple), 0 0 24px var(--purple-glow-strong);
+    }
+
+    .numbers-cell.drop-valid > .numbers-tile {
+        box-shadow: 0 0 0 2px var(--purple);
+    }
+
+    .numbers-cell.drop-hover > .numbers-tile {
+        box-shadow: 0 0 0 3px var(--purple), 0 0 20px var(--purple-glow-strong);
+        filter: brightness(1.15);
     }
 
     .numbers-tile {
@@ -456,6 +467,7 @@ const fallbackStats = [
         z-index: 10;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--purple);
         transition: box-shadow 0.1s ease;
+        pointer-events: none;
     }
 
     .numbers-tile[data-milestone="true"] {
