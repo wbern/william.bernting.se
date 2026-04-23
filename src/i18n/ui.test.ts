@@ -19,7 +19,13 @@ describe("ui translations", () => {
 
   it("no unexpected empty values", () => {
     // These keys are intentionally empty for some locales (e.g. Swedish "Stacken." has no prefix)
-    const allowEmpty = new Set(["skills.heading.before"]);
+    const allowEmpty = new Set([
+      "skills.heading.before",
+      // stat prefixes are intentionally empty when the sentence starts with the value
+      "stats.users.prefix",
+      "stats.experience.prefix",
+      "stats.tdd.prefix",
+    ]);
     for (const lang of languages) {
       for (const [key, value] of Object.entries(ui[lang])) {
         if (allowEmpty.has(key)) continue;
