@@ -75,6 +75,28 @@ test.describe("numbers game", () => {
     await expect(page.locator('[data-board] .numbers-tile[data-value="6"]')).toHaveCount(1);
   });
 
+  test("clicking the game-over banner restarts the game", async ({ page }) => {
+    await gotoStatsSlide(page);
+    await page.evaluate(() => {
+      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
+      api!.setBoard([
+        [3, 6, 12, 24],
+        [6, 12, 24, 48],
+        [12, 24, 48, 96],
+        [24, 48, 96, 192],
+      ]);
+      // Trigger a no-op merge attempt to force the game-over check
+      api!.attemptMerge({ row: 0, col: 0 }, { row: 0, col: 1 });
+    });
+    const gameover = page.locator("[data-gameover]");
+    await expect(gameover).toBeVisible();
+    await gameover.click();
+    await expect(gameover).toBeHidden();
+    expect(await page.locator("[data-score]").textContent()).toBe("0");
+    const tileCount = await page.locator("[data-board] .numbers-tile").count();
+    expect(tileCount).toBeGreaterThanOrEqual(4);
+  });
+
   test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {
     await gotoStatsSlide(page);
     await page.evaluate(() => {
