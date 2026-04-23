@@ -170,6 +170,27 @@ export function nextSpawnPlan(
   return { count: mode === "active" ? 2 : 0, mode };
 }
 
+export function ensureMergeAvailable(
+  board: Board,
+  rng: () => number = Math.random,
+): Board {
+  if (hasValidMerge(board)) return board;
+  const empties: Array<[number, number]> = [];
+  let lowest = Infinity;
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      const v = board[r][c];
+      if (v === 0) empties.push([r, c]);
+      else if (v < lowest) lowest = v;
+    }
+  }
+  if (empties.length === 0 || lowest === Infinity) return board;
+  const [r, c] = empties[Math.floor(rng() * empties.length)];
+  return board.map((row, ri) =>
+    ri === r ? row.map((v, ci) => (ci === c ? lowest : v)) : row,
+  );
+}
+
 export function hasValidMerge(board: Board): boolean {
   const seen = new Set<number>();
   for (const row of board) {
