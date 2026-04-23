@@ -249,9 +249,16 @@ const fallbackStats = [
             };
         });
 
-        // Keep touch drags inside the board — don't let the keen-slider treat
-        // them as a page swipe, and don't let the browser scroll the page
-        // while the user is dragging a tile.
+        // Keen-slider listens on `mousedown`/`touchstart` (not pointer events),
+        // so pointerdown's stopPropagation doesn't block it. Stop the matching
+        // native events on a tile before they bubble to the slider container.
+        // touchmove during an active drag also needs preventDefault to keep
+        // the browser from scrolling the page.
+        boardEl.addEventListener("mousedown", (e) => {
+            if ((e.target as HTMLElement).closest(".numbers-tile")) {
+                e.stopPropagation();
+            }
+        });
         boardEl.addEventListener("touchstart", (e) => {
             if ((e.target as HTMLElement).closest(".numbers-tile")) {
                 e.stopPropagation();
@@ -305,6 +312,8 @@ const fallbackStats = [
         window.addEventListener("pointerup", (e) => endDrag(e, true));
         window.addEventListener("pointercancel", (e) => endDrag(e, false));
 
+        gameoverEl.addEventListener("click", () => start());
+
         buildGrid();
         start();
 
@@ -312,7 +321,7 @@ const fallbackStats = [
             setBoard(next: Board) {
                 board = next.map((row) => [...row]);
                 score = 0;
-                gameoverEl!.hidden = true;
+                gameoverEl!.hidden = !isGameOver(board);
                 render();
             },
             getBoard: () => board.map((row) => [...row]),
@@ -512,6 +521,13 @@ const fallbackStats = [
         color: var(--purple);
         font-family: var(--mono);
         font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .numbers-gameover:hover {
+        color: var(--purple-glow-strong, var(--purple));
+        text-decoration: underline;
     }
 
     .numbers-fallback { display: none; }
