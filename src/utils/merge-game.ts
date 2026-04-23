@@ -7,11 +7,12 @@ export type StatKey =
   | "teams"
   | "experience"
   | "prototypes"
-  | "tdd"
+  | "speaking"
   | "managed"
   | "bugfix"
   | "clients"
   | "coderate"
+  | "linkedin"
   | "users";
 
 const STAT_TILES: Record<number, StatKey> = {
@@ -19,11 +20,12 @@ const STAT_TILES: Record<number, StatKey> = {
   12: "teams",
   24: "experience",
   48: "prototypes",
-  96: "tdd",
+  96: "speaking",
   192: "managed",
   384: "bugfix",
   768: "clients",
   1536: "coderate",
+  3072: "linkedin",
   6144: "users",
 };
 
@@ -94,6 +96,73 @@ export function spawnTile(board: Board, rng: () => number = Math.random): Board 
   return board.map((row, ri) =>
     ri === r ? row.map((v, ci) => (ci === c ? STARTING_TILE : v)) : row,
   );
+}
+
+export function spawnNext(board: Board, rng: () => number = Math.random): Board {
+  const nonZero: Array<{ row: number; col: number; value: number }> = [];
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      if (board[r][c] !== 0) nonZero.push({ row: r, col: c, value: board[r][c] });
+    }
+  }
+  const shuffled = [...nonZero].sort(() => rng() - 0.5);
+  for (const tile of shuffled) {
+    const neighbors: Array<[number, number]> = [
+      [tile.row - 1, tile.col],
+      [tile.row + 1, tile.col],
+      [tile.row, tile.col - 1],
+      [tile.row, tile.col + 1],
+    ].filter(
+      ([r, c]) =>
+        r >= 0 && r < board.length && c >= 0 && c < board[r].length && board[r][c] === 0,
+    );
+    if (neighbors.length === 0) continue;
+    const [r, c] = neighbors[Math.floor(rng() * neighbors.length)];
+    return board.map((row, ri) =>
+      ri === r ? row.map((v, ci) => (ci === c ? tile.value : v)) : row,
+    );
+  }
+  return spawnTile(board, rng);
+}
+
+const MILESTONE_VALUES = [6, 12, 24, 48, 96, 192, 384, 768, 1536, 6144] as const;
+
+export function spawnRandomMilestone(
+  board: Board,
+  rng: () => number = Math.random,
+): Board {
+  const empties: Array<[number, number]> = [];
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      if (board[r][c] === 0) empties.push([r, c]);
+    }
+  }
+  if (empties.length === 0) return board;
+  const [r, c] = empties[Math.floor(rng() * empties.length)];
+  const value = MILESTONE_VALUES[Math.floor(rng() * MILESTONE_VALUES.length)];
+  return board.map((row, ri) =>
+    ri === r ? row.map((v, ci) => (ci === c ? value : v)) : row,
+  );
+}
+
+export type SpawnMode = "active" | "withhold";
+
+const SPAWN_WITHHOLD_HIGH = 11;
+const SPAWN_WITHHOLD_LOW = 4;
+
+export function nextSpawnPlan(
+  board: Board,
+  mode: SpawnMode,
+): { count: number; mode: SpawnMode } {
+  let filled = 0;
+  for (const row of board) for (const v of row) if (v !== 0) filled++;
+  if (mode === "active" && filled >= SPAWN_WITHHOLD_HIGH) {
+    return { count: 0, mode: "withhold" };
+  }
+  if (mode === "withhold" && filled <= SPAWN_WITHHOLD_LOW) {
+    return { count: 2, mode: "active" };
+  }
+  return { count: mode === "active" ? 2 : 0, mode };
 }
 
 export function hasValidMerge(board: Board): boolean {

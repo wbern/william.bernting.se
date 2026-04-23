@@ -47,7 +47,7 @@ test.describe("numbers game", () => {
       api.attemptMerge({ row: 0, col: 0 }, { row: 0, col: 1 });
     });
     const mergedTile = page.locator('[data-board] .numbers-tile[data-value="6"]');
-    await expect(mergedTile).toHaveCount(1);
+    await expect(mergedTile.first()).toBeVisible();
     expect(await page.locator("[data-score]").textContent()).toBe("6");
   });
 
@@ -72,7 +72,7 @@ test.describe("numbers game", () => {
     await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 20, sourceBox.y + sourceBox.height / 2, { steps: 5 });
     await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
     await page.mouse.up();
-    await expect(page.locator('[data-board] .numbers-tile[data-value="6"]')).toHaveCount(1);
+    await expect(page.locator('[data-board] .numbers-tile[data-value="6"]').first()).toBeVisible();
   });
 
   test("clicking the game-over banner restarts the game", async ({ page }) => {
@@ -133,10 +133,16 @@ test.describe("numbers game", () => {
 
       const label = `scenario ${i}: (${from.row},${from.col}) → (${to.row},${to.col})`;
       await expect(
-        page.locator('[data-board] .numbers-tile[data-value="12"]'),
+        page.locator('[data-board] .numbers-tile[data-value="12"]').first(),
         label,
-      ).toHaveCount(1);
+      ).toBeVisible();
     }
+  });
+
+  test("only one starter tile shows the drag hint on first load", async ({ page }) => {
+    await gotoStatsSlide(page);
+    const starterTiles = page.locator('[data-board] .numbers-tile[data-starter="true"]');
+    await expect(starterTiles).toHaveCount(1);
   });
 
   test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {

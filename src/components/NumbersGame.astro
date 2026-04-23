@@ -12,10 +12,11 @@ const fallbackStats = [
     { key: "experience", value: t("stats.experience.value"), label: t("stats.experience"), short: t("stats.experience.short"), prefix: t("stats.experience.prefix"), suffix: t("stats.experience.suffix") },
     { key: "coderate",   value: t("stats.coderate.value"),   label: t("stats.coderate"),   short: t("stats.coderate.short"),   prefix: t("stats.coderate.prefix"),   suffix: t("stats.coderate.suffix") },
     { key: "recruited",  value: t("stats.recruited.value"),  label: t("stats.recruited"),  short: t("stats.recruited.short"),  prefix: t("stats.recruited.prefix"),  suffix: t("stats.recruited.suffix") },
-    { key: "tdd",        value: t("stats.tdd.value"),        label: t("stats.tdd"),        short: t("stats.tdd.short"),        prefix: t("stats.tdd.prefix"),        suffix: t("stats.tdd.suffix") },
+    { key: "speaking",   value: t("stats.speaking.value"),   label: t("stats.speaking"),   short: t("stats.speaking.short"),   prefix: t("stats.speaking.prefix"),   suffix: t("stats.speaking.suffix") },
     { key: "managed",    value: t("stats.managed.value"),    label: t("stats.managed"),    short: t("stats.managed.short"),    prefix: t("stats.managed.prefix"),    suffix: t("stats.managed.suffix") },
     { key: "bugfix",     value: t("stats.bugfix.value"),     label: t("stats.bugfix"),     short: t("stats.bugfix.short"),     prefix: t("stats.bugfix.prefix"),     suffix: t("stats.bugfix.suffix") },
     { key: "clients",    value: t("stats.clients.value"),    label: t("stats.clients"),    short: t("stats.clients.short"),    prefix: t("stats.clients.prefix"),    suffix: t("stats.clients.suffix") },
+    { key: "linkedin",   value: t("stats.linkedin.value"),   label: t("stats.linkedin"),   short: t("stats.linkedin.short"),   prefix: t("stats.linkedin.prefix"),   suffix: t("stats.linkedin.suffix") },
 ];
 ---
 
@@ -57,13 +58,15 @@ const fallbackStats = [
 <script>
     import {
         mergeTilesAt,
-        spawnTile,
+        spawnNext,
+        spawnRandomMilestone,
+        nextSpawnPlan,
         isGameOver,
         getStatForTile,
         createEmptyBoard,
         seedBoard,
     } from "../utils/merge-game";
-    import type { Board, Position, StatKey } from "../utils/merge-game";
+    import type { Board, Position, StatKey, SpawnMode } from "../utils/merge-game";
 
     const BOARD_SIZE = 4;
     const DRAG_THRESHOLD = 6;
@@ -107,6 +110,8 @@ const fallbackStats = [
         let board: Board = createBoard();
         let renderedBoard: Board = createBoard();
         let score = 0;
+        let hintShown = false;
+        let spawnMode: SpawnMode = "active";
 
         const cellEls: HTMLElement[][] = [];
 
@@ -126,7 +131,7 @@ const fallbackStats = [
             }
         }
 
-        function renderTile(value: number): HTMLElement {
+        function renderTile(value: number, withHint = false): HTMLElement {
             const tile = document.createElement("div");
             tile.className = "numbers-tile";
             tile.dataset.value = String(value);
@@ -166,7 +171,7 @@ const fallbackStats = [
                     suffixEl.textContent = suffix;
                     tile.append(suffixEl);
                 }
-            } else if (value === 3 && startHint) {
+            } else if (value === 3 && startHint && withHint) {
                 tile.dataset.starter = "true";
                 const valueEl = document.createElement("span");
                 valueEl.className = "numbers-tile-value";
@@ -190,7 +195,11 @@ const fallbackStats = [
                     if (renderedBoard[r][c] === value) continue;
                     const cell = cellEls[r][c];
                     cell.innerHTML = "";
-                    if (value !== 0) cell.appendChild(renderTile(value));
+                    if (value !== 0) {
+                        const withHint = value === 3 && !hintShown;
+                        cell.appendChild(renderTile(value, withHint));
+                        if (withHint) hintShown = true;
+                    }
                     renderedBoard[r][c] = value;
                 }
             }
@@ -199,6 +208,8 @@ const fallbackStats = [
         function start() {
             board = seedBoard();
             score = 0;
+            hintShown = false;
+            spawnMode = "active";
             gameoverEl!.hidden = true;
             render();
         }
@@ -206,7 +217,13 @@ const fallbackStats = [
         function attemptMerge(from: Position, to: Position) {
             const result = mergeTilesAt(board, from, to);
             if (!result.merged) return false;
-            board = spawnTile(result.board);
+            let next = result.board;
+            const plan = nextSpawnPlan(next, spawnMode);
+            spawnMode = plan.mode;
+            for (let i = 0; i < plan.count; i++) {
+                next = i === 0 ? spawnNext(next) : spawnRandomMilestone(next);
+            }
+            board = next;
             score += result.gained;
             render();
             if (isGameOver(board)) gameoverEl!.hidden = false;
@@ -535,18 +552,18 @@ const fallbackStats = [
         white-space: nowrap;
     }
 
-    /* Dark text on light backgrounds (pineapple yellow) */
-    .numbers-tile[data-stat="tdd"] .numbers-tile-value,
-    .numbers-tile[data-stat="tdd"] .numbers-tile-prefix,
-    .numbers-tile[data-stat="tdd"] .numbers-tile-stat {
+    /* Dark text on light backgrounds (pineapple yellow, tier 5) */
+    .numbers-tile[data-tier="5"] .numbers-tile-value,
+    .numbers-tile[data-tier="5"] .numbers-tile-prefix,
+    .numbers-tile[data-tier="5"] .numbers-tile-stat {
         color: #3a2550;
         text-shadow: none;
     }
-    .numbers-tile[data-stat="tdd"] .numbers-tile-prefix,
-    .numbers-tile[data-stat="tdd"] .numbers-tile-stat {
+    .numbers-tile[data-tier="5"] .numbers-tile-prefix,
+    .numbers-tile[data-tier="5"] .numbers-tile-stat {
         color: rgba(58, 37, 80, 0.75);
     }
-    .numbers-tile[data-stat="tdd"] .numbers-tile-value[data-approx="true"]::before {
+    .numbers-tile[data-tier="5"] .numbers-tile-value[data-approx="true"]::before {
         color: rgba(58, 37, 80, 0.55);
     }
 

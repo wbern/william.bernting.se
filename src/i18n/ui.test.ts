@@ -24,7 +24,7 @@ describe("ui translations", () => {
       // stat prefixes are intentionally empty when the sentence starts with the value
       "stats.users.prefix",
       "stats.experience.prefix",
-      "stats.tdd.prefix",
+      "stats.linkedin.prefix",
     ]);
     for (const lang of languages) {
       for (const [key, value] of Object.entries(ui[lang])) {
