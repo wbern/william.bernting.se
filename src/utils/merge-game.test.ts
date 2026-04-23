@@ -4,6 +4,7 @@ import {
   isGameOver,
   spawnTile,
   getStatForTile,
+  hasValidMerge,
 } from "./merge-game";
 
 describe("mergeTilesAt", () => {
@@ -33,17 +34,29 @@ describe("mergeTilesAt", () => {
     expect(result.board).toEqual(board);
   });
 
-  it("refuses to merge tiles that are not orthogonally adjacent", () => {
+  it("merges two equal tiles even when they are not adjacent", () => {
     const board = [
-      [3, 0, 3, 0],
+      [3, 0, 0, 3],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 2 });
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 3 });
+    expect(result.merged).toBe(true);
+    expect(result.board[0][0]).toBe(0);
+    expect(result.board[0][3]).toBe(6);
+    expect(result.gained).toBe(6);
+  });
+
+  it("refuses to merge a tile onto itself", () => {
+    const board = [
+      [3, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 0 });
     expect(result.merged).toBe(false);
-    expect(result.board).toEqual(board);
-    expect(result.gained).toBe(0);
   });
 });
 
@@ -52,8 +65,16 @@ describe("getStatForTile", () => {
     expect(getStatForTile(48)).toBe("prototypes");
   });
 
+  it("maps tile 6 to the recruited stat", () => {
+    expect(getStatForTile(6)).toBe("recruited");
+  });
+
+  it("maps tile 96 to the tdd stat", () => {
+    expect(getStatForTile(96)).toBe("tdd");
+  });
+
   it("returns undefined for tile values that do not represent a stat", () => {
-    expect(getStatForTile(6)).toBeUndefined();
+    expect(getStatForTile(3072)).toBeUndefined();
   });
 });
 
@@ -71,35 +92,57 @@ describe("spawnTile", () => {
   });
 });
 
+describe("hasValidMerge", () => {
+  it("is true when two adjacent tiles share a value", () => {
+    const board = [
+      [3, 0, 0, 0],
+      [3, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    expect(hasValidMerge(board)).toBe(true);
+  });
+
+  it("is true when two equal tiles exist anywhere on the board, even non-adjacent", () => {
+    const board = [
+      [3, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 3],
+    ];
+    expect(hasValidMerge(board)).toBe(true);
+  });
+
+  it("is false when every tile has a unique value", () => {
+    const board = [
+      [3, 6, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 12, 0],
+      [0, 0, 0, 24],
+    ];
+    expect(hasValidMerge(board)).toBe(false);
+  });
+});
+
 describe("isGameOver", () => {
-  it("is true when the board is full and no neighbors match", () => {
+  it("is false whenever any two tiles share a value, even non-adjacent", () => {
     const board = [
       [3, 6, 12, 24],
       [6, 12, 24, 48],
       [12, 24, 48, 96],
       [24, 48, 96, 192],
+    ];
+    expect(isGameOver(board)).toBe(false);
+  });
+
+  it("is true when the board is full with no duplicate values", () => {
+    const board = [
+      [3, 6, 12, 24],
+      [48, 96, 192, 384],
+      [768, 1536, 3072, 6144],
+      [12288, 24576, 49152, 98304],
     ];
     expect(isGameOver(board)).toBe(true);
-  });
-
-  it("is false when a vertical pair could still merge", () => {
-    const board = [
-      [3, 6, 12, 24],
-      [3, 12, 24, 48],
-      [12, 24, 48, 96],
-      [24, 48, 96, 192],
-    ];
-    expect(isGameOver(board)).toBe(false);
-  });
-
-  it("is false when a horizontal pair could still merge", () => {
-    const board = [
-      [3, 3, 12, 24],
-      [6, 12, 24, 48],
-      [12, 24, 48, 96],
-      [24, 48, 96, 192],
-    ];
-    expect(isGameOver(board)).toBe(false);
   });
 
   it("is true when empty cells exist but no adjacent tiles match", () => {

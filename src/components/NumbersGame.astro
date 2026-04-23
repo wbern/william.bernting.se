@@ -6,28 +6,23 @@ const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const fallbackStats = [
-    { key: "prototypes", value: t("stats.prototypes.value"), label: t("stats.prototypes"), short: t("stats.prototypes.short") },
-    { key: "users",      value: t("stats.users.value"),      label: t("stats.users"),      short: t("stats.users.short") },
-    { key: "teams",      value: t("stats.teams.value"),      label: t("stats.teams"),      short: t("stats.teams.short") },
-    { key: "experience", value: t("stats.experience.value"), label: t("stats.experience"), short: t("stats.experience.short") },
-    { key: "coderate",   value: t("stats.coderate.value"),   label: t("stats.coderate"),   short: t("stats.coderate.short") },
+    { key: "prototypes", value: t("stats.prototypes.value"), label: t("stats.prototypes"), short: t("stats.prototypes.short"), prefix: t("stats.prototypes.prefix"), suffix: t("stats.prototypes.suffix") },
+    { key: "users",      value: t("stats.users.value"),      label: t("stats.users"),      short: t("stats.users.short"),      prefix: t("stats.users.prefix"),      suffix: t("stats.users.suffix") },
+    { key: "teams",      value: t("stats.teams.value"),      label: t("stats.teams"),      short: t("stats.teams.short"),      prefix: t("stats.teams.prefix"),      suffix: t("stats.teams.suffix") },
+    { key: "experience", value: t("stats.experience.value"), label: t("stats.experience"), short: t("stats.experience.short"), prefix: t("stats.experience.prefix"), suffix: t("stats.experience.suffix") },
+    { key: "coderate",   value: t("stats.coderate.value"),   label: t("stats.coderate"),   short: t("stats.coderate.short"),   prefix: t("stats.coderate.prefix"),   suffix: t("stats.coderate.suffix") },
+    { key: "recruited",  value: t("stats.recruited.value"),  label: t("stats.recruited"),  short: t("stats.recruited.short"),  prefix: t("stats.recruited.prefix"),  suffix: t("stats.recruited.suffix") },
+    { key: "tdd",        value: t("stats.tdd.value"),        label: t("stats.tdd"),        short: t("stats.tdd.short"),        prefix: t("stats.tdd.prefix"),        suffix: t("stats.tdd.suffix") },
+    { key: "managed",    value: t("stats.managed.value"),    label: t("stats.managed"),    short: t("stats.managed.short"),    prefix: t("stats.managed.prefix"),    suffix: t("stats.managed.suffix") },
+    { key: "bugfix",     value: t("stats.bugfix.value"),     label: t("stats.bugfix"),     short: t("stats.bugfix.short"),     prefix: t("stats.bugfix.prefix"),     suffix: t("stats.bugfix.suffix") },
+    { key: "clients",    value: t("stats.clients.value"),    label: t("stats.clients"),    short: t("stats.clients.short"),    prefix: t("stats.clients.prefix"),    suffix: t("stats.clients.suffix") },
 ];
 ---
 
 <div class="section-inner numbers-section">
     <div class="section-label reveal">{t("stats.label")}</div>
-    <h2 class="section-heading reveal reveal-delay-1">
-        {t("stats.heading.before")}<span class="highlight">{t("stats.heading.highlight")}</span>{t("stats.heading.after")}
-    </h2>
 
-    <div class="numbers-game reveal reveal-delay-2" data-numbers-game>
-        <div class="numbers-status">
-            <div class="numbers-score">
-                <span class="numbers-score-label">{t("numbers.score")}</span>
-                <span class="numbers-score-value" data-score>0</span>
-            </div>
-        </div>
-
+    <div class="numbers-game reveal reveal-delay-2" data-numbers-game data-start-hint={t("numbers.hint.start")}>
         <div
             class="numbers-board"
             role="application"
@@ -36,11 +31,22 @@ const fallbackStats = [
         ></div>
 
         <div class="numbers-gameover" data-gameover hidden>{t("numbers.gameover")}</div>
+
+        <div class="numbers-score" aria-live="polite">
+            <span class="numbers-score-value" data-score>0</span>
+            <span class="numbers-score-label">{t("numbers.score")}</span>
+        </div>
     </div>
 
     <div class="numbers-fallback" data-fallback-stats>
         {fallbackStats.map((stat) => (
-            <div class="stat" data-stat-key={stat.key} data-stat-short={stat.short}>
+            <div
+                class="stat"
+                data-stat-key={stat.key}
+                data-stat-short={stat.short}
+                data-stat-prefix={stat.prefix}
+                data-stat-suffix={stat.suffix}
+            >
                 <div class="stat-number">{stat.value}</div>
                 <div class="stat-label">{stat.label}</div>
             </div>
@@ -54,43 +60,22 @@ const fallbackStats = [
         spawnTile,
         isGameOver,
         getStatForTile,
-        STARTING_TILE,
+        createEmptyBoard,
+        seedBoard,
     } from "../utils/merge-game";
     import type { Board, Position, StatKey } from "../utils/merge-game";
 
     const BOARD_SIZE = 4;
-    const INITIAL_TILES = 6;
     const DRAG_THRESHOLD = 6;
 
-    type StatMeta = { value: string; label: string; short: string };
+    type StatMeta = { value: string; label: string; short: string; prefix: string; suffix: string };
 
     function createBoard(): Board {
-        return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
-    }
-
-    function seedBoard(): Board {
-        let b = createBoard();
-        for (let i = 0; i < INITIAL_TILES; i++) {
-            b = spawnTile(b);
-            // Occasionally upgrade a tile to a 6 so early merges land on 12 (teams milestone) faster
-            if (i % 2 === 1) {
-                const empties: Array<[number, number]> = [];
-                b.forEach((row, r) => row.forEach((v, c) => { if (v === STARTING_TILE) empties.push([r, c]); }));
-                if (empties.length > 0) {
-                    const [r, c] = empties[Math.floor(Math.random() * empties.length)];
-                    b = b.map((row, ri) => ri === r ? row.map((v, ci) => ci === c ? 6 : v) : row);
-                }
-            }
-        }
-        return b;
+        return createEmptyBoard(BOARD_SIZE);
     }
 
     function tierFor(value: number): number {
         return Math.min(12, Math.max(0, Math.round(Math.log2(value / 3))));
-    }
-
-    function areAdjacent(a: Position, b: Position): boolean {
-        return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
     }
 
     function readStatLabels(root: HTMLElement): Partial<Record<StatKey, StatMeta>> {
@@ -102,6 +87,8 @@ const fallbackStats = [
                 value: el.querySelector(".stat-number")?.textContent?.trim() ?? "",
                 label: el.querySelector(".stat-label")?.textContent?.trim() ?? "",
                 short: el.dataset.statShort ?? "",
+                prefix: el.dataset.statPrefix ?? "",
+                suffix: el.dataset.statSuffix ?? "",
             };
         });
         return result;
@@ -115,8 +102,10 @@ const fallbackStats = [
         if (!boardEl || !scoreEl || !gameoverEl) return;
 
         const statLabels = readStatLabels(section);
+        const startHint = root.dataset.startHint ?? "";
 
         let board: Board = createBoard();
+        let renderedBoard: Board = createBoard();
         let score = 0;
 
         const cellEls: HTMLElement[][] = [];
@@ -148,14 +137,45 @@ const fallbackStats = [
                 tile.dataset.milestone = "true";
                 const meta = statLabels[stat];
                 const displayValue = meta?.value ?? String(value);
-                const short = meta?.short ?? "";
+                const prefix = meta?.prefix ?? "";
+                const suffix = meta?.suffix ?? "";
+                const normalized = displayValue.replace(/[\s,]/g, "");
+                const numericPart = parseFloat(normalized);
+                const isApprox =
+                    normalized !== String(value) &&
+                    Number.isFinite(numericPart) &&
+                    numericPart >= value * 0.5 &&
+                    numericPart <= value * 2;
+
+                if (prefix) {
+                    const prefixEl = document.createElement("span");
+                    prefixEl.className = "numbers-tile-prefix";
+                    prefixEl.textContent = prefix;
+                    tile.append(prefixEl);
+                }
+
                 const valueEl = document.createElement("span");
                 valueEl.className = "numbers-tile-value";
-                valueEl.textContent = `~${displayValue}`;
-                const labelEl = document.createElement("span");
-                labelEl.className = "numbers-tile-stat";
-                labelEl.textContent = short;
-                tile.append(valueEl, labelEl);
+                if (isApprox) valueEl.dataset.approx = "true";
+                valueEl.textContent = displayValue;
+                tile.append(valueEl);
+
+                if (suffix) {
+                    const suffixEl = document.createElement("span");
+                    suffixEl.className = "numbers-tile-stat";
+                    suffixEl.textContent = suffix;
+                    tile.append(suffixEl);
+                }
+            } else if (value === 3 && startHint) {
+                tile.dataset.starter = "true";
+                const valueEl = document.createElement("span");
+                valueEl.className = "numbers-tile-value";
+                valueEl.textContent = String(value);
+                tile.append(valueEl);
+                const hintEl = document.createElement("span");
+                hintEl.className = "numbers-tile-stat";
+                hintEl.textContent = startHint;
+                tile.append(hintEl);
             } else {
                 tile.textContent = String(value);
             }
@@ -166,10 +186,12 @@ const fallbackStats = [
             scoreEl!.textContent = String(score);
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
+                    const value = board[r][c];
+                    if (renderedBoard[r][c] === value) continue;
                     const cell = cellEls[r][c];
                     cell.innerHTML = "";
-                    const value = board[r][c];
                     if (value !== 0) cell.appendChild(renderTile(value));
+                    renderedBoard[r][c] = value;
                 }
             }
         }
@@ -216,7 +238,6 @@ const fallbackStats = [
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     if (r === from.row && c === from.col) continue;
                     if (board[r][c] !== value) continue;
-                    if (!areAdjacent(from, { row: r, col: c })) continue;
                     cellEls[r][c].classList.add("drop-valid");
                 }
             }
@@ -299,14 +320,14 @@ const fallbackStats = [
             if (!drag || e.pointerId !== drag.pointerId) return;
             const current = drag;
             drag = null;
+            let target: Position | null = null;
+            if (attempted && current.activated) {
+                target = positionFromCell(cellAtPoint(e.clientX, e.clientY));
+            }
             current.tileEl.classList.remove("dragging");
             current.tileEl.style.transform = "";
             clearDropHighlights();
-            if (attempted && current.activated) {
-                const hoverCell = cellAtPoint(e.clientX, e.clientY);
-                const target = positionFromCell(hoverCell);
-                if (target) attemptMerge(current.origin, target);
-            }
+            if (target) attemptMerge(current.origin, target);
         }
 
         window.addEventListener("pointerup", (e) => endDrag(e, true));
@@ -344,63 +365,49 @@ const fallbackStats = [
     .numbers-section {
         display: flex;
         flex-direction: column;
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .numbers-game {
-        display: grid;
-        grid-template-columns: 180px minmax(0, 1fr);
-        grid-template-areas:
-            "status board"
-            "over   board";
-        gap: 16px 28px;
-        align-items: start;
-    }
-
-    .numbers-status {
-        grid-area: status;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
+        width: 100%;
+        max-width: 720px;
     }
 
     .numbers-score {
+        align-self: flex-end;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
         font-family: var(--mono);
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        padding: 10px 14px;
-        border-radius: 10px;
-        text-align: center;
-    }
-
-    .numbers-score-label {
-        display: block;
-        font-size: 10px;
+        font-size: 11px;
         color: var(--text-muted);
         text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 4px;
+        letter-spacing: 1.5px;
+        opacity: 0.6;
     }
 
     .numbers-score-value {
-        font-size: 26px;
+        font-size: 13px;
         color: var(--purple);
-        font-weight: 800;
+        font-weight: 700;
     }
 
     .numbers-board {
-        grid-area: board;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 10px;
+        border-radius: 14px;
+        padding: 12px;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         grid-template-rows: repeat(4, 1fr);
-        gap: 10px;
+        gap: 12px;
         aspect-ratio: 1;
         width: 100%;
-        max-width: 440px;
-        justify-self: start;
         touch-action: none;
     }
 
@@ -441,7 +448,7 @@ const fallbackStats = [
         justify-content: center;
         font-family: var(--mono);
         font-weight: 700;
-        font-size: clamp(13px, 2.2vw, 22px);
+        font-size: clamp(26px, 4.2vw, 48px);
         border-radius: 8px;
         background: var(--purple-dim);
         color: #fff;
@@ -467,29 +474,80 @@ const fallbackStats = [
         pointer-events: none;
     }
 
-    .numbers-tile[data-milestone="true"] {
-        animation: tile-pop 0.18s ease-out, tile-pulse 1.6s ease-in-out infinite;
+    .numbers-tile[data-milestone="true"],
+    .numbers-tile[data-starter="true"] {
         flex-direction: column;
-        gap: 2px;
-        padding: 6px;
+        gap: 3px;
+        padding: 8px 6px;
         text-align: center;
+        justify-content: center;
     }
 
+    .numbers-tile[data-milestone="true"] {
+        animation: tile-pop 0.18s ease-out, tile-pulse 1.6s ease-in-out infinite;
+    }
+
+    .numbers-tile-prefix {
+        font-family: var(--mono);
+        font-size: clamp(8px, 0.95vw, 11px);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        line-height: 1.1;
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 600;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
     .numbers-tile-value {
-        font-size: clamp(16px, 2.6vw, 22px);
-        font-weight: 800;
+        position: relative;
+        font-size: clamp(30px, 4.6vw, 52px);
+        font-weight: 900;
         line-height: 1;
         color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        white-space: nowrap;
+    }
+
+    .numbers-tile-value[data-approx="true"]::before {
+        content: "~";
+        position: absolute;
+        right: 100%;
+        top: 0;
+        margin-right: 1px;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 500;
     }
 
     .numbers-tile-stat {
         font-family: var(--mono);
-        font-size: clamp(9px, 1.2vw, 11px);
+        font-size: clamp(8px, 0.95vw, 11px);
         text-transform: uppercase;
-        letter-spacing: 1px;
-        opacity: 0.85;
-        line-height: 1.2;
+        letter-spacing: 0.8px;
+        line-height: 1.15;
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 600;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Dark text on light backgrounds (pineapple yellow) */
+    .numbers-tile[data-stat="tdd"] .numbers-tile-value,
+    .numbers-tile[data-stat="tdd"] .numbers-tile-prefix,
+    .numbers-tile[data-stat="tdd"] .numbers-tile-stat {
+        color: #3a2550;
+        text-shadow: none;
+    }
+    .numbers-tile[data-stat="tdd"] .numbers-tile-prefix,
+    .numbers-tile[data-stat="tdd"] .numbers-tile-stat {
+        color: rgba(58, 37, 80, 0.75);
+    }
+    .numbers-tile[data-stat="tdd"] .numbers-tile-value[data-approx="true"]::before {
+        color: rgba(58, 37, 80, 0.55);
     }
 
     @keyframes tile-pop {
@@ -498,26 +556,37 @@ const fallbackStats = [
     }
 
     @keyframes tile-pulse {
-        0%, 100% { box-shadow: 0 0 16px var(--purple-glow-strong); }
-        50%      { box-shadow: 0 0 28px var(--purple-glow-strong); }
+        0%, 100% { box-shadow: 0 0 16px var(--tile-glow, var(--purple-glow-strong)); }
+        50%      { box-shadow: 0 0 28px var(--tile-glow, var(--purple-glow-strong)); }
     }
 
-    .numbers-tile[data-tier="0"]  { background: #2a1a3a; color: #d0b4e8; }
-    .numbers-tile[data-tier="1"]  { background: #3b2650; color: #e0c4f2; }
-    .numbers-tile[data-tier="2"]  { background: #4d2f66; }
-    .numbers-tile[data-tier="3"]  { background: #5f387c; }
-    .numbers-tile[data-tier="4"]  { background: #724091; }
-    .numbers-tile[data-tier="5"]  { background: #8549a7; }
-    .numbers-tile[data-tier="6"]  { background: #9b4dca; }
-    .numbers-tile[data-tier="7"]  { background: #b25fdb; }
-    .numbers-tile[data-tier="8"]  { background: #c670ec; }
-    .numbers-tile[data-tier="9"]  { background: linear-gradient(135deg, #d070ff, #9b4dca); font-size: clamp(11px, 2vw, 18px); }
-    .numbers-tile[data-tier="10"],
+    /* Fruit palette — darkened so white text meets WCAG AA (or pineapple uses dark text).
+       Each tier sets --tile-glow to match its gradient so the pulse halo reads as that color. */
+    .numbers-tile[data-tier="0"]  { background: #2a1a3a; color: #d0b4e8; --tile-glow: rgba(125, 90, 170, 0.55); }
+    .numbers-tile[data-tier="1"]  { background: linear-gradient(135deg, #246a8a, #143e52); --tile-glow: rgba(60, 150, 200, 0.55); }  /* blueberry */
+    .numbers-tile[data-tier="2"]  { background: linear-gradient(135deg, #7a3fb8, #4f2780); --tile-glow: rgba(150, 85, 220, 0.55); }  /* grape */
+    .numbers-tile[data-tier="3"]  { background: linear-gradient(135deg, #995410, #5e2f04); --tile-glow: rgba(220, 130, 40, 0.55); }  /* orange */
+    .numbers-tile[data-tier="4"]  { background: linear-gradient(135deg, #b02828, #7a1818); --tile-glow: rgba(230, 70, 70, 0.55); }  /* apple */
+    .numbers-tile[data-tier="5"]  { background: linear-gradient(135deg, #ffdd44, #e6b820); --tile-glow: rgba(255, 220, 70, 0.6); }  /* pineapple (dark text) */
+    .numbers-tile[data-tier="6"]  { background: linear-gradient(135deg, #a8214a, #701530); --tile-glow: rgba(220, 60, 110, 0.55); }  /* cherry */
+    .numbers-tile[data-tier="7"]  { background: linear-gradient(135deg, #964020, #5e260e); --tile-glow: rgba(220, 110, 50, 0.55); }  /* tangerine */
+    .numbers-tile[data-tier="8"]  { background: linear-gradient(135deg, #a03868, #661a44); --tile-glow: rgba(210, 90, 150, 0.55); }  /* raspberry */
+    .numbers-tile[data-tier="9"]  { background: linear-gradient(135deg, #1f7a3a, #0f4a22); --tile-glow: rgba(60, 180, 90, 0.55); font-size: clamp(22px, 3.6vw, 40px); }  /* watermelon */
+    .numbers-tile[data-tier="10"] { background: linear-gradient(135deg, #246a8a, #5f2fa0, #a03868); --tile-glow: rgba(150, 90, 200, 0.55); font-size: clamp(20px, 3.2vw, 36px); }
     .numbers-tile[data-tier="11"],
-    .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #f090ff, #9b4dca); font-size: clamp(10px, 1.8vw, 16px); }
+    .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #8a1e1e, #7a4010, #a07c15, #145e2a, #184d66, #4a1f80); --tile-glow: rgba(200, 150, 60, 0.55); font-size: clamp(18px, 3vw, 32px); }
+
+    /* Scale value down on tiers with wider numbers so they fit on one line */
+    .numbers-tile[data-tier="9"]  .numbers-tile-value { font-size: clamp(22px, 3.2vw, 36px); }
+    .numbers-tile[data-tier="10"] .numbers-tile-value,
+    .numbers-tile[data-tier="11"] .numbers-tile-value,
+    .numbers-tile[data-tier="12"] .numbers-tile-value { font-size: clamp(20px, 3.0vw, 32px); }
+    /* Experience: "15 år" needs room for both number + unit */
+    .numbers-tile[data-stat="experience"] .numbers-tile-value { font-size: clamp(26px, 4.0vw, 44px); }
 
     .numbers-gameover {
-        grid-area: over;
+        align-self: flex-start;
+        order: -1;
         color: var(--purple);
         font-family: var(--mono);
         font-size: 13px;
@@ -533,20 +602,7 @@ const fallbackStats = [
     .numbers-fallback { display: none; }
 
     @media (max-width: 700px) {
-        .numbers-game {
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "status"
-                "board"
-                "over";
-        }
-        .numbers-status {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .numbers-score { flex: 1; padding: 8px 12px; }
-        .numbers-board { max-width: 100%; justify-self: stretch; }
+        .numbers-board { max-width: 100%; gap: 8px; padding: 8px; }
     }
 
     @media (prefers-reduced-motion: reduce) {

@@ -81,12 +81,10 @@ test.describe("numbers game", () => {
       const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
       api!.setBoard([
         [3, 6, 12, 24],
-        [6, 12, 24, 48],
-        [12, 24, 48, 96],
-        [24, 48, 96, 192],
+        [48, 96, 192, 384],
+        [768, 1536, 3072, 6144],
+        [12288, 24576, 49152, 98304],
       ]);
-      // Trigger a no-op merge attempt to force the game-over check
-      api!.attemptMerge({ row: 0, col: 0 }, { row: 0, col: 1 });
     });
     const gameover = page.locator("[data-gameover]");
     await expect(gameover).toBeVisible();
@@ -95,6 +93,50 @@ test.describe("numbers game", () => {
     expect(await page.locator("[data-score]").textContent()).toBe("0");
     const tileCount = await page.locator("[data-board] .numbers-tile").count();
     expect(tileCount).toBeGreaterThanOrEqual(4);
+  });
+
+  test("dragging any 6 onto another 6 merges them across 10 non-adjacent scenarios", async ({ page }) => {
+    await gotoStatsSlide(page);
+
+    const scenarios: Array<{ from: { row: number; col: number }; to: { row: number; col: number } }> = [
+      { from: { row: 3, col: 2 }, to: { row: 0, col: 2 } },
+      { from: { row: 0, col: 0 }, to: { row: 3, col: 3 } },
+      { from: { row: 0, col: 3 }, to: { row: 3, col: 0 } },
+      { from: { row: 0, col: 0 }, to: { row: 0, col: 3 } },
+      { from: { row: 0, col: 0 }, to: { row: 3, col: 0 } },
+      { from: { row: 1, col: 1 }, to: { row: 2, col: 2 } },
+      { from: { row: 3, col: 1 }, to: { row: 0, col: 1 } },
+      { from: { row: 2, col: 0 }, to: { row: 1, col: 3 } },
+      { from: { row: 0, col: 2 }, to: { row: 3, col: 1 } },
+      { from: { row: 3, col: 3 }, to: { row: 0, col: 0 } },
+    ];
+
+    for (const [i, { from, to }] of scenarios.entries()) {
+      const seed = Array.from({ length: 4 }, () => [0, 0, 0, 0]);
+      seed[from.row][from.col] = 6;
+      seed[to.row][to.col] = 6;
+      await page.evaluate((b) => {
+        (window as unknown as { __numbersGame: MergeApi }).__numbersGame.setBoard(b);
+      }, seed);
+
+      const sourceTile = page.locator(`[data-board] .numbers-cell[data-row="${from.row}"][data-col="${from.col}"] .numbers-tile`);
+      const targetCell = page.locator(`[data-board] .numbers-cell[data-row="${to.row}"][data-col="${to.col}"]`);
+      const sBox = await sourceTile.boundingBox();
+      const tBox = await targetCell.boundingBox();
+      if (!sBox || !tBox) throw new Error(`scenario ${i}: missing bounding box`);
+
+      await page.mouse.move(sBox.x + sBox.width / 2, sBox.y + sBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(sBox.x + sBox.width / 2 + 20, sBox.y + sBox.height / 2, { steps: 5 });
+      await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + tBox.height / 2, { steps: 10 });
+      await page.mouse.up();
+
+      const label = `scenario ${i}: (${from.row},${from.col}) → (${to.row},${to.col})`;
+      await expect(
+        page.locator('[data-board] .numbers-tile[data-value="12"]'),
+        label,
+      ).toHaveCount(1);
+    }
   });
 
   test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {
