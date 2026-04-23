@@ -25,6 +25,7 @@ describe("ui translations", () => {
       "stats.users.prefix",
       "stats.experience.prefix",
       "stats.linkedin.prefix",
+      "stats.messages.prefix",
     ]);
     for (const lang of languages) {
       for (const [key, value] of Object.entries(ui[lang])) {

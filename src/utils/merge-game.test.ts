@@ -63,6 +63,21 @@ describe("mergeTilesAt", () => {
     const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 0 });
     expect(result.merged).toBe(false);
   });
+
+  it("explodes two 12288 tiles into a fresh starter instead of producing a no-stat 24576", () => {
+    const board = [
+      [12288, 12288, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(result.merged).toBe(true);
+    expect(result.exploded).toBe(true);
+    expect(result.board[0][0]).toBe(0);
+    expect(result.board[0][1]).toBe(3);
+    expect(result.gained).toBe(24576);
+  });
 });
 
 describe("getStatForTile", () => {
@@ -80,6 +95,10 @@ describe("getStatForTile", () => {
 
   it("maps tile 3072 to the linkedin stat", () => {
     expect(getStatForTile(3072)).toBe("linkedin");
+  });
+
+  it("maps tile 12288 to the messages stat", () => {
+    expect(getStatForTile(12288)).toBe("messages");
   });
 
   it("returns undefined for tile values that do not represent a stat", () => {
