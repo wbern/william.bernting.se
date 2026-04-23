@@ -13,7 +13,8 @@ export type StatKey =
   | "clients"
   | "coderate"
   | "linkedin"
-  | "users";
+  | "users"
+  | "messages";
 
 const STAT_TILES: Record<number, StatKey> = {
   6: "recruited",
@@ -27,6 +28,7 @@ const STAT_TILES: Record<number, StatKey> = {
   1536: "coderate",
   3072: "linkedin",
   6144: "users",
+  12288: "messages",
 };
 
 export function getStatForTile(value: number): StatKey | undefined {
@@ -35,24 +37,27 @@ export function getStatForTile(value: number): StatKey | undefined {
 
 export type Position = { row: number; col: number };
 
+const MAX_STAT_TILE = 12288;
+
 export function mergeTilesAt(
   board: Board,
   from: Position,
   to: Position,
-): { board: Board; gained: number; merged: boolean } {
+): { board: Board; gained: number; merged: boolean; exploded: boolean } {
   if (from.row === to.row && from.col === to.col) {
-    return { board, gained: 0, merged: false };
+    return { board, gained: 0, merged: false, exploded: false };
   }
   const fromValue = board[from.row][from.col];
   const toValue = board[to.row][to.col];
   if (fromValue === 0 || toValue === 0 || fromValue !== toValue) {
-    return { board, gained: 0, merged: false };
+    return { board, gained: 0, merged: false, exploded: false };
   }
   const next = board.map((row) => [...row]);
   const sum = next[from.row][from.col] * 2;
   next[from.row][from.col] = 0;
-  next[to.row][to.col] = sum;
-  return { board: next, gained: sum, merged: true };
+  const exploded = sum > MAX_STAT_TILE;
+  next[to.row][to.col] = exploded ? STARTING_TILE : sum;
+  return { board: next, gained: sum, merged: true, exploded };
 }
 
 export function createEmptyBoard(size = 4): Board {

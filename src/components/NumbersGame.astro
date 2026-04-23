@@ -17,6 +17,7 @@ const fallbackStats = [
     { key: "bugfix",     value: t("stats.bugfix.value"),     label: t("stats.bugfix"),     short: t("stats.bugfix.short"),     prefix: t("stats.bugfix.prefix"),     suffix: t("stats.bugfix.suffix") },
     { key: "clients",    value: t("stats.clients.value"),    label: t("stats.clients"),    short: t("stats.clients.short"),    prefix: t("stats.clients.prefix"),    suffix: t("stats.clients.suffix") },
     { key: "linkedin",   value: t("stats.linkedin.value"),   label: t("stats.linkedin"),   short: t("stats.linkedin.short"),   prefix: t("stats.linkedin.prefix"),   suffix: t("stats.linkedin.suffix") },
+    { key: "messages",   value: t("stats.messages.value"),   label: t("stats.messages"),   short: t("stats.messages.short"),   prefix: t("stats.messages.prefix"),   suffix: t("stats.messages.suffix") },
 ];
 ---
 
@@ -226,8 +227,18 @@ const fallbackStats = [
             board = next;
             score += result.gained;
             render();
+            if (result.exploded) playExplosion(to);
             if (isGameOver(board)) gameoverEl!.hidden = false;
             return true;
+        }
+
+        function playExplosion(at: Position) {
+            const cell = cellEls[at.row]?.[at.col];
+            if (!cell) return;
+            const burst = document.createElement("div");
+            burst.className = "numbers-explosion";
+            cell.appendChild(burst);
+            burst.addEventListener("animationend", () => burst.remove(), { once: true });
         }
 
         function positionFromCell(cell: HTMLElement | null): Position | null {
@@ -616,6 +627,23 @@ const fallbackStats = [
         text-decoration: underline;
     }
 
+    .numbers-explosion {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        background: radial-gradient(circle, #fffbe6 0%, #ffd23a 30%, #ff7a1a 60%, rgba(255, 60, 20, 0) 80%);
+        animation: numbers-explode 520ms ease-out forwards;
+        z-index: 5;
+    }
+
+    @keyframes numbers-explode {
+        0%   { transform: scale(0.4); opacity: 0; filter: blur(0); }
+        25%  { transform: scale(1.3); opacity: 1; filter: blur(0); }
+        60%  { transform: scale(2.2); opacity: 0.65; filter: blur(4px); }
+        100% { transform: scale(3.2); opacity: 0; filter: blur(10px); }
+    }
+
     .numbers-fallback { display: none; }
 
     @media (max-width: 700px) {
@@ -625,6 +653,7 @@ const fallbackStats = [
     @media (prefers-reduced-motion: reduce) {
         .numbers-tile { animation: none; }
         .numbers-tile[data-milestone="true"] { animation: none; }
+        .numbers-explosion { animation-duration: 120ms; }
     }
 
     @media print {
