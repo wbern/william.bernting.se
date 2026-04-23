@@ -62,6 +62,7 @@ const fallbackStats = [
         spawnNext,
         spawnRandomMilestone,
         nextSpawnPlan,
+        ensureMergeAvailable,
         isGameOver,
         getStatForTile,
         createEmptyBoard,
@@ -207,7 +208,7 @@ const fallbackStats = [
         }
 
         function start() {
-            board = seedBoard();
+            board = ensureMergeAvailable(seedBoard());
             score = 0;
             hintShown = false;
             spawnMode = "active";
@@ -224,6 +225,7 @@ const fallbackStats = [
             for (let i = 0; i < plan.count; i++) {
                 next = i === 0 ? spawnNext(next) : spawnRandomMilestone(next);
             }
+            next = ensureMergeAvailable(next);
             board = next;
             score += result.gained;
             render();

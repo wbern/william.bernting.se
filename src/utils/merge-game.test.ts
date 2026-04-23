@@ -9,6 +9,7 @@ import {
   getStatForTile,
   hasValidMerge,
   nextSpawnPlan,
+  ensureMergeAvailable,
 } from "./merge-game";
 import type { Board } from "./merge-game";
 
@@ -310,6 +311,49 @@ describe("spawnNext", () => {
     const allStats = ["recruited", "teams", "experience", "prototypes", "speaking", "managed", "bugfix", "clients", "coderate", "linkedin", "users"];
     const missing = allStats.filter((s) => !seen.has(s));
     expect(missing, `missing stats after 60 merges: ${missing.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("ensureMergeAvailable", () => {
+  it("spawns a duplicate of the lowest existing tile when no merge is available but empties remain", () => {
+    const board: Board = [
+      [14, 0, 0, 47],
+      [0, 0, 15, 5000],
+      [0, 0, 0, 0],
+      [10, 7, 0, 0],
+    ];
+    // Lowest non-zero tile on the board is 7
+    const result = ensureMergeAvailable(board, () => 0);
+    expect(hasValidMerge(result)).toBe(true);
+    let sevens = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (result[r][c] === 7) sevens++;
+      }
+    }
+    expect(sevens).toBe(2);
+  });
+
+  it("leaves the board untouched when a valid merge already exists", () => {
+    const board: Board = [
+      [3, 3, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = ensureMergeAvailable(board, () => 0);
+    expect(result).toEqual(board);
+  });
+
+  it("returns the board unchanged when it is already full", () => {
+    const board: Board = [
+      [3, 6, 12, 24],
+      [48, 96, 192, 384],
+      [768, 1536, 3072, 6144],
+      [12288, 24576, 49152, 98304],
+    ];
+    const result = ensureMergeAvailable(board, () => 0);
+    expect(result).toEqual(board);
   });
 });
 
