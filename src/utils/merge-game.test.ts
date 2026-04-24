@@ -308,7 +308,7 @@ describe("spawnNext", () => {
       }
       if (!merged) break;
     }
-    const allStats = ["recruited", "teams", "experience", "prototypes", "speaking", "managed", "bugfix", "clients", "coderate", "linkedin", "users"];
+    const allStats = ["recruited", "teams", "experience", "prototypes", "speaking", "managed", "clients", "coderate", "linkedin", "users"];
     const missing = allStats.filter((s) => !seen.has(s));
     expect(missing, `missing stats after 60 merges: ${missing.join(", ")}`).toEqual([]);
   });

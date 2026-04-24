@@ -9,7 +9,6 @@ export type StatKey =
   | "prototypes"
   | "speaking"
   | "managed"
-  | "bugfix"
   | "clients"
   | "coderate"
   | "linkedin"
@@ -23,7 +22,6 @@ const STAT_TILES: Record<number, StatKey> = {
   48: "prototypes",
   96: "speaking",
   192: "managed",
-  384: "bugfix",
   768: "clients",
   1536: "coderate",
   3072: "linkedin",
