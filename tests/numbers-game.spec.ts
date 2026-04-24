@@ -139,10 +139,10 @@ test.describe("numbers game", () => {
     }
   });
 
-  test("only one starter tile shows the drag hint on first load", async ({ page }) => {
+  test("no starter tile shows the drag hint", async ({ page }) => {
     await gotoStatsSlide(page);
     const starterTiles = page.locator('[data-board] .numbers-tile[data-starter="true"]');
-    await expect(starterTiles).toHaveCount(1);
+    await expect(starterTiles).toHaveCount(0);
   });
 
   test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {

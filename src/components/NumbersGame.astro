@@ -107,12 +107,10 @@ const fallbackStats = [
         if (!boardEl || !scoreEl || !gameoverEl) return;
 
         const statLabels = readStatLabels(section);
-        const startHint = root.dataset.startHint ?? "";
 
         let board: Board = createBoard();
         let renderedBoard: Board = createBoard();
         let score = 0;
-        let hintShown = false;
         let spawnMode: SpawnMode = "active";
 
         const cellEls: HTMLElement[][] = [];
@@ -133,7 +131,7 @@ const fallbackStats = [
             }
         }
 
-        function renderTile(value: number, withHint = false): HTMLElement {
+        function renderTile(value: number): HTMLElement {
             const tile = document.createElement("div");
             tile.className = "numbers-tile";
             tile.dataset.value = String(value);
@@ -173,16 +171,6 @@ const fallbackStats = [
                     suffixEl.textContent = suffix;
                     tile.append(suffixEl);
                 }
-            } else if (value === 3 && startHint && withHint) {
-                tile.dataset.starter = "true";
-                const valueEl = document.createElement("span");
-                valueEl.className = "numbers-tile-value";
-                valueEl.textContent = String(value);
-                tile.append(valueEl);
-                const hintEl = document.createElement("span");
-                hintEl.className = "numbers-tile-stat";
-                hintEl.textContent = startHint;
-                tile.append(hintEl);
             } else {
                 tile.textContent = String(value);
             }
@@ -197,11 +185,7 @@ const fallbackStats = [
                     if (renderedBoard[r][c] === value) continue;
                     const cell = cellEls[r][c];
                     cell.innerHTML = "";
-                    if (value !== 0) {
-                        const withHint = value === 3 && !hintShown;
-                        cell.appendChild(renderTile(value, withHint));
-                        if (withHint) hintShown = true;
-                    }
+                    if (value !== 0) cell.appendChild(renderTile(value));
                     renderedBoard[r][c] = value;
                 }
             }
@@ -210,7 +194,6 @@ const fallbackStats = [
         function start() {
             board = ensureMergeAvailable(seedBoard());
             score = 0;
-            hintShown = false;
             spawnMode = "active";
             gameoverEl!.hidden = true;
             render();
