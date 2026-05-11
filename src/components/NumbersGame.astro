@@ -176,6 +176,39 @@ const fallbackStats = [
             return tile;
         }
 
+        function fitTile(tile: HTMLElement) {
+            const parts = tile.querySelectorAll<HTMLElement>(
+                ".numbers-tile-value, .numbers-tile-prefix, .numbers-tile-stat"
+            );
+            parts.forEach((el) => {
+                el.style.fontSize = "";
+                const available = el.clientWidth;
+                if (available <= 0 || el.scrollWidth <= available) return;
+                const current = parseFloat(getComputedStyle(el).fontSize);
+                if (!Number.isFinite(current) || current <= 0) return;
+                const ratio = available / el.scrollWidth;
+                el.style.fontSize = Math.max(8, current * ratio * 0.97) + "px";
+            });
+        }
+
+        function fitAllTiles() {
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const tile = cellEls[r]?.[c]?.querySelector<HTMLElement>(".numbers-tile");
+                    if (tile) fitTile(tile);
+                }
+            }
+        }
+
+        let pendingFit = 0;
+        function scheduleFit() {
+            if (pendingFit) cancelAnimationFrame(pendingFit);
+            pendingFit = requestAnimationFrame(() => {
+                pendingFit = 0;
+                fitAllTiles();
+            });
+        }
+
         function render() {
             scoreEl!.textContent = String(score);
             for (let r = 0; r < BOARD_SIZE; r++) {
@@ -188,6 +221,7 @@ const fallbackStats = [
                     renderedBoard[r][c] = value;
                 }
             }
+            scheduleFit();
         }
 
         function start() {
@@ -350,6 +384,13 @@ const fallbackStats = [
         buildGrid();
         start();
 
+        if (typeof ResizeObserver !== "undefined") {
+            const ro = new ResizeObserver(() => scheduleFit());
+            ro.observe(boardEl);
+        } else {
+            window.addEventListener("resize", scheduleFit);
+        }
+
         (window as unknown as { __numbersGame?: unknown }).__numbersGame = {
             setBoard(next: Board) {
                 board = next.map((row) => [...row]);
@@ -428,6 +469,7 @@ const fallbackStats = [
         border-radius: 8px;
         position: relative;
         min-width: 0;
+        container-type: inline-size;
         transition: background 0.15s ease, box-shadow 0.15s ease;
     }
 
@@ -455,12 +497,14 @@ const fallbackStats = [
     .numbers-tile {
         position: absolute;
         inset: 0;
+        box-sizing: border-box;
+        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         font-family: var(--mono);
         font-weight: 700;
-        font-size: clamp(26px, 4.2vw, 48px);
+        font-size: clamp(22px, 32cqi, 48px);
         border-radius: 8px;
         background: var(--purple-dim);
         color: #fff;
@@ -490,7 +534,7 @@ const fallbackStats = [
     .numbers-tile[data-starter="true"] {
         flex-direction: column;
         gap: 3px;
-        padding: 8px 6px;
+        padding: 6% 6%;
         text-align: center;
         justify-content: center;
     }
@@ -501,26 +545,30 @@ const fallbackStats = [
 
     .numbers-tile-prefix {
         font-family: var(--mono);
-        font-size: clamp(8px, 0.95vw, 11px);
+        font-size: clamp(7px, 10cqi, 11px);
         text-transform: uppercase;
         letter-spacing: 0.8px;
         line-height: 1.1;
         color: rgba(255, 255, 255, 0.78);
         font-weight: 600;
+        width: 100%;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        text-align: center;
     }
 
     .numbers-tile-value {
         position: relative;
-        font-size: clamp(30px, 4.6vw, 52px);
+        font-size: clamp(20px, 32cqi, 52px);
         font-weight: 900;
         line-height: 1;
         color: #fff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
         white-space: nowrap;
+        max-width: 100%;
+        text-align: center;
     }
 
     .numbers-tile-value[data-approx="true"]::before {
@@ -535,16 +583,18 @@ const fallbackStats = [
 
     .numbers-tile-stat {
         font-family: var(--mono);
-        font-size: clamp(8px, 0.95vw, 11px);
+        font-size: clamp(7px, 10cqi, 11px);
         text-transform: uppercase;
         letter-spacing: 0.8px;
         line-height: 1.15;
         color: rgba(255, 255, 255, 0.78);
         font-weight: 600;
+        width: 100%;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        text-align: center;
     }
 
     /* Dark text on light backgrounds (pineapple yellow, tier 5) */
@@ -583,18 +633,18 @@ const fallbackStats = [
     .numbers-tile[data-tier="6"]  { background: linear-gradient(135deg, #a8214a, #701530); --tile-glow: rgba(220, 60, 110, 0.55); }  /* cherry */
     .numbers-tile[data-tier="7"]  { background: linear-gradient(135deg, #964020, #5e260e); --tile-glow: rgba(220, 110, 50, 0.55); }  /* tangerine */
     .numbers-tile[data-tier="8"]  { background: linear-gradient(135deg, #a03868, #661a44); --tile-glow: rgba(210, 90, 150, 0.55); }  /* raspberry */
-    .numbers-tile[data-tier="9"]  { background: linear-gradient(135deg, #1f7a3a, #0f4a22); --tile-glow: rgba(60, 180, 90, 0.55); font-size: clamp(22px, 3.6vw, 40px); }  /* watermelon */
-    .numbers-tile[data-tier="10"] { background: linear-gradient(135deg, #246a8a, #5f2fa0, #a03868); --tile-glow: rgba(150, 90, 200, 0.55); font-size: clamp(20px, 3.2vw, 36px); }
+    .numbers-tile[data-tier="9"]  { background: linear-gradient(135deg, #1f7a3a, #0f4a22); --tile-glow: rgba(60, 180, 90, 0.55); font-size: clamp(18px, 26cqi, 40px); }  /* watermelon */
+    .numbers-tile[data-tier="10"] { background: linear-gradient(135deg, #246a8a, #5f2fa0, #a03868); --tile-glow: rgba(150, 90, 200, 0.55); font-size: clamp(16px, 22cqi, 36px); }
     .numbers-tile[data-tier="11"],
-    .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #8a1e1e, #7a4010, #a07c15, #145e2a, #184d66, #4a1f80); --tile-glow: rgba(200, 150, 60, 0.55); font-size: clamp(18px, 3vw, 32px); }
+    .numbers-tile[data-tier="12"] { background: linear-gradient(135deg, #8a1e1e, #7a4010, #a07c15, #145e2a, #184d66, #4a1f80); --tile-glow: rgba(200, 150, 60, 0.55); font-size: clamp(15px, 20cqi, 32px); }
 
     /* Scale value down on tiers with wider numbers so they fit on one line */
-    .numbers-tile[data-tier="9"]  .numbers-tile-value { font-size: clamp(22px, 3.2vw, 36px); }
+    .numbers-tile[data-tier="9"]  .numbers-tile-value { font-size: clamp(18px, 24cqi, 36px); }
     .numbers-tile[data-tier="10"] .numbers-tile-value,
     .numbers-tile[data-tier="11"] .numbers-tile-value,
-    .numbers-tile[data-tier="12"] .numbers-tile-value { font-size: clamp(20px, 3.0vw, 32px); }
+    .numbers-tile[data-tier="12"] .numbers-tile-value { font-size: clamp(16px, 20cqi, 32px); }
     /* Experience: "15 år" needs room for both number + unit */
-    .numbers-tile[data-stat="experience"] .numbers-tile-value { font-size: clamp(26px, 4.0vw, 44px); }
+    .numbers-tile[data-stat="experience"] .numbers-tile-value { font-size: clamp(20px, 28cqi, 44px); }
 
     .numbers-gameover {
         align-self: flex-start;
