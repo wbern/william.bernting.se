@@ -363,13 +363,26 @@ for (const img of photoImages) {
     const SLIDE_HEIGHT = window.matchMedia("(min-width: 901px)").matches ? 76 : 60;
     const CENTER_OFFSET = window.matchMedia("(min-height: 600px)").matches ? 1.5 : 1;
 
+    function tagKey(tag: string): string {
+        const t = tag.toLowerCase();
+        if (t === "ai-agent" || t === "ai agent" || t === "ai / rag") return "ai";
+        if (t === "infrastruktur" || t === "infrastructure") return "infra";
+        if (t.includes("legacy") || t === "modernisering" || t === "modernization") return "legacy";
+        if (t === "open source") return "open-source";
+        if (t === "undervisning" || t === "teaching") return "teaching";
+        if (t === "företag" || t === "business" || t === "ledarskap" || t === "leadership" || t === "dataanalys" || t === "data analysis") return "business";
+        if (t === "meta") return "meta";
+        return "creative"; // Personal Project, Game, 3D Visualization, fallback
+    }
+
     // Build slide elements
     PROJECTS.forEach((p, i) => {
         const slide = document.createElement("div");
         slide.className = "roller-slide";
         slide.setAttribute("role", "option");
         slide.dataset.index = String(i);
-        slide.innerHTML = `<span class="roller-slide__tag">${p.tag}</span><span class="roller-slide__title">${p.title}</span>`;
+        const key = tagKey(p.tag);
+        slide.innerHTML = `<span class="roller-slide__tag" data-key="${key}">${p.tag}</span><span class="roller-slide__title">${p.title}</span>`;
         track.appendChild(slide);
     });
 
@@ -672,7 +685,7 @@ for (const img of photoImages) {
             const illustration = PROJECT_ILLUSTRATIONS[currentIdx] ?? "";
             detailCard.innerHTML = `
                 ${illustration}
-                <div class="project-tag">${p.tag}</div>
+                <div class="project-tag" data-key="${tagKey(p.tag)}">${p.tag}</div>
                 <h3>${p.title}</h3>
                 <p>${p.description}</p>
                 <button class="back-button back-button--bottom" aria-label="${backBtn?.getAttribute("aria-label") ?? "Back"}">
@@ -998,13 +1011,27 @@ for (const img of photoImages) {
     }
 
     .detail-card .project-tag {
+        display: inline-block;
         font-family: var(--mono);
         font-size: 12px;
-        color: var(--purple);
+        color: var(--chip, var(--purple));
+        background: color-mix(in srgb, var(--chip, #888) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--chip, var(--border)) 55%, transparent);
         text-transform: uppercase;
         letter-spacing: 2.5px;
+        padding: 3px 12px;
+        border-radius: 999px;
         margin-bottom: 14px;
     }
+
+    .detail-card .project-tag[data-key="ai"]          { --chip: #a874e0; }
+    .detail-card .project-tag[data-key="legacy"]      { --chip: #e8a352; }
+    .detail-card .project-tag[data-key="open-source"] { --chip: #5fd095; }
+    .detail-card .project-tag[data-key="infra"]       { --chip: #5fcae0; }
+    .detail-card .project-tag[data-key="creative"]    { --chip: #e07ab0; }
+    .detail-card .project-tag[data-key="business"]    { --chip: #e0c057; }
+    .detail-card .project-tag[data-key="teaching"]    { --chip: #7faff0; }
+    .detail-card .project-tag[data-key="meta"]        { --chip: #8888a0; }
 
     .detail-card h3 {
         font-size: 28px;
@@ -1101,16 +1128,26 @@ for (const img of photoImages) {
     .roller-slide__tag {
         display: inline-block;
         font-size: 10px;
-        color: var(--text-dim);
-        background: var(--bg-card-hover);
-        border: 1px solid var(--border);
+        color: var(--chip, var(--text-dim));
+        background: color-mix(in srgb, var(--chip, #888) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--chip, var(--border)) 55%, transparent);
         text-transform: uppercase;
         letter-spacing: 1.5px;
         padding: 2px 9px;
         border-radius: 999px;
         margin-bottom: 5px;
-        transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        white-space: nowrap;
+        transition: opacity 0.2s ease, box-shadow 0.2s ease;
     }
+
+    .roller-slide__tag[data-key="ai"]          { --chip: #a874e0; }
+    .roller-slide__tag[data-key="legacy"]      { --chip: #e8a352; }
+    .roller-slide__tag[data-key="open-source"] { --chip: #5fd095; }
+    .roller-slide__tag[data-key="infra"]       { --chip: #5fcae0; }
+    .roller-slide__tag[data-key="creative"]    { --chip: #e07ab0; }
+    .roller-slide__tag[data-key="business"]    { --chip: #e0c057; }
+    .roller-slide__tag[data-key="teaching"]    { --chip: #7faff0; }
+    .roller-slide__tag[data-key="meta"]        { --chip: #8888a0; }
 
     .roller-slide__title {
         font-size: 15px;
@@ -1132,10 +1169,8 @@ for (const img of photoImages) {
     }
 
     .roller-slide--selected .roller-slide__tag {
-        color: var(--purple);
-        border-color: var(--purple-dim);
-        background: var(--purple-glow);
         opacity: 1;
+        box-shadow: 0 0 12px color-mix(in srgb, var(--chip, var(--purple)) 35%, transparent);
     }
 
     .roller-slide--near {
@@ -1395,8 +1430,17 @@ for (const img of photoImages) {
     @media (min-width: 901px) {
         .roller-section { --slide-h: 76px; }
         .roller-viewport { width: 520px; }
-        .roller-slide__tag { font-size: 11px; letter-spacing: 2px; padding: 3px 11px; }
-        .roller-slide__title { font-size: 17px; }
+        .roller-slide__tag {
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 3px 11px;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-bottom: 0;
+        }
+        .roller-slide__title { font-size: 17px; padding: 0 150px; }
         .roller-slide--selected .roller-slide__title { font-size: 20px; }
         .roller-slide--near .roller-slide__title { font-size: 16px; }
         .roller-slide--far .roller-slide__title { font-size: 14px; }
