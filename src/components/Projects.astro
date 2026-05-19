@@ -59,7 +59,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
 
     <!-- ===== VIEW 2: Detail ===== -->
     <div class="detail-view" data-testid="detail-view">
-        <button class="back-button" data-testid="back-button" aria-label={t("projects.aria.back")}>
+        <button class="back-button" data-testid="back-button" aria-label={t("projects.aria.back")} data-label={t("projects.back")}>
             <span class="back-arrow">&#x2190;</span> {t("projects.back")}
         </button>
         <div class="detail-card" data-testid="detail-card">
@@ -483,7 +483,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
                 <h3>${p.title}</h3>
                 <p>${p.description}</p>
                 <button class="back-button back-button--bottom" aria-label="${backBtn?.getAttribute("aria-label") ?? "Back"}">
-                    <span class="back-arrow">&#x2190;</span> ${backBtn?.textContent?.trim() ?? "Back"}
+                    <span class="back-arrow">&#x2190;</span> ${backBtn?.dataset.label ?? "Back"}
                 </button>
             `;
             // Wire up the bottom back button
@@ -743,6 +743,10 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         overscroll-behavior: contain;
         scrollbar-width: thin;
         scrollbar-color: var(--text-muted) transparent;
+        /* Horizontal padding so the back-button's hover glow (extends ~20px)
+           isn't clipped by the scroll container's overflow boundary. */
+        padding: 4px 22px;
+        margin: -4px -22px;
     }
 
     .detail-active .detail-view::-webkit-scrollbar {
@@ -762,8 +766,10 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         background: var(--bg);
         border: 1px solid var(--border);
         color: var(--text-dim);
-        font-family: var(--mono);
-        font-size: 13px;
+        font-family: var(--kendev);
+        font-weight: 400;
+        font-size: 14px;
+        letter-spacing: 0.01em;
         padding: 8px 18px;
         border-radius: 100px;
         cursor: pointer;
@@ -785,7 +791,6 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         border-color: var(--purple);
         color: var(--purple);
         box-shadow: 0 0 20px var(--purple-glow);
-        transform: translateX(-4px);
     }
 
     .back-arrow {
