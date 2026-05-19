@@ -120,9 +120,11 @@ for (const img of photoImages) {
         </div>`;
     }
 
-    /* ── Diorama illustrations (keyed by project index) ── */
-    const PROJECT_ILLUSTRATIONS: Record<number, string> = {
-        0: `<div class="diorama">
+    /* ── Diorama illustrations (keyed by project slug, derived from English title).
+       Keying by slug — not index — so adding/reordering projects can't silently
+       attach the wrong banner to a project. ── */
+    const PROJECT_ILLUSTRATIONS: Record<string, string> = {
+        "community-assistant": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back layer: tag labels -->
                 <g class="diorama-el diorama-el--back">
@@ -149,7 +151,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        1: `<div class="diorama">
+        "pi-pai": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back layer: connection lines (control plane) -->
                 <g class="diorama-el diorama-el--back">
@@ -187,7 +189,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        2: `<div class="diorama">
+        "dll-decompilation": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: pipeline connection -->
                 <g class="diorama-el diorama-el--back">
@@ -226,8 +228,8 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        3: photoDiorama("/chess-tool.jpg", "Legacy chess seeding tool — tournament settings dialog"),
-        4: `<div class="diorama">
+        "legacy-chess-tool-rewrite": photoDiorama("/chess-tool.jpg", "Legacy chess seeding tool — tournament settings dialog"),
+        "adr-lint": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: subtle grid lines -->
                 <g class="diorama-el diorama-el--back">
@@ -263,7 +265,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        5: `<div class="diorama">
+        "this-cv": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: recursive frame lines -->
                 <g class="diorama-el diorama-el--back">
@@ -294,7 +296,7 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        6: `<div class="diorama">
+        "tdd-command-generator": `<div class="diorama">
             <svg viewBox="0 0 568 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <!-- Back: cycle connection arcs -->
                 <g class="diorama-el diorama-el--back">
@@ -330,14 +332,22 @@ for (const img of photoImages) {
                 </g>
             </svg>
         </div>`,
-        7: photoDiorama("/chess-reel.jpg", "Chess Reel — a meme-oriented chess board"),
-        8: photoDiorama("/tdd-presentation.jpg", "TDD with AI — How to do your job and stop writing code"),
-        10: photoDiorama("/3d-visualization.jpg", "Architectural Blueprint to 3D — rendered building from CAD data"),
-        11: photoDiorama("/pixi-platformer.jpg", "Pixi Platformer — a Doodle Jump-style game built with web technology"),
-        14: photoDiorama("/kendev.png", "kendev.se — IT consultancy"),
-        12: photoDiorama("/telia-se.png", "Telia.se — legacy migration to modern frontend"),
-        15: photoDiorama("/sembo-startpage.jpg", "Sembo.se — travel booking startpage"),
+        "chess-reel": photoDiorama("/chess-reel.jpg", "Chess Reel — a meme-oriented chess board"),
+        "tdd-with-ai-presentation": photoDiorama("/tdd-presentation.jpg", "TDD with AI — How to do your job and stop writing code"),
+        "architectural-blueprint-to-3d": photoDiorama("/3d-visualization.jpg", "Architectural Blueprint to 3D — rendered building from CAD data"),
+        "pixi-platformer": photoDiorama("/pixi-platformer.jpg", "Pixi Platformer — a Doodle Jump-style game built with web technology"),
+        "kendev-se": photoDiorama("/kendev.png", "kendev.se — IT consultancy"),
+        "telia-se": photoDiorama("/telia-se.png", "Telia.se — legacy migration to modern frontend"),
+        "sembo-se-startpage": photoDiorama("/sembo-startpage.jpg", "Sembo.se — travel booking startpage"),
     };
+
+    // Dev-time sanity: an illustration key must match a real project slug.
+    // Catches typos and stale entries left behind when projects are renamed/removed.
+    for (const slug of Object.keys(PROJECT_ILLUSTRATIONS)) {
+        if (!PROJECT_SLUGS.includes(slug)) {
+            console.warn(`PROJECT_ILLUSTRATIONS has unknown slug "${slug}" — no matching project.`);
+        }
+    }
 
     const N = PROJECTS.length;
 
@@ -682,7 +692,7 @@ for (const img of photoImages) {
         isDetailView = true;
         const p = PROJECTS[currentIdx];
         if (detailCard) {
-            const illustration = PROJECT_ILLUSTRATIONS[currentIdx] ?? "";
+            const illustration = PROJECT_ILLUSTRATIONS[PROJECT_SLUGS[currentIdx]] ?? "";
             detailCard.innerHTML = `
                 ${illustration}
                 <div class="project-tag" data-key="${tagKey(p.tag)}">${p.tag}</div>
@@ -965,7 +975,7 @@ for (const img of photoImages) {
     }
 
     .back-button {
-        background: none;
+        background: var(--bg);
         border: 1px solid var(--border);
         color: var(--text-dim);
         font-family: var(--mono);
@@ -978,6 +988,8 @@ for (const img of photoImages) {
         align-items: center;
         gap: 8px;
         margin-bottom: 24px;
+        position: relative;
+        z-index: 1;
     }
 
     .back-button--bottom {
