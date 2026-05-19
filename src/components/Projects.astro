@@ -1117,6 +1117,8 @@ for (const img of photoImages) {
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding-top: 7px; /* compensate for title line-height descender so chip sits visually centered */
+        box-sizing: border-box;
         font-family: var(--mono);
         user-select: none;
         cursor: pointer;
