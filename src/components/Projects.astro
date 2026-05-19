@@ -1099,12 +1099,17 @@ for (const img of photoImages) {
     }
 
     .roller-slide__tag {
-        font-size: 9px;
-        color: var(--purple);
+        display: inline-block;
+        font-size: 10px;
+        color: var(--text-dim);
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border);
         text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 2px;
-        transition: opacity 0.2s ease;
+        letter-spacing: 1.5px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        margin-bottom: 5px;
+        transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     }
 
     .roller-slide__title {
@@ -1127,6 +1132,9 @@ for (const img of photoImages) {
     }
 
     .roller-slide--selected .roller-slide__tag {
+        color: var(--purple);
+        border-color: var(--purple-dim);
+        background: var(--purple-glow);
         opacity: 1;
     }
 
@@ -1135,7 +1143,7 @@ for (const img of photoImages) {
     }
 
     .roller-slide--near .roller-slide__tag {
-        opacity: 0.5;
+        opacity: 0.7;
     }
 
     .roller-slide--near .roller-slide__title {
@@ -1148,7 +1156,7 @@ for (const img of photoImages) {
     }
 
     .roller-slide--far .roller-slide__tag {
-        opacity: 0.5;
+        opacity: 0.6;
     }
 
     .roller-slide--far .roller-slide__title {
@@ -1387,7 +1395,7 @@ for (const img of photoImages) {
     @media (min-width: 901px) {
         .roller-section { --slide-h: 76px; }
         .roller-viewport { width: 520px; }
-        .roller-slide__tag { font-size: 10px; letter-spacing: 2.5px; }
+        .roller-slide__tag { font-size: 11px; letter-spacing: 2px; padding: 3px 11px; }
         .roller-slide__title { font-size: 17px; }
         .roller-slide--selected .roller-slide__title { font-size: 20px; }
         .roller-slide--near .roller-slide__title { font-size: 16px; }
