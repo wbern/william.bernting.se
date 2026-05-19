@@ -6,12 +6,12 @@ export const ui = {
   sv: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontendutvecklare med 15 års erfarenhet av mjukvaruutveckling — från legacyräddning till moderna verktyg och snabba leveranser.",
+      "Tre spår: lär ut AI, dyker ner i legacy som krånglar, bygger det du faktiskt vill ha. 15 års mjukvaruerfarenhet.",
 
     "hero.greeting": "Hej!",
-    "hero.tagline.before": "Jag bygger saker som ",
-    "hero.tagline.strong": "fungerar",
-    "hero.tagline.after": ". Sedan bygger jag mer. Sedan levererar jag.",
+    "hero.tagline.before": "Jag ",
+    "hero.tagline.strong": "lär ut, dyker in & bygger",
+    "hero.tagline.after": ". Tre spår.",
     "hero.scroll": "scrolla ner",
 
     "stats.label": "I siffror",
@@ -133,12 +133,12 @@ export const ui = {
   en: {
     "meta.title": "William Bernting",
     "meta.description":
-      "Frontend developer with 15 years of shipping software — from legacy rescue to modern tooling and rapid delivery.",
+      "Three tracks: teach AI, dive into legacy that misbehaves, build what you actually want. 15 years shipping software.",
 
     "hero.greeting": "Hey!",
-    "hero.tagline.before": "I build things that ",
-    "hero.tagline.strong": "work",
-    "hero.tagline.after": ". Then I build more things. Then I ship them.",
+    "hero.tagline.before": "I ",
+    "hero.tagline.strong": "teach, dive in & build",
+    "hero.tagline.after": ". Three tracks.",
     "hero.scroll": "scroll down",
 
     "stats.label": "By the numbers",

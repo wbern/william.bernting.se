@@ -114,7 +114,7 @@ const cv: Record<Lang, CvData> = {
   sv: {
     profile: {
       name: "William Bernting",
-      subtitle: "Enmansbyrå – Fullstack & AI-förstärkt utveckling",
+      subtitle: "Tre spår: lära ut AI · dyka in i legacy · bygga det du vill ha",
       contacts: [
         { icon: "phone", text: "(+46) 0706676047", href: "tel:+46706676047" },
         { icon: "email", text: "william@bernting.se", href: "mailto:william@bernting.se" },
@@ -123,8 +123,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "Jag räddar legacykodbaser, bygger nya produkter och förstärker befintliga team med <strong>AI-augmenterad utveckling</strong>. Ett internt verktyg jag byggde hos ett Fortune 500-företag växte organiskt till <strong>5 000 aktiva användare</strong> — jag levererar mjukvara som folk faktiskt använder.",
-        "Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong>. Jag tar uppdrag fasvis eller löpande — hör av dig så pratar vi om vad som passar.",
+        "Jag jobbar i tre spår: jag <strong>lär ut</strong> hur man kommer igång med AI — oavsett ålder, grupp eller yrke. Jag <strong>dyker in</strong> i legacysystem som krånglar eller tyst genererar pengar varje år. Och jag <strong>bygger</strong> det du faktiskt vill ha — till ett fast pris, tillsammans med mitt nätverk.",
+        "Ett internt verktyg jag byggde hos ett Fortune 500-företag växte organiskt till <strong>5 000 aktiva användare</strong> — jag levererar mjukvara som folk faktiskt använder. Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong>. Hör av dig så pratar vi om vilket spår som passar.",
       ],
     },
     jobs: [
@@ -249,7 +249,7 @@ const cv: Record<Lang, CvData> = {
   en: {
     profile: {
       name: "William Bernting",
-      subtitle: "One-Man Agency – Fullstack & AI-Augmented Development",
+      subtitle: "Three tracks: teach AI · dive into legacy · build what you want",
       contacts: [
         { icon: "phone", text: "(+46) 0706676047", href: "tel:+46706676047" },
         { icon: "email", text: "william@bernting.se", href: "mailto:william@bernting.se" },
@@ -258,8 +258,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "I rescue legacy codebases, build new products, and augment existing teams with <strong>AI-powered development</strong>. An internal tool I built at a Fortune 500 company grew organically to <strong>5,000 active users</strong> — I ship software people actually use.",
-        "Strongest in <strong>Engineering</strong>, with hands-on experience in <strong>Product</strong> and <strong>UX</strong>. I take on projects in phases or on a continuous basis — reach out and let\u2019s talk about what fits.",
+        "I work in three tracks: I <strong>teach</strong> people how to get started with AI — regardless of age, group, or profession. I <strong>dive into</strong> legacy systems that misbehave or quietly drive revenue every year. And I <strong>build</strong> what you actually want — at a fixed price, together with my network.",
+        "An internal tool I built at a Fortune 500 company grew organically to <strong>5,000 active users</strong> — I ship software people actually use. Strongest in <strong>Engineering</strong>, with hands-on experience in <strong>Product</strong> and <strong>UX</strong>. Reach out and let\u2019s talk about which track fits.",
       ],
     },
     jobs: [
