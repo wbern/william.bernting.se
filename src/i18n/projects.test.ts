@@ -31,6 +31,12 @@ describe("projects", () => {
     expect(en.title).toBe("Community Assistant");
   });
 
+  it("each entry's slug equals slugify(en.title)", () => {
+    for (const entry of projectEntries) {
+      expect(entry.slug).toBe(slugify(entry.en.title));
+    }
+  });
+
   describe("slugify", () => {
     it("converts titles to URL slugs", () => {
       expect(slugify("Pixi Platformer")).toBe("pixi-platformer");
