@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 async function goToTimeline(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-  await page.click("body");
+  await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
 
   for (let i = 0; i < 3; i++) {
     await page.keyboard.press("ArrowDown");

@@ -9,8 +9,8 @@ const SLIDES = [
   "quote",
 ] as const;
 
-// Hero CSS animations finish at ~3.2s + 1s buffer
-const HERO_WAIT_MS = 4200;
+// Hero CSS animations finish at ~1.4s + buffer
+const HERO_WAIT_MS = 2000;
 // keen-slider transition duration (500ms) + reveal animations (~700ms + delays up to 600ms) + buffer
 const SLIDE_TRANSITION_MS = 2300;
 
@@ -49,7 +49,7 @@ for (const locale of LOCALES) {
     test("screenshot every slide", async ({ page }, testInfo) => {
       await page.goto(locale.prefix + "/");
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-      await page.click("body");
+      await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
 
       for (let i = 0; i < SLIDES.length; i++) {
         await goToSlide(page, i);
@@ -70,7 +70,7 @@ for (const locale of LOCALES) {
 
       await page.goto(locale.prefix + "/");
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-      await page.click("body");
+      await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
 
       for (let i = 0; i < SLIDES.length; i++) {
         await goToSlide(page, i);
@@ -130,7 +130,7 @@ for (const locale of LOCALES) {
     test("no slide content clipped without being scrollable", async ({ page }) => {
       await page.goto(locale.prefix + "/");
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-      await page.click("body");
+      await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
 
       for (let i = 0; i < SLIDES.length; i++) {
         await goToSlide(page, i);

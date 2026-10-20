@@ -12,7 +12,7 @@ async function goToProjectsSlide(
 ) {
   await page.goto(prefix + "/", { waitUntil: "networkidle" });
   await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-  await page.click("body");
+  await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
 
   // Wait for hero animations, then navigate to slide 1
   await page.waitForTimeout(4500);

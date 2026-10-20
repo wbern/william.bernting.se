@@ -162,6 +162,12 @@ const defaultHref = buildMailto(CONTACT.email);
             });
         }
 
+        // Hero tagline verbs deep-link here with a track pre-picked
+        document.addEventListener("finale-pick-track", ((e: CustomEvent) => {
+            const btn = trackBtns.find((b) => b.dataset.track === e.detail?.track) ?? null;
+            if (btn) selectTrack(btn);
+        }) as EventListener);
+
         // --- Recommendation carousel (click to cycle, no auto-rotate) ---
         const reviews = Array.from(root.querySelectorAll<HTMLElement>("[data-review]"));
         const nextBtn = root.querySelector<HTMLButtonElement>("[data-reviews-next]");
