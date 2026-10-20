@@ -174,10 +174,14 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
     await knockDown(page);
     await page.waitForTimeout(2500); // let the shove settle
 
-    // Grab whichever block is on top at its own centre (physics piles are random)
+    // Grab the highest block in the pile that is clear at its own centre
+    // (physics piles are random). The widest block usually lands at the bottom
+    // with the rest resting on it, so DOM order is a poor pick.
     const job = await page.evaluate((sel) => {
-      for (const el of Array.from(document.querySelectorAll<HTMLElement>(`${sel} .tower-block`))) {
-        const r = el.getBoundingClientRect();
+      const els = Array.from(document.querySelectorAll<HTMLElement>(`${sel} .tower-block`))
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+        .sort((a, b) => a.r.y - b.r.y);
+      for (const { el, r } of els) {
         const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
         if (hit && el.contains(hit)) return el.dataset.job!;
       }
@@ -189,12 +193,18 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
     const cy = box.y + box.height / 2;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.waitForTimeout(50);
+    // Matter's MouseConstraint only grabs on an engine tick while the pointer
+    // is over the body — hold still long enough for a tick even under load.
+    await page.mouse.move(cx + 1, cy);
+    await page.waitForTimeout(250);
     await page.mouse.move(cx + 150, cy - 40, { steps: 20 });
-    await page.waitForTimeout(400);
 
-    const newBox = (await block.boundingBox())!;
-    expect(Math.abs(newBox.x - box.x) + Math.abs(newBox.y - box.y)).toBeGreaterThan(10);
+    await expect
+      .poll(async () => {
+        const b = (await block.boundingBox())!;
+        return Math.abs(b.x - box.x) + Math.abs(b.y - box.y);
+      }, { timeout: 3000 })
+      .toBeGreaterThan(10);
     await page.mouse.up();
   });
 

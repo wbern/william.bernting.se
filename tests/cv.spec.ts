@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { getCvSkills } from "../src/i18n/cv";
 
 const LOCALES = [
   { prefix: "", lang: "sv", path: "/cv" },
@@ -80,7 +81,7 @@ for (const locale of LOCALES) {
     test("skills tags render", async ({ page }) => {
       await page.goto(locale.path);
       const skills = await page.locator(".skill-tag").count();
-      expect(skills).toBe(12);
+      expect(skills).toBe(getCvSkills().length);
     });
 
     test("hreflang tags are present", async ({ page }) => {
