@@ -174,8 +174,8 @@ const comboDefs: ComboDef[] = [
         pair: ["tdd", "ai"],
         title: { sv: "TDD för AI-agenter", en: "TDD for AI agents" },
         body: {
-            sv: "Färdiga kommandon som får AI-agenter att skriva testet först. Open source, över 100 GitHub-stjärnor första natten.",
-            en: "Ready-made commands that make AI agents write the test first. Open source, over 100 GitHub stars the first night.",
+            sv: "Färdiga kommandon som får AI-agenter att skriva testet först. Open source, 100 GitHub-stjärnor på under två dygn.",
+            en: "Ready-made commands that make AI agents write the test first. Open source, 100 GitHub stars in under two days.",
         },
         slug: "tdd-command-generator",
     },
@@ -194,7 +194,7 @@ const comboDefs: ComboDef[] = [
             sv: "En presentation om testdriven utveckling med AI-agenter, byggd helt med Claude Code och redo att köras.",
             en: "A talk on test-driven development with AI coding agents, built entirely with Claude Code and ready to run.",
         },
-        slug: "tdd-with-ai-presentation",
+        slug: "tdd-command-generator",
     },
     {
         pair: ["microfrontends", "coaching"],

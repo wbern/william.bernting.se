@@ -1,9 +1,54 @@
 import { test, expect } from "@playwright/test";
 
 const LOCALES = [
-  { prefix: "", label: "sv", spin: "Snurra", open: "Visa", back: "Tillbaka" },
-  { prefix: "/en", label: "en", spin: "Spin", open: "Open", back: "Back" },
+  {
+    prefix: "",
+    label: "sv",
+    spin: "Snurra",
+    open: "Läs mer",
+    back: "Tillbaka",
+    dll: "Systemet utan källkod",
+    community: "Styrelsens AI-assistent",
+    tdd: "Lär AI:n att testa först",
+  },
+  {
+    prefix: "/en",
+    label: "en",
+    spin: "Spin",
+    open: "Read more",
+    back: "Back",
+    dll: "The system nobody had code for",
+    community: "The board's AI assistant",
+    tdd: "Teaching AI to test first",
+  },
 ];
+
+const PROJECT_COUNT = 11;
+const FLAGSHIPS = ["dll-decompilation", "knowledge-bot", "legacy-chess-tool-rewrite", "telia-se"];
+
+/** Wait until the arrival auto-spin has settled on an item. */
+async function waitForSpinToSettle(page: import("@playwright/test").Page) {
+  await page.waitForFunction(
+    () => {
+      const section = document.querySelector("[data-testid='projects-section']");
+      return (
+        section &&
+        !section.classList.contains("is-spinning") &&
+        document.querySelector("[data-testid='roller-selected']") !== null
+      );
+    },
+    { timeout: 15_000 },
+  );
+}
+
+/** Slug of the item currently in the centre slot. */
+async function selectedSlug(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const el = document.querySelector("[data-testid='roller-selected']") as HTMLElement | null;
+    const data = JSON.parse(document.getElementById("projects-i18n-data")!.textContent!);
+    return el ? data[Number(el.dataset.index)].slug : null;
+  });
+}
 
 /** Navigate to the projects slide (index 1) and wait for reveals. */
 async function goToProjectsSlide(
@@ -35,6 +80,7 @@ async function goToProjectsSlide(
     },
     { timeout: 10_000 },
   );
+  await waitForSpinToSettle(page);
 }
 
 for (const locale of LOCALES) {
@@ -46,10 +92,10 @@ for (const locale of LOCALES) {
       const roller = page.locator("[data-testid='roller']");
       await expect(roller).toBeVisible();
 
-      // All 14 project slides are in the DOM
+      // Every curated project is in the DOM
       const bars = roller.locator(".roller-slide");
       const count = await bars.count();
-      expect(count).toBe(14);
+      expect(count).toBe(PROJECT_COUNT);
     });
 
     test("displays a highlighted current selection", async ({ page }) => {
@@ -116,7 +162,7 @@ for (const locale of LOCALES) {
 
       const spinBtn = page.locator("[data-testid='spin-button']");
       await expect(spinBtn).toBeVisible();
-      await expect(spinBtn).toContainText(locale.spin);
+      await expect(spinBtn).toHaveAttribute("aria-label", locale.spin);
 
       await spinBtn.click();
 
@@ -126,30 +172,46 @@ for (const locale of LOCALES) {
       });
     });
 
-    test("spin lands and auto-transitions to detail view, back returns", async ({
+    test("first spin lands on a flagship case and does not open the card", async ({
       page,
     }) => {
       await goToProjectsSlide(page, locale.prefix);
 
+      expect(FLAGSHIPS).toContain(await selectedSlug(page));
+
+      // No forced detail view: the reader stays in control of the scroll
+      const section = page.locator("[data-testid='projects-section']");
+      await expect(section).not.toHaveClass(/detail-active/);
+      await expect(page.locator("#slide-dots")).not.toHaveClass(/hidden/);
+
+      // The hook line for the landed item is shown under the roller
+      await expect(page.locator("[data-testid='roller-hook']")).not.toBeEmpty();
+    });
+
+    test("spin lands, shows the hook, Read more opens, back returns", async ({
+      page,
+    }) => {
+      await goToProjectsSlide(page, locale.prefix);
+      const hook = page.locator("[data-testid='roller-hook']");
+      const hookBefore = await hook.textContent();
+
       await page.click("[data-testid='spin-button']");
+      await waitForSpinToSettle(page);
+      await page.waitForTimeout(500);
 
-      // Wait for detail-active class (spin → auto-open)
-      await page.waitForFunction(
-        () => {
-          const section = document.querySelector(
-            "[data-testid='projects-section']",
-          );
-          return section && section.classList.contains("detail-active");
-        },
-        { timeout: 15000 },
-      );
+      const section = page.locator("[data-testid='projects-section']");
+      await expect(section).not.toHaveClass(/detail-active/);
+      expect(await hook.textContent()).not.toBe(hookBefore);
 
-      // Detail card visible with tag, title, description
+      await page.click("[data-testid='open-button']");
+      await expect(section).toHaveClass(/detail-active/);
+
       const detailCard = page.locator("[data-testid='detail-card']");
       await expect(detailCard).toBeVisible();
       await expect(detailCard.locator(".project-tag")).not.toBeEmpty();
       await expect(detailCard.locator("h3")).not.toBeEmpty();
-      await expect(detailCard.locator("p")).not.toBeEmpty();
+      await expect(detailCard.locator(".detail-hook")).toHaveText((await hook.textContent())!.trim());
+      await expect(detailCard.locator(".detail-section")).toHaveCount(3);
 
       // Back button returns to roller
       const backBtn = page.locator("[data-testid='back-button']");
@@ -160,6 +222,22 @@ for (const locale of LOCALES) {
       await expect(
         page.locator("[data-testid='roller-view']"),
       ).toBeVisible();
+    });
+
+    test("spinning does not shift the layout", async ({ page }) => {
+      await goToProjectsSlide(page, locale.prefix);
+      const labelTop = () =>
+        page.evaluate(
+          () => document.querySelector(".roller-view .section-label")!.getBoundingClientRect().top,
+        );
+      const before = await labelTop();
+      await page.click("[data-testid='spin-button']");
+      await page.waitForTimeout(250);
+      const during = await labelTop();
+      await waitForSpinToSettle(page);
+      const after = await labelTop();
+      expect(Math.abs(during - before)).toBeLessThan(1);
+      expect(Math.abs(after - before)).toBeLessThan(1);
     });
 
     test("open button transitions to detail view", async ({ page }) => {
@@ -182,14 +260,14 @@ for (const locale of LOCALES) {
 
     /* ===== Diorama illustration tests ===== */
 
-    test("diorama renders for Community Assistant (index 0)", async ({
+    test("diorama renders for Community Assistant", async ({
       page,
     }) => {
-      await goToProjectsSlide(page, locale.prefix);
-
-      // Index 0 is the default selection — open the detail view
-      const openBtn = page.locator("[data-testid='open-button']");
-      await openBtn.click();
+      await page.goto(locale.prefix + "/#community-assistant", { waitUntil: "networkidle" });
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
       await page.waitForTimeout(600);
 
       const diorama = page.locator(
@@ -216,7 +294,7 @@ for (const locale of LOCALES) {
       });
     });
 
-    test("detail card with diorama fits inside viewport", async ({
+    test("detail view fits the viewport and its footer is always reachable", async ({
       page,
     }) => {
       await goToProjectsSlide(page, locale.prefix);
@@ -235,24 +313,16 @@ for (const locale of LOCALES) {
         viewport.width + 1,
       );
 
-      // Card bottom must not exceed viewport height
-      expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(
-        viewport.height,
-      );
+      // The scroll container fits; long cards scroll inside it
+      const viewBox = (await page.locator("[data-testid='detail-view']").boundingBox())!;
+      expect(viewBox.y).toBeGreaterThanOrEqual(0);
+      expect(viewBox.y + viewBox.height).toBeLessThanOrEqual(viewport.height);
 
-      // Diorama (if present) must sit inside the card
-      const diorama = card.locator(".diorama");
-      if ((await diorama.count()) > 0) {
-        const dioBox = (await diorama.boundingBox())!;
-        expect(dioBox.x).toBeGreaterThanOrEqual(cardBox.x);
-        expect(dioBox.y).toBeGreaterThanOrEqual(cardBox.y);
-        expect(dioBox.x + dioBox.width).toBeLessThanOrEqual(
-          cardBox.x + cardBox.width + 1,
-        );
-        expect(dioBox.y + dioBox.height).toBeLessThanOrEqual(
-          cardBox.y + cardBox.height + 1,
-        );
-      }
+      // Sticky footer (Back / Next) is fully visible without scrolling
+      const footerBox = (await page.locator("[data-testid='detail-footer']").boundingBox())!;
+      expect(footerBox.y).toBeGreaterThanOrEqual(0);
+      expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(viewport.height);
+      await expect(page.locator("[data-testid='next-button']")).toBeInViewport();
 
       // Back button must be visible (not pushed off top)
       const backBtn = page.locator("[data-testid='back-button']");
@@ -303,7 +373,8 @@ for (const locale of LOCALES) {
       if ((await diorama.count()) === 0) return;
 
       const clipped = await diorama.evaluate((container) => {
-        const svg = container.querySelector("svg")!;
+        const svg = container.querySelector("svg");
+        if (!svg) return []; // photo illustration
         const vb = svg.viewBox.baseVal;
         const svgRect = svg.getBoundingClientRect();
 
@@ -441,30 +512,53 @@ for (const locale of LOCALES) {
       expect(slideIndexAfter).toBe(slideIndexBefore);
     });
 
-    test("no diorama for project without illustration", async ({
+    test("every project has a visual, and Next walks through all of them", async ({
       page,
     }) => {
       await goToProjectsSlide(page, locale.prefix);
-
-      // Navigate to index 2 (Agentic DLL Decompilation) which has no illustration
-      await page.click("[data-testid='roller-arrow-down']");
-      await page.waitForTimeout(500);
-      await page.click("[data-testid='roller-arrow-down']");
-      await page.waitForTimeout(500);
-
-      const openBtn = page.locator("[data-testid='open-button']");
-      await openBtn.click();
+      await page.locator("[data-testid='open-button']").click();
       await page.waitForTimeout(600);
 
-      const detailCard = page.locator("[data-testid='detail-card']");
-      await expect(detailCard).toBeVisible();
+      const seen = new Set<string>();
+      for (let i = 0; i < PROJECT_COUNT; i++) {
+        const hash = await page.evaluate(() => location.hash);
+        seen.add(hash);
+        const card = page.locator("[data-testid='detail-card']");
+        await expect(card.locator(".diorama")).toHaveCount(1);
+        await expect(card.locator(".detail-hook")).not.toBeEmpty();
+        await expect(card.locator("[data-testid='detail-cta']")).toHaveCount(1);
+        await page.locator("[data-testid='next-button']").click();
+        await page.waitForTimeout(150);
+      }
+      expect(seen.size).toBe(PROJECT_COUNT);
+    });
 
-      // No diorama should be injected
-      const diorama = detailCard.locator(".diorama");
-      await expect(diorama).toHaveCount(0);
+    test("CTA closes the card and jumps to the contact slide", async ({ page }) => {
+      await goToProjectsSlide(page, locale.prefix);
+      await page.locator("[data-testid='open-button']").click();
+      await page.waitForTimeout(600);
+      await page.locator("[data-testid='detail-cta']").click();
+      await page.waitForTimeout(1500);
 
-      // But text content should still be present
-      await expect(detailCard.locator("h3")).not.toBeEmpty();
+      await expect(page.locator("[data-testid='projects-section']")).not.toHaveClass(/detail-active/);
+      const slideIndex = await page.evaluate(() => {
+        const slides = document.querySelectorAll("#slider > .keen-slider__slide");
+        for (let i = 0; i < slides.length; i++) {
+          const rect = slides[i].getBoundingClientRect();
+          if (rect.top >= -1 && rect.top < window.innerHeight) return i;
+        }
+        return -1;
+      });
+      const last = await page.evaluate(() => document.querySelectorAll("#slider > .keen-slider__slide").length - 1);
+      expect(slideIndex).toBe(last);
+    });
+
+    test("legend chip jumps to the next project in that category", async ({ page }) => {
+      await goToProjectsSlide(page, locale.prefix);
+      await page.locator(".legend-chip[data-track='teach']").click();
+      await page.waitForTimeout(600);
+      expect(["tdd-command-generator", "adr-lint"]).toContain(await selectedSlug(page));
+      await expect(page.locator(".legend-chip[data-track='teach']")).toHaveClass(/is-current/);
     });
 
     test("touch drag inside roller does not change the page slide", async ({
@@ -521,8 +615,8 @@ for (const locale of LOCALES) {
 
     /* ===== Deep linking tests ===== */
 
-    test("deep link to #pixi-platformer opens detail view", async ({ page }) => {
-      await page.goto(locale.prefix + "/#pixi-platformer", { waitUntil: "networkidle" });
+    test("deep link to #dll-decompilation opens detail view", async ({ page }) => {
+      await page.goto(locale.prefix + "/#dll-decompilation", { waitUntil: "networkidle" });
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
 
       // Wait for detail-active class (deep link → auto-open)
@@ -536,7 +630,28 @@ for (const locale of LOCALES) {
 
       const detailCard = page.locator("[data-testid='detail-card']");
       await expect(detailCard).toBeVisible();
-      await expect(detailCard.locator("h3")).toHaveText("Pixi Platformer");
+      await expect(detailCard.locator("h3")).toHaveText(locale.dll);
+    });
+
+    test("old deep link to a merged card resolves to its new home", async ({ page }) => {
+      await page.goto(locale.prefix + "/#tdd-with-ai-presentation", { waitUntil: "networkidle" });
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
+      await expect(page.locator("[data-testid='detail-card'] h3")).toHaveText(locale.tdd);
+      expect(await page.evaluate(() => location.hash)).toBe("#tdd-command-generator");
+    });
+
+    test("changing the hash while a card is open switches card", async ({ page }) => {
+      await page.goto(locale.prefix + "/#dll-decompilation", { waitUntil: "networkidle" });
+      await page.waitForFunction(
+        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
+        { timeout: 15000 },
+      );
+      await page.waitForTimeout(500);
+      await page.evaluate(() => { location.hash = "#community-assistant"; });
+      await expect(page.locator("[data-testid='detail-card'] h3")).toHaveText(locale.community);
     });
 
     test("deep link to #community-assistant opens detail view", async ({ page }) => {
@@ -553,40 +668,39 @@ for (const locale of LOCALES) {
 
       const detailCard = page.locator("[data-testid='detail-card']");
       await expect(detailCard).toBeVisible();
-      await expect(detailCard.locator("h3")).toHaveText("Community Assistant");
+      await expect(detailCard.locator("h3")).toHaveText(locale.community);
     });
 
     test("invalid hash does not crash and auto-spin still works", async ({ page }) => {
       await page.goto(locale.prefix + "/#nonexistent-project", { waitUntil: "networkidle" });
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
 
-      // The invalid hash still triggers navigation to the projects slide
-      // Auto-spin should fire since hash doesn't match any slug
+      // The invalid hash still triggers navigation to the projects slide,
+      // where the arrival spin runs and settles (without opening a card)
       await page.waitForFunction(
-        () => {
-          const section = document.querySelector("[data-testid='projects-section']");
-          return section && section.classList.contains("detail-active");
-        },
+        () => document.querySelector("[data-testid='roller']")?.classList.contains("roller-spinning"),
         { timeout: 15000 },
       );
-
-      // If we reached detail-active, auto-spin completed and opened detail
-      const detailCard = page.locator("[data-testid='detail-card']");
-      await expect(detailCard).toBeVisible();
+      await waitForSpinToSettle(page);
+      await expect(page.locator("[data-testid='projects-section']")).not.toHaveClass(/detail-active/);
+      await expect(page.locator("[data-testid='roller-hook']")).not.toBeEmpty();
     });
 
     test("hash updates when opening and closing detail view", async ({ page }) => {
       await goToProjectsSlide(page, locale.prefix);
 
-      // Auto-spin has landed and opened detail view
-      await page.waitForFunction(
-        () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
-        { timeout: 15000 },
-      );
+      await page.locator("[data-testid='open-button']").click();
+      await page.waitForTimeout(600);
 
-      // Hash should be set after auto-spin opens detail
-      const hashAfterOpen = await page.evaluate(() => location.hash);
-      expect(hashAfterOpen).toMatch(/^#.+/);
+      const slug = await selectedSlug(page);
+      expect(await page.evaluate(() => location.hash)).toBe("#" + slug);
+
+      // Next updates the hash
+      await page.locator("[data-testid='next-button']").click();
+      await page.waitForTimeout(300);
+      const hashAfterNext = await page.evaluate(() => location.hash);
+      expect(hashAfterNext).toMatch(/^#.+/);
+      expect(hashAfterNext).not.toBe("#" + slug);
 
       // Close detail view
       await page.locator("[data-testid='back-button']").click();
@@ -605,8 +719,8 @@ for (const locale of LOCALES) {
 
       await goToProjectsSlide(page, locale.prefix);
 
-      // Open detail view via spin (auto-transitions to detail)
-      await page.locator("[data-testid='spin-button']").click({ force: true });
+      // Open detail view via Read more
+      await page.locator("[data-testid='open-button']").click({ force: true });
       await page.waitForFunction(
         () => document.querySelector("[data-testid='projects-section']")?.classList.contains("detail-active"),
         { timeout: 15000 },
@@ -643,8 +757,8 @@ for (const locale of LOCALES) {
         return;
       }
 
-      // Deep-link directly to Chess Reel (long content) to open its detail view
-      await page.goto(locale.prefix + "/#chess-reel", { waitUntil: "networkidle" });
+      // Deep-link directly to a long card to open its detail view
+      await page.goto(locale.prefix + "/#legacy-chess-tool-rewrite", { waitUntil: "networkidle" });
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
 
       // Wait for detail view to open via deep link
@@ -654,28 +768,23 @@ for (const locale of LOCALES) {
       );
       await page.waitForTimeout(600);
 
-      // Scroll down inside the slide to simulate reading the long card content
-      const slide = page.locator("#slider > .keen-slider__slide").nth(1);
-      await slide.evaluate((el) => {
+      // Scroll to the end of the card (it scrolls inside the detail view)
+      const detailView = page.locator("[data-testid='detail-view']");
+      await detailView.evaluate((el) => {
         el.scrollTop = el.scrollHeight;
       });
       await page.waitForTimeout(300);
+      expect(await detailView.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
 
-      // Verify the slide is actually scrolled
-      const scrollTopBefore = await slide.evaluate((el) => el.scrollTop);
-      expect(scrollTopBefore).toBeGreaterThan(0);
-
-      // Navigate to next slide (ArrowDown triggers keen-slider since slide is at scroll bottom)
-      // Use evaluate to dispatch wheel event to trigger keen-slider navigation
-      await slide.evaluate((el) => {
-        el.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
-      });
-      await page.waitForTimeout(1000);
-
-      // Navigate back to projects slide
+      // Close the card, leave the slide and come back
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(700);
+      await page.keyboard.press("ArrowDown");
+      await page.waitForTimeout(1200);
       await page.keyboard.press("ArrowUp");
       await page.waitForTimeout(1500);
 
+      const slide = page.locator("#slider > .keen-slider__slide").nth(1);
       // The slide's scrollTop should be reset to 0
       const scrollTopAfter = await slide.evaluate((el) => el.scrollTop);
       expect(scrollTopAfter, "Slide scrollTop should reset to 0 after returning").toBe(0);

@@ -1,139 +1,560 @@
 import type { Lang } from "./ui";
+import { trackEntries, testimonials } from "./contact";
 
-export interface Project {
-  tag: string;
+/**
+ * The projects roulette (slide 2): a short, curated list of case stories.
+ *
+ * Every card answers three questions a non-technical reader has:
+ * what was the problem, what did William do, and what came of it. The tech
+ * ("under the hood") is kept, but it never leads.
+ *
+ * Sources for every claim live in the research dossiers for the 2026-10
+ * overhaul (repo READMEs, git logs, cv.ts, LinkedIn posts, GitHub/npm APIs).
+ * Do not add numbers here that cannot be traced to a source.
+ *
+ * `problem` / `did` / `outcome` may contain inline HTML (`<em>` for outcomes).
+ */
+
+/** What kind of value a project shows. Colours mirror the contact-slide tracks. */
+export type ProjectTrack = "legacy" | "build" | "teach" | "lab";
+
+export interface ProjectFact {
+  /** Big number or short figure, e.g. "38 000" or "2/5 → 5/5" */
+  value: string;
+  /** What the figure means, in plain words */
+  label: string;
+}
+
+export interface ProjectLink {
+  href: string;
+  label: string;
+}
+
+export interface ProjectCopy {
   title: string;
-  description: string;
+  /** Who/when, e.g. "Kunduppdrag · 2026" */
+  context: string;
+  /** One plain-language sentence. Shown under the roller and atop the card. */
+  hook: string;
+  problem: string;
+  did: string;
+  outcome: string;
+  facts: ProjectFact[];
+  /** Tech keywords for the "under the hood" footer */
+  nerdy: string[];
+  links: ProjectLink[];
 }
 
 interface ProjectEntry {
+  /** Stable deep-link id (`/#slug`). Never rename: links exist in the wild. */
   slug: string;
-  sv: Project;
-  en: Project;
+  track: ProjectTrack;
+  /** First auto-spin on arrival lands on one of these. */
+  flagship?: boolean;
+  /** Name of a testimonial in contact.ts to quote on the card. */
+  quote?: Partial<Record<Lang, string>>;
+  sv: ProjectCopy;
+  en: ProjectCopy;
 }
 
+const gh = (repo: string): ProjectLink => ({
+  href: `https://github.com/wbern/${repo}`,
+  label: `github.com/wbern/${repo}`,
+});
+
 /**
- * Project entries with explicit slugs.
- *
- * `as const satisfies` preserves slug string literals so they form the
- * `ProjectSlug` union type below. Any consumer keyed by slug (e.g. the
- * illustrations map) is then validated against this single source of truth
- * at compile time — TypeScript will flag unknown slugs and missing entries.
- *
- * Slug invariant: each entry's slug must equal `slugify(en.title)`. This is
- * checked by `projects.test.ts` so URLs stay derivable from titles.
+ * Display order is a pitch arc: rescue → AI for a real business → a product
+ * people used → big-company work → leadership → open source with traction →
+ * experiments.
  */
 const projectEntries = [
   {
-    slug: "community-assistant",
-    sv: { tag: "AI-agent", title: "Community Assistant", description: "AI-assistent för bostadsrättsföreningar och styrelser som hanterar återkommande e-postfrågor. Plockar upp inkommande mejl, matchar mot historiska ärenden och skriver ett utkast till svar baserat på hur styrelsen svarat förut. En styrelsemedlem godkänner eller justerar innan utskick.<br><br>Byggd på <em>Akka SDK</em> med event sourcing, integrerad med <em>Gmail</em> och <em>Google Sheets</em>. En <em>SmolLM2-135M</em> nano-LLM hanterar klassificering och utkastning — lätt nog att inte kräva en stor modell.<br><br><em>3-stegs teststrategi</em>: dummy-LLM:er för snabbhet och determinism, nano-modellen som realistiskt mellanlager, och produktionsmodellen för slutlig kvalitetskontroll.<br><br><a href=\"https://github.com/wbern/community-assistant\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/community-assistant</a>" },
-    en: { tag: "AI Agent", title: "Community Assistant", description: "AI assistant for community boards handling recurring email questions. Picks up incoming mail, matches against historical tickets, and drafts a reply based on how the board answered before. A board member approves or amends before sending.<br><br>Built on the <em>Akka SDK</em> with event sourcing, integrated with <em>Gmail</em> and <em>Google Sheets</em>. A <em>SmolLM2-135M</em> nano LLM handles classification and drafting — light enough to run without a large model.<br><br><em>3-tier testing strategy</em>: dummy LLMs for speed and determinism, the nano model as a realistic middle tier, and the production model for final confidence checks.<br><br><a href=\"https://github.com/wbern/community-assistant\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/community-assistant</a>" },
-  },
-  {
-    slug: "pi-pai",
-    sv: { tag: "Infrastruktur", title: "Pi-PAI", description: "Fjärrstyrd agentorkestrering på en <em>Raspberry Pi 4</em>, åtkomlig från mobilen via appen <em>Happy</em> (inklusive röststyrning). En <em>MCP-server</em> fungerar som kontrollplan: en Claude Code-instans startar och stoppar andra Claude Code-sessioner utifrån arbetsbelastning.<br><br>Varje agent har <em>GitHub</em>-åtkomst och kan självständigt köra tester, skapa pull requests och fortsätta arbeta medan operatören är borta från datorn. Hela uppsättningen provisioneras med <em>Ansible</em> — reproducerbar infrastruktur som går att deploya på kraftigare hårdvara, fler maskiner eller hos en kund.<br><br><a href=\"https://github.com/wbern/pi-pai\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/pi-pai</a>" },
-    en: { tag: "Infrastructure", title: "Pi-PAI", description: "Remote agent orchestration on a <em>Raspberry Pi 4</em>, accessed from a phone via the <em>Happy</em> app (with voice control). An <em>MCP server</em> acts as the control plane: one Claude Code instance starts and stops other Claude Code sessions based on workload.<br><br>Each agent has <em>GitHub</em> access and independently runs tests, opens pull requests, and continues work while the operator is away from the computer. Fully provisioned with <em>Ansible</em> — reproducible infrastructure that redeploys to bigger hardware, more machines, or a client site.<br><br><a href=\"https://github.com/wbern/pi-pai\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/pi-pai</a>" },
-  },
-  {
     slug: "dll-decompilation",
-    sv: { tag: "Legacyräddning", title: "DLL-dekompilering", description: "Återställde funktionalitet i underhållslösa leverantörs-<em>DLL:er</em> utan tillgång till källkod. Kunden startade om sin servermjukvara var 15:e minut på grund av ett <em>race condition</em> i binärerna.<br><br><em>3-fasprocess</em>: dekompilerade DLL:erna (resultat ~80% korrekt, resten trasigt på grund av binärernas ålder); byggde en testsvit mot den befintliga setupen för att låsa in nuvarande beteende; fixade den dekompilerade koden tills varje test passerade; löste sedan själva samtidighetsproblemet.<br><br>Deployad via <em>Tailscale</em> till <em>5 kundsajter</em> med 3 rollback-strategier. Låste upp en betydande intäktsström för kunden." },
-    en: { tag: "Legacy Rescue", title: "DLL Decompilation", description: "Recovered functionality from unmaintained vendor <em>DLLs</em> with no source code available. The client was restarting their server software every 15 minutes due to a <em>race condition</em> in the binaries.<br><br><em>3-phase process</em>: decompiled the DLLs (output ~80% correct, the rest broken by binary age); built a test suite against the existing setup to lock in current behavior; fixed the decompiled code until every test passed; then resolved the concurrency issue itself.<br><br>Deployed over <em>Tailscale</em> to <em>5 customer sites</em> with 3 rollback strategies. Unlocked a significant revenue stream for the client." },
-  },
-  {
-    slug: "legacy-chess-tool-rewrite",
-    sv: { tag: "Modernisering", title: "Legacy-schackverktyg: omskrivning", description: "Modernisering av ett desktopverktyg för lottning av schackturneringar från 2018 till en <em>ren webbapplikation</em>. Verktyget används fortfarande av många klubbar för sin enkelhet, och lottningsalgoritmerna är dess kärnvärde — parningar i schack är förvånansvärt komplicerade.<br><br>Den ursprungliga Java-frontenden kopplades isär från databasoperationerna och lottningslogiken exponerades via ett REST-lager. Byggde därefter <em>snapshot-tester av alla lottningspermutationer</em> — över 200 snapshots av hur databasen förändras under en turnering. Med det skyddsnätet på plats portades hela backenden till webbläsaren med <em>sql.js</em>; varje snapshot-test passerade vid första körningen.<br><br>Applikationen körs nu <em>helt offline i webbläsaren</em> — ingen backend behövs. <a href=\"https://lotta.bernting.se/?tab=pairings\" target=\"_blank\" rel=\"noopener noreferrer\">lotta.bernting.se</a><br><br><a href=\"https://github.com/wbern/lotta\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/lotta</a>" },
-    en: { tag: "Modernization", title: "Legacy Chess Tool Rewrite", description: "Modernization of a 2018-era desktop chess tournament pairing tool into a <em>browser-only application</em>. Still used by many clubs for its simplicity, the seeding algorithms are the software's core value — pairings in chess are surprisingly complex.<br><br>The original Java frontend was decoupled from its database operations and the pairing logic exposed through a REST layer. Built <em>snapshot tests of every pairing permutation</em> — over 200 snapshots of how the database evolves during a tournament. With that safety net in place, the entire backend was ported into the browser with <em>sql.js</em>; every snapshot test passed on the first run.<br><br>The application now runs <em>fully offline in the browser</em> — no backend required. <a href=\"https://lotta.bernting.se/?tab=pairings\" target=\"_blank\" rel=\"noopener noreferrer\">lotta.bernting.se</a><br><br><a href=\"https://github.com/wbern/lotta\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/lotta</a>" },
-  },
-  {
-    slug: "adr-lint",
-    sv: { tag: "Open Source", title: "adr-lint", description: "Definierar tekniska regelverk för ett team som <em>Architectural Decision Records</em>, och startar sedan en kortlivad LLM-agent per ADR vars uppgift är att bedöma om kodändringar lever upp till varje regel. Teamets <em>process</em> är viktigare än själva verktyget — adr-lint automatiserar bara utvärderingen.<br><br>Samma princip tillämpad på en publicerad artikel om AI och tillit: <em>15 ADR:er</em> definierade ramarna innan en mening var skriven, och en agent per ADR granskade var och en av <em>22 utkast</em> oberoende. Open source.<br><br><a href=\"https://github.com/wbern/adr-lint\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/adr-lint</a>" },
-    en: { tag: "Open Source", title: "adr-lint", description: "Defines technical rules for a team as <em>Architectural Decision Records</em>, then spawns a short-lived LLM agent per ADR to judge whether code changes meet each rule. The team's <em>process</em> matters more than the tool itself — adr-lint just automates the evaluation step.<br><br>Same principle applied to a published article on AI and trust: <em>15 ADRs</em> defined the boundaries before a sentence was written, and one agent per ADR independently reviewed each of <em>22 drafts</em>. Open source.<br><br><a href=\"https://github.com/wbern/adr-lint\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/adr-lint</a>" },
-  },
-  {
-    slug: "this-cv",
-    sv: { tag: "Meta", title: "Detta CV", description: "Du tittar på den. Sajten är byggd med <em>Astro</em>, <em>TypeScript</em> och <em>testdriven utveckling</em> — discipliner som motverkar regressioner vid iteration.<br><br>Målet: en engagerande upplevelse snarare än ännu en generisk utvecklarsajt. Starkt påverkad av UX-personer som jag samarbetat med genom åren.<br><br><a href=\"https://github.com/wbern/william.bernting.se\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/william.bernting.se</a>" },
-    en: { tag: "Meta", title: "This CV", description: "You're looking at it. The site is built with <em>Astro</em>, <em>TypeScript</em>, and <em>test-driven development</em> — disciplines applied to prevent regressions during iteration.<br><br>The goal: an engaging experience rather than another generic developer site. Strong influence from UX collaborators over the years.<br><br><a href=\"https://github.com/wbern/william.bernting.se\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/william.bernting.se</a>" },
-  },
-  {
-    slug: "tdd-command-generator",
-    sv: { tag: "Open Source", title: "TDD-kommandogenerator", description: "Slash-kommandoverktyg för AI-kodningsagenter som upprätthåller <em>testdriven utveckling</em>. Återanvändbara promptmallar kapslar in TDD-metodiken så att den inte behöver upprepas varje session — kompenserar för att kodningsagenter inte är tränade på praktiken.<br><br>Inkluderar en generator för att anpassa installationsplats. Repot har 100% testtäckning. Fick <em>över 100 GitHub-stjärnor över en natt</em> vid release. Open source.<br><br><a href=\"https://github.com/wbern/agent-instructions\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/agent-instructions</a>" },
-    en: { tag: "Open Source", title: "TDD Command Generator", description: "Slash-command toolkit for AI coding agents that enforces <em>test-driven development</em>. Reusable prompt templates encode the TDD methodology so it doesn't have to be repeated every session — compensating for the fact that coding agents aren't trained on the practice.<br><br>Includes a generator for customizing install location. Repo has 100% test coverage. Received <em>over 100 GitHub stars overnight</em> on release. Open source.<br><br><a href=\"https://github.com/wbern/agent-instructions\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/agent-instructions</a>" },
-  },
-  {
-    slug: "obscene",
-    sv: { tag: "Open Source", title: "obscene", description: "Statisk analys som lyfter <em>beteendemönster i en kodbas</em> och pekar ut tydliga refaktoriseringsmöjligheter. Byggd för att ta bort den sociala friktionen kring kodkvalitet — verktyget visar mönstren neutralt så att teamet kan besluta tillsammans vad som ska städas.<br><br>Körs i CI eller lokalt. Open source.<br><br><a href=\"https://github.com/wbern/obscene\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/obscene</a>" },
-    en: { tag: "Open Source", title: "obscene", description: "Static analysis that surfaces <em>behavior patterns in a codebase</em> and highlights clear refactor opportunities. Built to remove the social friction around code quality — the tool shows the patterns neutrally so the team can decide together what to clean up.<br><br>Runs in CI or locally. Open source.<br><br><a href=\"https://github.com/wbern/obscene\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/obscene</a>" },
-  },
-  {
-    slug: "cc-ping",
-    sv: { tag: "Open Source", title: "cc-ping", description: "Verktyg för att hantera <em>Claude Codes</em> vecko- och sessionsgränser. Pingar ett eller flera konton schemalagt så att gränserna återställs så tidigt som möjligt, och kan konfigureras för att tajma en sessionsreset till mitten av arbetsdagens peak.<br><br>Liten, fokuserad, open source — ett av flera verktyg byggda för att göra vardagsarbetet med AI-agenter förutsägbart.<br><br><a href=\"https://github.com/wbern/cc-ping\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/cc-ping</a>" },
-    en: { tag: "Open Source", title: "cc-ping", description: "Utility for managing <em>Claude Code</em> weekly and session limits. Pings one or more accounts on a schedule so the limits reset as early as possible, and can be configured to time a session reset around the middle of the workday peak.<br><br>Small, focused, open source — one of several tools built to make day-to-day work with AI agents predictable.<br><br><a href=\"https://github.com/wbern/cc-ping\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/cc-ping</a>" },
-  },
-  {
-    slug: "me-and-my-crew",
-    sv: { tag: "Open Source", title: "Me and My Crew", description: "Publik referensuppsättning för <em>Gas Town</em>-stil terminalbaserad agentorkestrering. Kör flera AI-agenter sida vid sida i terminalen — synliga snarare än dolda i bakgrunden — med tydlig struktur för vilken agent som äger vilken roll.<br><br>Ingen produkt; ett dokumenterat \"så här satte jag upp det, om du vill replikera.\" <a href=\"https://github.com/wbern/gastown-me-and-my-crew\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/gastown-me-and-my-crew</a>" },
-    en: { tag: "Open Source", title: "Me and My Crew", description: "Public reference setup for <em>Gas Town</em>-style terminal-based agent orchestration. Runs multiple AI agents side by side in the terminal — visible rather than hidden in the background — with clear structure for which agent owns which role.<br><br>Not a product; a documented \"this is how I set it up, if you want to replicate.\" <a href=\"https://github.com/wbern/gastown-me-and-my-crew\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/gastown-me-and-my-crew</a>" },
-  },
-  {
-    slug: "tmux-explode",
-    sv: { tag: "Open Source", title: "tmux-explode", description: "Litet kommando som visar <em>alla aktiva tmux-sessioner i en enda ruta</em> — en kontrolltornsvy för att övervaka många AI-agenter som körs parallellt. Open source.<br><br><a href=\"https://github.com/wbern/tmux-explode\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/tmux-explode</a>" },
-    en: { tag: "Open Source", title: "tmux-explode", description: "Small command that displays <em>all active tmux sessions in a single pane</em> — a control-tower view for monitoring many AI agents running in parallel. Open source.<br><br><a href=\"https://github.com/wbern/tmux-explode\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/tmux-explode</a>" },
-  },
-  {
-    slug: "chess-reel",
-    sv: { tag: "Personligt projekt", title: "Chess Reel", description: "Webbaserat schackbräde som spelar <em>öppningsreels</em> — ursprungligen byggt för att studera Hyper-Accelerated Dragon-varianten av Sicilianskt som svart.<br><br>Byggt med <em>testdriven utveckling</em> och en <em>diamantformad testsvit</em> — många något tyngre tester i mellanlagret — som visade sig särskilt välanpassad för agentisk kodning. Hanterar begränsningen att LLM:er inte kan spela schack genom att luta sig mot schackprotokoll och grundläggande principer.<br><br>En testbädd för att hantera stora mängder AI-skriven kod från grunden." },
-    en: { tag: "Personal Project", title: "Chess Reel", description: "Web chess board that plays <em>opening reels</em> — originally built to study the Hyper-Accelerated Dragon variation of the Sicilian as black.<br><br>Built with <em>test-driven development</em> using a <em>diamond-shaped test suite</em> — many slightly heavier tests in the middle layer — which proved especially well suited to agentic coding. Handles the limitation that LLMs can't play chess by leaning on chess protocols and foundational principles.<br><br>A testbed for managing large amounts of AI-written code from scratch." },
-  },
-  {
-    slug: "tdd-with-ai-presentation",
-    sv: { tag: "Undervisning", title: "TDD med AI — Presentation", description: "Presentation om <em>testdriven utveckling med AI-kodningsagenter</em>. Byggd helt från terminalen med Claude Code, slides skapade med <em>Slidev</em>, hostade på den här sajten — alltid tillgängliga och redo att köras.<br><br><a href=\"https://github.com/wbern/slidev-tdd-with-ai\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/slidev-tdd-with-ai</a>" },
-    en: { tag: "Teaching", title: "TDD with AI — Presentation", description: "Presentation on <em>test-driven development with AI coding agents</em>. Built entirely from the terminal with Claude Code, slides made with <em>Slidev</em>, hosted on this site — always accessible and ready to run.<br><br><a href=\"https://github.com/wbern/slidev-tdd-with-ai\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/slidev-tdd-with-ai</a>" },
-  },
-  {
-    slug: "linkedin-conversation-analysis",
-    sv: { tag: "Dataanalys", title: "LinkedIn-konversationsanalys", description: "Interaktiv dashboard byggd från en personlig export av <em>LinkedIn-konversationer</em>. Ungefär hälften av kalla kontakter kände sig tvungna att förklara sin förfrågan när de hälsades på — en tydlig effekt av att bryta normen.<br><br>Konversationerna kategoriserades i <em>13 kategorier</em> och visualiseras genom <em>7 vyer</em> som lyfter mönster i vem som är värd att lägga tid på. Byggd för att informera en kontaktstrategi från primärdata snarare än magkänsla." },
-    en: { tag: "Data Analysis", title: "LinkedIn Conversation Analysis", description: "Interactive dashboard built from a personal export of <em>LinkedIn conversations</em>. Around half of cold contacts felt compelled to explain their request once greeted — a clear effect of breaking the silent-norm.<br><br>Conversations were categorized into <em>13 categories</em> and visualized through <em>7 views</em> surfacing patterns in who is worth spending time on. Built to inform an outreach strategy from primary data rather than intuition." },
-  },
-  {
-    slug: "architectural-blueprint-to-3d",
-    sv: { tag: "3D-visualisering", title: "Arkitektritning till 3D", description: "Pipeline som omvandlar <em>AutoCAD-ritningar till 3D-visualiseringar</em> med LLM-agenter i varje steg. Varje transformationssteg utförs av en agent, utan manuell detaljstyrning av det visuella resultatet.<br><br>3D förblir ett utmanande område för agentisk kodning — mycket av ekosystemet är fortfarande inlåst bakom <em>proprietära assets och mjukvara</em>. Projektet visar gränserna för vad agenter kan och inte kan göra när ekosystemet inte är öppet." },
-    en: { tag: "3D Visualization", title: "Architectural Blueprint to 3D", description: "Pipeline that converts <em>AutoCAD blueprints into 3D renderings</em> using LLM agents at each step. Each transformation stage is executed by an agent, with no manual micromanagement of the visual output.<br><br>3D remains a challenging space for agentic coding — much of the ecosystem is still locked behind <em>proprietary assets and software</em>. The project surfaces the practical boundaries of what agents can and can't do when the ecosystem isn't open." },
-  },
-  {
-    slug: "pixi-platformer",
-    sv: { tag: "Spel", title: "Pixi Platformer", description: "Platformer i Doodle Jump-stil byggd från grunden med webbteknologi — ingen spelmotor. Egen <em>Entity Component System</em>-arkitektur i React: varje spelobjekt sätts ihop av lösa komponenter (position, hastighet, kollision, soliditet).<br><br>Fysiken använder <em>icke-linjär gravitation</em> med olika accelerationskurvor för uppåt- och nedåtrörelse. Stöder <em>tangentbord och touch</em>, renderad med <em>Pixi.js 7</em> via WebGL, testad med <em>Vitest</em>.<br><br><a href=\"https://github.com/wbern/platformer\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/platformer</a>" },
-    en: { tag: "Game", title: "Pixi Platformer", description: "Doodle Jump-style platformer built from scratch with web technology — no game engine. Custom <em>Entity Component System</em> architecture in React: each game object composed of loose components (position, velocity, collision, solidity).<br><br>Physics use <em>non-linear gravity</em> with different acceleration curves for upward and downward movement. Supports <em>keyboard and touch</em>, rendered with <em>Pixi.js 7</em> via WebGL, tested with <em>Vitest</em>.<br><br><a href=\"https://github.com/wbern/platformer\" target=\"_blank\" rel=\"noopener noreferrer\">github.com/wbern/platformer</a>" },
+    track: "legacy",
+    flagship: true,
+    sv: {
+      title: "Systemet utan källkod",
+      context: "Kunduppdrag · 2026",
+      hook: "Servern fick startas om var 15:e minut. Leverantören var borta, källkoden likaså. Nu står den stadigt.",
+      problem: "Ett bokningssystem där boende i bostadsrättsföreningar bokar tvättstuga och gästlägenhet kraschade hela tiden. Felet satt i runt 20 år gamla leverantörsfiler som ingen längre hade källkoden till.",
+      did: "Under en helg lät jag en AI-agent översätta filerna tillbaka till läsbar kod. Först skrev jag 19 automatiska kontroller mot de skarpa sajterna, och originalet klarade 8. Sedan lagade jag grundfelet, flera webbplatser som trampade varandra på tårna mot samma gamla komponent, och rullade ut med tre olika sätt att backa.",
+      outcome: "<em>19 av 19 kontroller gröna, på 5 sajter.</em> Inga fler omstarter var 15:e minut. \"Ingen källkod\" visade sig bara vara en startpunkt.",
+      facts: [
+        { value: "5", label: "sajter lagade" },
+        { value: "8 → 19", label: "av 19 tester gröna" },
+        { value: "1", label: "helg" },
+      ],
+      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Named mutex", "Playwright", "Tailscale"],
+      links: [],
+    },
+    en: {
+      title: "The system nobody had code for",
+      context: "Client work · 2026",
+      hook: "The server had to be restarted every 15 minutes. The vendor was gone, and so was the source code. Now it just runs.",
+      problem: "A booking system where residents of housing associations book laundry rooms and guest flats kept crashing. The fault sat in vendor files around 20 years old that nobody had the source code for any more.",
+      did: "Over one weekend I had an AI agent turn the files back into readable code. First I wrote 19 automated checks against the live sites, and the original passed 8. Then I fixed the root cause, several websites stepping on each other's toes against the same old component, and rolled out with three different ways to roll back.",
+      outcome: "<em>19 of 19 checks green, across 5 sites.</em> No more restarts every 15 minutes. \"No source code\" turned out to be just a starting point.",
+      facts: [
+        { value: "5", label: "sites fixed" },
+        { value: "8 → 19", label: "of 19 tests passing" },
+        { value: "1", label: "weekend" },
+      ],
+      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Named mutex", "Playwright", "Tailscale"],
+      links: [],
+    },
   },
   {
     slug: "knowledge-bot",
-    sv: { tag: "AI / RAG", title: "Knowledge Bot", description: "<em>RAG-baserad mejlrådgivare</em> för en fastighetsförvaltningskund med <em>38 000 historiska supportmejl</em>. Kombinerar <em>hybridsökning</em> — BM25 nyckelordssökning via SQLite FTS5 och vektorsökning via <em>LEANN</em>, ett grafbaserat retrieval-system som komprimerar lagringen med 97%. Resultaten slås ihop med <em>Reciprocal Rank Fusion</em> och matas till en lokal LLM via <em>Ollama</em>.<br><br>Träffsäkerheten gick från 40% till <em>100%</em> efter att metadataprefix och hybridstrategin lagts till. Körs helt privat på en <em>Proxmox-VM</em> provisionerad med Ansible — ingen data lämnar kundens servrar. <em>Telegram-bot</em> och en mejlbevakare ger personalen rådgivning i realtid, med källhänvisningar till de historiska mejl som låg till grund för svaret." },
-    en: { tag: "AI / RAG", title: "Knowledge Bot", description: "<em>RAG-based email advisor</em> for a property-management client with <em>38,000 historical support emails</em>. Combines <em>hybrid search</em> — BM25 keyword search via SQLite FTS5 and vector search via <em>LEANN</em>, a graph-based retrieval system that compresses storage by 97%. Results are merged with <em>Reciprocal Rank Fusion</em> and fed to a local LLM via <em>Ollama</em>.<br><br>Retrieval accuracy went from 40% to <em>100%</em> after adding metadata prefixes and the hybrid strategy. Runs entirely private on a <em>Proxmox VM</em> provisioned with Ansible — no data leaves the client's servers. A <em>Telegram bot</em> and an email watcher deliver real-time advice with source citations to the historical mails that informed each answer." },
+    track: "build",
+    flagship: true,
+    sv: {
+      title: "Företagets mejlminne",
+      context: "Kundpilot · 2026",
+      hook: "38 000 gamla mejl blev en kollega som minns hur vi löste det förra gången.",
+      problem: "Ett litet säkerhetsföretag i Göteborg (passersystem, porttelefoner) får hundratals mejl i månaden. Samma frågor kommer tillbaka, men svaren ligger begravda i enskildas inkorgar. Och kundmejl får inte skickas till någon molntjänst.",
+      did: "Jag byggde en AI-rådgivare som körs helt på företagets egen server. Den läser varje nytt mejl, letar fram liknande ärenden bland 38 000 gamla och föreslår hur teamet brukar lösa det, med originalmejlen som kvitto. Personalen kan också fråga den direkt i gruppchatten.",
+      outcome: "<em>Inga mejl lämnade huset.</em> Träffsäkerheten på testfrågorna gick från 2 av 5 till <em>5 av 5</em> när jag kombinerade vanlig ordsökning med AI-sökning. Allt på en server utan grafikkort och utan licenskostnader.",
+      facts: [
+        { value: "38 000", label: "mejl i minnet" },
+        { value: "2/5 → 5/5", label: "testfrågor rätt" },
+        { value: "0", label: "mejl till molnet" },
+      ],
+      nerdy: ["RAG", "BM25 (SQLite FTS5)", "Vektorsökning (LEANN)", "Reciprocal Rank Fusion", "Ollama", "Proxmox", "Ansible", "Telegram"],
+      links: [{ href: "https://www.kendev.se/articles/leann-email-advisor", label: "Hela genomgången på kendev.se" }],
+    },
+    en: {
+      title: "The company's email memory",
+      context: "Client pilot · 2026",
+      hook: "38,000 old emails became a colleague who remembers how we solved it last time.",
+      problem: "A small Gothenburg security company (access control, intercoms) gets hundreds of emails a month. The same questions keep coming back, but the answers are buried in individual inboxes. And customer emails can't be sent to a cloud service.",
+      did: "I built an AI advisor that runs entirely on the company's own server. It reads each new email, finds similar cases among 38,000 old ones and suggests how the team usually handles it, with the original emails as receipts. Staff can also ask it directly in their group chat.",
+      outcome: "<em>No email left the building.</em> Accuracy on the test questions went from 2 of 5 to <em>5 of 5</em> once I combined plain keyword search with AI search. All on a server with no graphics card and no licence costs.",
+      facts: [
+        { value: "38,000", label: "emails remembered" },
+        { value: "2/5 → 5/5", label: "test questions right" },
+        { value: "0", label: "emails sent to the cloud" },
+      ],
+      nerdy: ["RAG", "BM25 (SQLite FTS5)", "Vector search (LEANN)", "Reciprocal Rank Fusion", "Ollama", "Proxmox", "Ansible", "Telegram"],
+      links: [{ href: "https://www.kendev.se/articles/leann-email-advisor", label: "Full write-up on kendev.se" }],
+    },
+  },
+  {
+    slug: "legacy-chess-tool-rewrite",
+    track: "legacy",
+    flagship: true,
+    sv: {
+      title: "Lotta: schack i webbläsaren",
+      context: "Eget projekt, open source · 2026",
+      hook: "Ett nedlagt lottningsprogram för schack, flyttat till webben. Första skarpa testet: en regionsfinal med ca 500 barn.",
+      problem: "Jag skulle lotta en schackturnering, men programmet gick inte längre att ladda ner. Det hade stått still sedan 2018 och krävde Java på rätt dator, men klubbarna gillar det för att det är enkelt. Det verkliga värdet sitter i lottningsreglerna, och de är förvånansvärt kluriga.",
+      did: "Innan jag rörde något spelade jag in över 200 facit från det gamla programmet: hur turneringar ska lottas och räknas. Med det skyddsnätet på plats flyttade jag hela programmet in i webbläsaren och lät facit avgöra när det var klart.",
+      outcome: "Gratis på <em>lotta.bernting.se</em>: ingen installation, ingen inloggning, funkar offline. Domare och publik följer lottningen live i mobilen. Det körde en regionsfinal i Schack4an med <em>ca 500 barn</em>. Och vet ni vad? Det funkade.",
+      facts: [
+        { value: "~500", label: "barn i en regionsfinal" },
+        { value: "200+", label: "facit-tester" },
+        { value: "0", label: "servrar" },
+      ],
+      nerdy: ["Java Swing → React 19", "SQLite i webbläsaren (sql.js)", "IndexedDB", "WebRTC P2P", "Golden master-tester", "PWA"],
+      links: [
+        { href: "https://lotta.bernting.se", label: "lotta.bernting.se" },
+        gh("lotta"),
+      ],
+    },
+    en: {
+      title: "Lotta: chess in the browser",
+      context: "Own project, open source · 2026",
+      hook: "A discontinued chess pairing program, moved to the web. Its first real test: a regional final with about 500 kids.",
+      problem: "I needed to pair a chess tournament, but the program could no longer be downloaded. It had been frozen since 2018 and needed Java on the right PC, yet clubs like it because it's simple. Its real value is the pairing rules, and those are surprisingly tricky.",
+      did: "Before touching anything I recorded over 200 answer keys from the old program: how tournaments should be paired and scored. With that safety net in place I moved the whole program into the browser and let the answer keys decide when it was done.",
+      outcome: "Free at <em>lotta.bernting.se</em>: no install, no signup, works offline. Referees and spectators follow the pairings live on their phones. It ran a Schack4an regional final with <em>about 500 kids</em>. And you know what? It worked.",
+      facts: [
+        { value: "~500", label: "kids at a regional final" },
+        { value: "200+", label: "answer-key tests" },
+        { value: "0", label: "servers" },
+      ],
+      nerdy: ["Java Swing → React 19", "SQLite in the browser (sql.js)", "IndexedDB", "WebRTC P2P", "Golden master tests", "PWA"],
+      links: [
+        { href: "https://lotta.bernting.se", label: "lotta.bernting.se" },
+        gh("lotta"),
+      ],
+    },
   },
   {
     slug: "telia-se",
-    sv: { tag: "Legacymigrering", title: "Telia.se", description: "Inkrementell migrering av Telia.se från ett legacysystem byggt i <em>Freemarker</em> — en mallmotor djupt sammanflätad med affärslogiken — till en modern frontend, utan big bang-omskrivning.<br><br>Arbetet omfattade att bygga bryggor mellan gammalt och nytt, införa mönster som kunde samexistera med den befintliga kodbasen, och successivt fasa ut Freemarker-mallar utan att störa produktionstrafiken. Uppdraget i en mening: <em>migrera utan att stanna</em>." },
-    en: { tag: "Legacy Migration", title: "Telia.se", description: "Incremental migration of Telia.se from a <em>Freemarker</em>-based legacy templating system — deeply intertwined with the business logic — to a modern frontend, without a big-bang rewrite.<br><br>Work involved building bridges between old and new, introducing patterns that coexisted with the existing codebase, and progressively phasing out Freemarker templates without disrupting production traffic. The brief in one phrase: <em>migrate without stopping</em>." },
-  },
-  {
-    slug: "kendev-se",
-    sv: { tag: "Företag", title: "kendev.se", description: "Min konsultfirmas webbplats. <em>IT-integration, coachning och migration.</em><br><br><a href=\"https://www.kendev.se\" target=\"_blank\" rel=\"noopener noreferrer\">www.kendev.se</a>" },
-    en: { tag: "Business", title: "kendev.se", description: "My consultancy's website. <em>IT integration, coaching, and migration.</em><br><br><a href=\"https://www.kendev.se\" target=\"_blank\" rel=\"noopener noreferrer\">www.kendev.se</a>" },
+    track: "legacy",
+    flagship: true,
+    quote: { sv: "Joel Ericsson", en: "Nina Fogelberg" },
+    sv: {
+      title: "Telia.se",
+      context: "Anställd på Telia · 2020–2022",
+      hook: "Byggde om framsidan på Telia.se medan butiken var öppen.",
+      problem: "Telia.se kunde inte stänga för renovering. Den gamla mallmotorn hade utseende och affärslogik hopflätade, och att skriva om allt på en gång hade stoppat 14 utvecklingsteam.",
+      did: "Jag ledde frontend-omställningen för företagsdelen med sex team och designade en arkitektur där gammalt och nytt kunde leva sida vid sida, så att varje team kunde leverera sin del själv. Som lead developer höll jag sedan ihop den gemensamma kodbasen för 14 team och coachade dem varje vecka.",
+      outcome: "<em>Sajten bytte motor bit för bit</em>, utan big bang. Största lärdomen: tekniken var den lätta delen. Att få 14 team att dra åt samma håll var det riktiga jobbet.",
+      facts: [
+        { value: "14", label: "utvecklingsteam" },
+        { value: "6", label: "team i B2B-omställningen" },
+        { value: "1", label: "gemensam kodbas" },
+      ],
+      nerdy: ["Freemarker → micro-frontends", "Monorepo", "TypeScript", "Node.js"],
+      links: [],
+    },
+    en: {
+      title: "Telia.se",
+      context: "At Telia · 2020–2022",
+      hook: "Rebuilt the front of Telia.se while the shop stayed open.",
+      problem: "Telia.se couldn't close for renovation. The old templating engine had look and business logic tangled together, and rewriting everything at once would have stopped 14 development teams.",
+      did: "I led the frontend transformation of the business (B2B) side across six teams and designed an architecture where old and new could live side by side, so each team could ship its own part. As lead developer I then kept the shared codebase for 14 teams healthy and coached them every week.",
+      outcome: "<em>The site swapped engines piece by piece</em>, no big bang. The biggest lesson: the tech was the easy part. Getting 14 teams to pull in the same direction was the real job.",
+      facts: [
+        { value: "14", label: "development teams" },
+        { value: "6", label: "teams in the B2B move" },
+        { value: "1", label: "shared codebase" },
+      ],
+      nerdy: ["Freemarker → micro-frontends", "Monorepo", "TypeScript", "Node.js"],
+      links: [],
+    },
   },
   {
     slug: "sembo-se-startpage",
-    sv: { tag: "Ledarskap", title: "Sembo.se Startsida", description: "Ledde omdesignen av Sembo.se:s startsida från ett experimentellt landningsläge till en <em>förstklassig användarupplevelse</em> — omarkitektur, prestanda och en sammanhållen design som matchade resten av plattformen.<br><br>Levererades genom <em>coachning av teamet</em> och tydliga tekniska standarder. Startsidan blev en central yta för <em>kampanjer, inspirationsinnehåll och snabb resebokning</em> — och ett bevis för vad ett litet, fokuserat team kan leverera." },
-    en: { tag: "Leadership", title: "Sembo.se Startpage", description: "Led the redesign of the Sembo.se startpage from an experimental landing into a <em>first-class user experience</em> — rearchitecture, performance, and a cohesive design matching the rest of the platform.<br><br>Delivered through <em>team coaching</em> and clear technical standards. The startpage became a key surface for <em>campaigns, inspirational content, and quick travel booking</em> — and a proof point for what a small, focused team can ship." },
+    track: "build",
+    quote: { sv: "Paweł Rokosz", en: "Paweł Rokosz" },
+    sv: {
+      title: "Sembo.se",
+      context: "Tech lead på Sembo · 2023–2025",
+      hook: "Resebyråns skyltfönster: skriv en kampanj en gång, så dyker den upp överallt där den ska.",
+      problem: "Startsidan är det första en resenär ser, men den hade börjat som ett experiment. Kampanjer, inspiration och sök skulle samsas på samma yta, och innehållet behövde gå att ändra utan att bygga om sidan.",
+      did: "Jag införde ett headless CMS med innehållet först: en kampanj skrivs en gång och blir automatiskt både kort på startsidan och egen kampanjsida. Jag fick UX, skribenter och utvecklare att skissa tillsammans, var med och rekryterade fyra nya kollegor och kodade själv, runt 31 % av teamets commits.",
+      outcome: "Startsidan blev navet för <em>kampanjer, inspiration och snabb sökning</em>, och jag hade högst output i ett team på 11.",
+      facts: [
+        { value: "11", label: "personer i teamet" },
+        { value: "4", label: "nya kollegor rekryterade" },
+        { value: "31 %", label: "av teamets commits" },
+      ],
+      nerdy: ["Next.js", "React", "TypeScript", "Sanity CMS", "A/B-tester"],
+      links: [],
+    },
+    en: {
+      title: "Sembo.se",
+      context: "Tech lead at Sembo · 2023–2025",
+      hook: "The travel agency's shop window: write a campaign once and it shows up everywhere it should.",
+      problem: "The start page is the first thing a traveller sees, but it had started life as an experiment. Campaigns, inspiration and search had to share the same space, and content needed to change without rebuilding the page.",
+      did: "I brought in a headless CMS, content first: a campaign is written once and automatically becomes both a start-page card and its own campaign page. I got UX, writers and developers sketching together, helped recruit four new colleagues and kept coding myself, about 31% of the team's commits.",
+      outcome: "The start page became the hub for <em>campaigns, inspiration and quick search</em>, and I had the highest output on a team of 11.",
+      facts: [
+        { value: "11", label: "people on the team" },
+        { value: "4", label: "new colleagues recruited" },
+        { value: "31%", label: "of the team's commits" },
+      ],
+      nerdy: ["Next.js", "React", "TypeScript", "Sanity CMS", "A/B tests"],
+      links: [],
+    },
+  },
+  {
+    slug: "tdd-command-generator",
+    track: "teach",
+    sv: {
+      title: "Lär AI:n att testa först",
+      context: "Open source + föredrag · 2025–2026",
+      hook: "AI skriver kod snabbt men slarvigt. Jag lärde den att testa först, och 100 utvecklare stjärnmärkte det på under två dygn.",
+      problem: "AI-kodagenter skriver kod självsäkert, men ofta utan att bevisa att den fungerar. Gamla funktioner går sönder när nya byggs, och man får förklara samma arbetssätt varje gång.",
+      did: "Jag paketerade mitt sätt att hålla dem ärliga, testdriven utveckling, i färdiga kommandon: skriv /red så skriver agenten först ett test som fallerar, /green så får den det att gå igenom. Det installeras med ett kommando. Sedan har jag pratat om det, bland annat hos Walley och Knowit.",
+      outcome: "<em>167 stjärnor och 21 forkar på GitHub</em>, runt 3 900 nedladdningar och en presentation som alltid ligger uppe: \"How to do your job and stop writing code\".",
+      facts: [
+        { value: "167", label: "stjärnor på GitHub" },
+        { value: "< 2 dygn", label: "till de första 100" },
+        { value: "~3 900", label: "nedladdningar" },
+      ],
+      nerdy: ["Claude Code-kommandon", "npm", "Vitest, 100 % täckningskrav", "semantic-release", "Slidev"],
+      links: [
+        gh("agent-instructions"),
+        { href: "https://pages.bernting.se/slidev-tdd-with-ai/", label: "Presentationen" },
+      ],
+    },
+    en: {
+      title: "Teaching AI to test first",
+      context: "Open source + talks · 2025–2026",
+      hook: "AI writes code fast but sloppily. I taught it to test first, and 100 developers starred it in under two days.",
+      problem: "AI coding agents write code confidently, but often without proving it works. Old features break when new ones are built, and you end up explaining the same way of working every time.",
+      did: "I packaged my way of keeping them honest, test-driven development, into ready-made commands: type /red and the agent first writes a failing test, /green and it makes it pass. It installs with one command. Since then I've talked about it at places like Walley and Knowit.",
+      outcome: "<em>167 stars and 21 forks on GitHub</em>, about 3,900 downloads and a talk that is always online: \"How to do your job and stop writing code\".",
+      facts: [
+        { value: "167", label: "GitHub stars" },
+        { value: "< 2 days", label: "to the first 100" },
+        { value: "~3,900", label: "downloads" },
+      ],
+      nerdy: ["Claude Code commands", "npm", "Vitest, 100% coverage gate", "semantic-release", "Slidev"],
+      links: [
+        gh("agent-instructions"),
+        { href: "https://pages.bernting.se/slidev-tdd-with-ai/", label: "The talk (slides)" },
+      ],
+    },
+  },
+  {
+    slug: "pi-pai",
+    track: "lab",
+    sv: {
+      title: "Pi-PAI",
+      context: "Open source-experiment · 2026",
+      hook: "Ett gäng AI-utvecklare i fickan, på en dator stor som en kortlek.",
+      problem: "Jag bar runt på laptopen överallt, bara för att kunna sätta igång enkla AI-uppgifter.",
+      did: "Jag gjorde en gammal Raspberry Pi till en verkstad som alltid är igång. Jag ger uppdraget från mobilen, med rösten eller i text, och går därifrån. En agent är arbetsledare och startar fler när det finns jobb, var och en inlåst i sin egen sandlåda. Hela uppsättningen byggs upp med ett skript.",
+      outcome: "Första provkörningen: <em>1 000 uppslag på 35 minuter</em> medan jag gjorde annat, och en notis i mobilen när det var klart. Steg-för-steg-guiden ligger på kendev.se.",
+      facts: [
+        { value: "1 000", label: "uppslag i första testet" },
+        { value: "35 min", label: "utan mig vid datorn" },
+        { value: "1", label: "Raspberry Pi" },
+      ],
+      nerdy: ["Raspberry Pi 4", "Ansible", "Docker-sandlåda", "Claude Code", "MCP", "tmux"],
+      links: [
+        { href: "https://www.kendev.se/articles/raspberry-pi-claude-server", label: "Guiden på kendev.se" },
+        gh("pi-pai"),
+      ],
+    },
+    en: {
+      title: "Pi-PAI",
+      context: "Open source experiment · 2026",
+      hook: "A small crew of AI developers in my pocket, on a computer the size of a deck of cards.",
+      problem: "I was carrying my laptop everywhere, just to kick off simple AI tasks.",
+      did: "I turned an old Raspberry Pi into an always-on workshop. I hand it a task from my phone, by voice or text, and walk away. One agent acts as foreman and starts more when there's work, each locked in its own sandbox. The whole setup is rebuilt with one script.",
+      outcome: "First test run: <em>1,000 lookups in 35 minutes</em> while I did something else, and a phone notification when it was done. The step-by-step guide is on kendev.se.",
+      facts: [
+        { value: "1,000", label: "lookups in the first test" },
+        { value: "35 min", label: "without me at the desk" },
+        { value: "1", label: "Raspberry Pi" },
+      ],
+      nerdy: ["Raspberry Pi 4", "Ansible", "Docker sandbox", "Claude Code", "MCP", "tmux"],
+      links: [
+        { href: "https://www.kendev.se/articles/raspberry-pi-claude-server", label: "The guide on kendev.se" },
+        gh("pi-pai"),
+      ],
+    },
+  },
+  {
+    slug: "adr-lint",
+    track: "teach",
+    sv: {
+      title: "ADRian",
+      context: "Open source · 2026",
+      hook: "Skriv ner teamets regler en gång. En AI-granskare kollar sedan varje ändring mot dem.",
+      problem: "Alla team har regler av typen \"så gör vi inte här\". Oftast sitter de i någons huvud och följs bara om just den personen råkar granska koden.",
+      did: "ADRian gör varje nedskriven regel till en egen AI-granskare. Varje ändring kontrolleras mot alla regler som berör den, innan den ens sparas, med rad och förslag på fix. Det började i ett kundteam, och nu har jag byggt om det som open source.",
+      outcome: "<em>Mindre tjat i kodgranskningen</em>, och regler som lever i stället för att samla damm. Samma knep styrde en artikel jag skrev: 15 regler, 22 utkast, varje utkast granskat mot varje regel.",
+      facts: [
+        { value: "8", label: "releaser" },
+        { value: "15", label: "regler i artikeltestet" },
+        { value: "22", label: "utkast granskade" },
+      ],
+      nerdy: ["Architecture Decision Records", "Go", "Claude Code CLI", "Git hooks", "Homebrew"],
+      links: [gh("adrian")],
+    },
+    en: {
+      title: "ADRian",
+      context: "Open source · 2026",
+      hook: "Write your team's rules down once. An AI reviewer then checks every change against them.",
+      problem: "Every team has rules like \"we don't do it that way here\". Usually they live in someone's head and are only enforced if that person happens to review your code.",
+      did: "ADRian turns each written rule into its own AI reviewer. Every change is checked against every rule that applies, before it is even committed, with the line and a suggested fix. It started in a client's team, and I've since rebuilt it as open source.",
+      outcome: "<em>Less nagging in code review</em>, and rules that stay alive instead of gathering dust. The same trick steered an article I wrote: 15 rules, 22 drafts, every draft checked against every rule.",
+      facts: [
+        { value: "8", label: "releases" },
+        { value: "15", label: "rules in the article test" },
+        { value: "22", label: "drafts reviewed" },
+      ],
+      nerdy: ["Architecture Decision Records", "Go", "Claude Code CLI", "Git hooks", "Homebrew"],
+      links: [gh("adrian")],
+    },
+  },
+  {
+    slug: "community-assistant",
+    track: "lab",
+    sv: {
+      title: "Styrelsens AI-assistent",
+      context: "Prototyp · 2025",
+      hook: "Gör jobbet ingen i styrelsen vill göra: mejlkorgen.",
+      problem: "Ideella styrelser i bostadsföreningar drunknar i samma mejl: parkering, nycklar, soprummet. Mejl hamnar mellan stolarna och ingen vet vem som svarade vad.",
+      did: "En prototyp som läser föreningens inkorg, taggar och sammanfattar varje mejl och samlar allt i ett delat kalkylark, med påminnelser när något blir liggande. Styrelsen skriver bara \"jag har ringt rörmokaren\" i chatten. Den kan skriva ett utkast till svar, men det är alltid en människa som trycker på skicka.",
+      outcome: "Det svåra var att testa en AI som aldrig svarar likadant två gånger. Lösningen blev <em>tre testnivåer</em>: låtsas-AI för fart, en pytteliten AI-modell som generalrepetition och den riktiga modellen sist.",
+      facts: [
+        { value: "5 min", label: "mellan inkorgskollarna" },
+        { value: "3", label: "testnivåer" },
+        { value: "80 %", label: "testtäckning som krav" },
+      ],
+      nerdy: ["Akka SDK", "Event sourcing", "Gmail API", "Google Sheets API", "SmolLM2-135M (testnivå)", "JaCoCo"],
+      links: [gh("community-assistant")],
+    },
+    en: {
+      title: "The board's AI assistant",
+      context: "Prototype · 2025",
+      hook: "Doing the job nobody on the board wants to do: the inbox.",
+      problem: "Volunteer boards in housing associations drown in the same emails: parking, keys, the bin room. Mails slip between board members and nobody knows who answered what.",
+      did: "A prototype that reads the association's inbox, tags and summarises every email and gathers it all in one shared spreadsheet, with reminders when something sits too long. Board members just say \"I called the plumber\" in chat. It can draft a reply, but a human always presses send.",
+      outcome: "The hard part was testing an AI that never answers the same way twice. The answer was <em>three test levels</em>: a fake AI for speed, a tiny AI model as a dress rehearsal and the real model last.",
+      facts: [
+        { value: "5 min", label: "between inbox checks" },
+        { value: "3", label: "test levels" },
+        { value: "80%", label: "test coverage required" },
+      ],
+      nerdy: ["Akka SDK", "Event sourcing", "Gmail API", "Google Sheets API", "SmolLM2-135M (test tier)", "JaCoCo"],
+      links: [gh("community-assistant")],
+    },
+  },
+  {
+    slug: "linkedin-conversation-analysis",
+    track: "lab",
+    sv: {
+      title: "Vem svarar på LinkedIn?",
+      context: "Egen dataanalys · 2025",
+      hook: "Säg \"hej\" och hälften tystnar. Dela något användbart och nästan ingen gör det.",
+      problem: "Som enmansbyrå ville jag veta vilka av mina LinkedIn-samtal som faktiskt leder någonstans.",
+      did: "Jag exporterade mina egna meddelanden och lät AI sortera två månaders samtal, 107 stycken, i 13 typer, från jobberbjudanden till födelsedagshälsningar. Resultatet blev en dashboard med 7 vyer.",
+      outcome: "Lärdomen var rak. När jag bara skrev \"hej!\" dog <em>13 av 26</em> samtal direkt. När jag delade något användbart, som mina AI-kommandon, blev <em>1 av 25</em> obesvarat.",
+      facts: [
+        { value: "107", label: "samtal analyserade" },
+        { value: "13/26", label: "tystnade efter \"hej!\"" },
+        { value: "1/25", label: "tystnade när jag delade något" },
+      ],
+      nerdy: ["Node.js", "LLM-klassificering", "D3", "Observable Plot"],
+      links: [],
+    },
+    en: {
+      title: "Who actually replies?",
+      context: "Own data analysis · 2025",
+      hook: "Say \"hi\" and half go quiet. Share something useful and almost nobody does.",
+      problem: "As a one-man consultancy I wanted to know which of my LinkedIn conversations actually lead somewhere.",
+      did: "I exported my own messages and had AI sort two months of conversations, 107 of them, into 13 types, from job offers to birthday wishes. The result was a dashboard with 7 views.",
+      outcome: "The lesson was blunt. When I just wrote \"hi!\", <em>13 of 26</em> conversations died right there. When I shared something useful, like my AI commands, <em>1 of 25</em> went unanswered.",
+      facts: [
+        { value: "107", label: "conversations analysed" },
+        { value: "13/26", label: "went quiet after \"hi!\"" },
+        { value: "1/25", label: "went quiet when I shared" },
+      ],
+      nerdy: ["Node.js", "LLM classification", "D3", "Observable Plot"],
+      links: [],
+    },
+  },
+  {
+    slug: "architectural-blueprint-to-3d",
+    track: "lab",
+    sv: {
+      title: "Från ritning till 3D",
+      context: "Eget experiment · 2026",
+      hook: "Stängt filformat: återvändsgränd. Öppet filformat: jag klev in i vårt framtida badrum.",
+      problem: "Vi renoverar badrummet, och jag ville stå i det innan någon lyft en hammare. Första försöket var arkitektens AutoCAD-ritning, ett stängt format där mina AI-agenter inte kom någonstans.",
+      did: "Sedan skickade arkitekten även en IFC-fil, en öppen standard. Agenterna skrev en konverterare från grunden, och ritningen blev ett 3D-rum där vi byter färger, växlar mellan dag- och kvällsljus och kan kliva in med VR-headset.",
+      outcome: "Lärdomen tar jag med mig till kunder: <em>AI är bara så kapabel som formaten du låter den läsa.</em>",
+      facts: [
+        { value: "0", label: "beroenden i konverteraren" },
+        { value: "1:1", label: "skala i VR" },
+      ],
+      nerdy: ["IFC", "Python", "Babylon.js", "WebXR"],
+      links: [],
+    },
+    en: {
+      title: "From blueprint to 3D",
+      context: "Own experiment · 2026",
+      hook: "Closed file format: dead end. Open file format: I walked into our future bathroom.",
+      problem: "We're renovating our bathroom, and I wanted to stand in it before anyone picked up a hammer. The first attempt was the architect's AutoCAD drawing, a closed format where my AI agents got nowhere.",
+      did: "Then the architect also sent an IFC file, an open standard. The agents wrote a converter from scratch, and the drawing became a 3D room where we swap colours, switch between day and evening light and can walk in with a VR headset.",
+      outcome: "The lesson I bring to clients: <em>AI is only as capable as the formats you let it read.</em>",
+      facts: [
+        { value: "0", label: "dependencies in the converter" },
+        { value: "1:1", label: "scale in VR" },
+      ],
+      nerdy: ["IFC", "Python", "Babylon.js", "WebXR"],
+      links: [],
+    },
   },
 ] as const satisfies readonly ProjectEntry[];
 
 /** Literal union of every valid project slug. Drives compile-time validation of slug-keyed maps. */
 export type ProjectSlug = (typeof projectEntries)[number]["slug"];
 
-export function getProjects(lang: Lang): Project[] {
-  return projectEntries.map((entry) => entry[lang]);
+/**
+ * Slugs that used to exist and now live inside another card. Old deep links
+ * (`/#tdd-with-ai-presentation`) keep working by resolving to the new card.
+ */
+export const SLUG_ALIASES: Record<string, ProjectSlug> = {
+  "tdd-with-ai-presentation": "tdd-command-generator",
+};
+
+interface TrackCopy {
+  label: string;
+  /** Closing line on every card in this track */
+  cta: string;
 }
 
-/** Generate a URL slug from an English project title. */
+export interface TrackStyle {
+  /** Chip / accent colour */
+  color: string;
+}
+
+const trackColor = (id: "teach" | "legacy" | "build") =>
+  trackEntries.find((t) => t.id === id)!.color;
+
+/** Track labels, colours and per-track CTA. Colours come from the contact slide. */
+export const PROJECT_TRACKS: Record<ProjectTrack, TrackStyle & Record<Lang, TrackCopy>> = {
+  legacy: {
+    color: trackColor("legacy"),
+    sv: { label: "Legacyräddning", cta: "Har ni ett system som krånglar, eller tyst drar in pengar?" },
+    en: { label: "Legacy rescue", cta: "Got a system that misbehaves, or quietly makes you money?" },
+  },
+  build: {
+    color: trackColor("build"),
+    sv: { label: "Bygge", cta: "Vill ni ha något liknande byggt?" },
+    en: { label: "Build", cta: "Want something like this built?" },
+  },
+  teach: {
+    color: trackColor("teach"),
+    sv: { label: "Lära ut", cta: "Vill ditt team jobba så här? Jag håller workshops." },
+    en: { label: "Teaching", cta: "Want your team working like this? I run workshops." },
+  },
+  lab: {
+    color: "#e07ab0",
+    sv: { label: "Experiment", cta: "Nyfiken på vad det här kan betyda för er?" },
+    en: { label: "Experiment", cta: "Curious what this could mean for you?" },
+  },
+};
+
+export const TRACK_ORDER: ProjectTrack[] = ["legacy", "build", "teach", "lab"];
+
+export interface ProjectQuote {
+  text: string;
+  name: string;
+  relation: string;
+}
+
+/** A fully resolved project for one locale, ready to render. */
+export interface Project extends ProjectCopy {
+  slug: ProjectSlug;
+  track: ProjectTrack;
+  flagship: boolean;
+  /** Track label, e.g. "Legacyräddning" */
+  tag: string;
+  quote: ProjectQuote | null;
+}
+
+function resolveQuote(name: string | undefined, lang: Lang): ProjectQuote | null {
+  if (!name) return null;
+  const t = testimonials.find((q) => q.name === name);
+  if (!t) return null;
+  return { text: t.text, name: t.name, relation: t.relation[lang] };
+}
+
+export function getProjects(lang: Lang): Project[] {
+  return projectEntries.map((entry) => {
+    const e = entry as ProjectEntry;
+    return {
+      ...(e[lang] as ProjectCopy),
+      slug: entry.slug,
+      track: e.track,
+      flagship: e.flagship ?? false,
+      tag: PROJECT_TRACKS[e.track][lang].label,
+      quote: resolveQuote(e.quote?.[lang], lang),
+    };
+  });
+}
+
+/** Generate a URL slug from a title. */
 export function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -144,6 +565,13 @@ export function slugify(title: string): string {
 /** All project slugs, in display order. */
 export function getProjectSlugs(): ProjectSlug[] {
   return projectEntries.map((entry) => entry.slug);
+}
+
+/** Resolve a URL hash (without `#`) to a current slug, following aliases. */
+export function resolveProjectSlug(hash: string): ProjectSlug | null {
+  const slugs = getProjectSlugs() as string[];
+  if (slugs.includes(hash)) return hash as ProjectSlug;
+  return SLUG_ALIASES[hash] ?? null;
 }
 
 export { projectEntries };

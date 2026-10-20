@@ -1,24 +1,40 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
-import { getProjects, getProjectSlugs } from "../i18n/projects";
-import { PROJECT_ILLUSTRATIONS } from "./projectIllustrations";
+import { getProjects, PROJECT_TRACKS, TRACK_ORDER, SLUG_ALIASES } from "../i18n/projects";
+import { getProjectIllustrations } from "./projectIllustrations";
 import { blurPlaceholder } from "../utils/blur-placeholder";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 const projects = getProjects(lang);
-const slugs = getProjectSlugs();
+const illustrations = getProjectIllustrations(lang);
+
+// Legend: only tracks that have at least one project, in a fixed order.
+const legend = TRACK_ORDER
+    .map((id) => ({ id, color: PROJECT_TRACKS[id].color, label: PROJECT_TRACKS[id][lang].label, cta: PROJECT_TRACKS[id][lang].cta }))
+    .filter((tr) => projects.some((p) => p.track === tr.id));
+const trackData = Object.fromEntries(legend.map((tr) => [tr.id, { color: tr.color, label: tr.label, cta: tr.cta }]));
 
 // Generate blur placeholders for every photo illustration at build time.
-// Source list comes from PROJECT_ILLUSTRATIONS so it stays in sync automatically.
 const blurMap: Record<string, { dataUrl: string; width: number; height: number }> = {};
-for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
+for (const illustration of Object.values(illustrations)) {
     if (illustration?.kind === "photo") {
         const filename = illustration.src.replace(/^\//, "");
         blurMap[illustration.src] = await blurPlaceholder(filename);
     }
 }
+
+const labels = {
+    problem: t("projects.section.problem"),
+    did: t("projects.section.did"),
+    outcome: t("projects.section.outcome"),
+    underHood: t("projects.under-hood"),
+    facts: t("projects.facts.aria"),
+    links: t("projects.links"),
+    cta: t("projects.cta.button"),
+    position: t("projects.position"),
+};
 ---
 
 <div class="section-inner roller-section" data-testid="projects-section">
@@ -29,11 +45,20 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
             {t("projects.heading.before")}<span class="highlight">{t("projects.heading.highlight")}</span>{t("projects.heading.after")}
         </h2>
 
+        <div class="roller-legend" data-testid="roller-legend">
+            <span class="roller-count">{t("projects.count").replace("{n}", String(projects.length))}</span>
+            {legend.map((tr) => (
+                <button class="legend-chip" data-track={tr.id} style={`--chip:${tr.color}`} title={t("projects.legend.aria")}>
+                    <span class="legend-dot" aria-hidden="true"></span>{tr.label}
+                </button>
+            ))}
+        </div>
+
         <div class="roller-wrapper">
             <button class="roller-arrow" data-testid="roller-arrow-up" aria-label={t("projects.aria.prev")}>&#x25B2;</button>
 
             <div class="roller-viewport" data-testid="roller" data-keen-slider-clickable role="listbox" aria-label={t("projects.aria.list")}>
-                <div id="roller-track" class="roller-track" aria-live="polite">
+                <div id="roller-track" class="roller-track">
                     <!-- Slides populated by script -->
                 </div>
                 <!-- Centre-slot highlight overlay -->
@@ -43,18 +68,20 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
             <button class="roller-arrow" data-testid="roller-arrow-down" aria-label={t("projects.aria.next")}>&#x25BC;</button>
         </div>
 
+        <p class="roller-hook" data-testid="roller-hook" aria-live="polite"></p>
+
         <div class="roller-actions">
-            <button class="action-button action-button--spin" data-testid="spin-button">
+            <button class="action-button action-button--spin" data-testid="spin-button" aria-label={t("projects.spin")} title={t("projects.spin")}>
                 <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M 19.5 12 A 7.5 7.5 0 1 0 15 18.9" />
                     <polyline points="19.5,8 19.5,12 15.5,12" />
                 </svg>
             </button>
-            <!-- Hidden but functional for test automation -->
-            <button class="action-button action-button--open sr-only" data-testid="open-button">
-                {t("projects.open")} &#x2192;
+            <button class="action-button action-button--open" data-testid="open-button">
+                {t("projects.open")} <span class="open-arrow" aria-hidden="true">&#x2192;</span>
             </button>
         </div>
+        <p class="roller-hint" aria-hidden="true">{t("projects.hint")}</p>
     </div>
 
     <!-- ===== VIEW 2: Detail ===== -->
@@ -62,8 +89,17 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         <button class="back-button" data-testid="back-button" aria-label={t("projects.aria.back")} data-label={t("projects.back")}>
             <span class="back-arrow">&#x2190;</span> {t("projects.back")}
         </button>
-        <div class="detail-card" data-testid="detail-card">
+        <article class="detail-card" data-testid="detail-card">
             <!-- Detail content injected by script -->
+        </article>
+        <div class="detail-footer" data-testid="detail-footer">
+            <button class="back-button back-button--bottom" aria-label={t("projects.aria.back")}>
+                <span class="back-arrow">&#x2190;</span> {t("projects.back")}
+            </button>
+            <span class="detail-position" data-testid="detail-position"></span>
+            <button class="next-button" data-testid="next-button">
+                {t("projects.next")} <span class="next-arrow" aria-hidden="true">&#x2192;</span>
+            </button>
         </div>
     </div>
 </div>
@@ -75,9 +111,10 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     <div class="projects-grid">
         {projects.map((p) => (
             <div class="project-card">
-                <div class="project-tag">{p.tag}</div>
+                <div class="project-tag">{p.tag} · {p.context}</div>
                 <h3>{p.title}</h3>
-                <p>{p.description}</p>
+                <p>{p.hook}</p>
+                <p set:html={p.outcome} />
             </div>
         ))}
     </div>
@@ -85,55 +122,70 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
 
 <!-- Inject translated project data for client JS -->
 <script type="application/json" id="projects-i18n-data" set:html={JSON.stringify(projects)} />
-<script type="application/json" id="projects-slugs-data" set:html={JSON.stringify(slugs)} />
+<script type="application/json" id="projects-aliases-data" set:html={JSON.stringify(SLUG_ALIASES)} />
 <script type="application/json" id="projects-blur-data" set:html={JSON.stringify(blurMap)} />
-<script type="application/json" id="projects-illustrations-data" set:html={JSON.stringify(PROJECT_ILLUSTRATIONS)} />
+<script type="application/json" id="projects-illustrations-data" set:html={JSON.stringify(illustrations)} />
+<script type="application/json" id="projects-tracks-data" set:html={JSON.stringify(trackData)} />
+<script type="application/json" id="projects-labels-data" set:html={JSON.stringify(labels)} />
 
 <script>
-    const PROJECTS: { tag: string; title: string; description: string }[] =
-        JSON.parse(document.getElementById("projects-i18n-data")!.textContent!);
+    import { mod, pickLanding, nextInTrack } from "../utils/roller";
 
-    /* ── Deep-link slug map (English titles → index) ── */
-    const PROJECT_SLUGS: string[] =
-        JSON.parse(document.getElementById("projects-slugs-data")!.textContent!);
-    const slugToIndex: Record<string, number> = {};
-    PROJECT_SLUGS.forEach((slug, i) => { slugToIndex[slug] = i; });
+    interface ProjectData {
+        slug: string; track: string; flagship: boolean; tag: string;
+        title: string; context: string; hook: string;
+        problem: string; did: string; outcome: string;
+        facts: { value: string; label: string }[];
+        nerdy: string[];
+        links: { href: string; label: string }[];
+        quote: { text: string; name: string; relation: string } | null;
+    }
+    const json = <T,>(id: string): T => JSON.parse(document.getElementById(id)!.textContent!);
 
-    /* ── Blur placeholders for photo dioramas ── */
-    const BLUR_DATA: Record<string, { dataUrl: string; width: number; height: number }> =
-        JSON.parse(document.getElementById("projects-blur-data")!.textContent!);
-
-    /* ── Illustrations (per-slug discriminated union, validated at compile time
-       in projectIllustrations.ts via Record<ProjectSlug, Illustration | null>).
-       Slug-keyed and exhaustive: missing or stale entries break the build. ── */
+    const PROJECTS = json<ProjectData[]>("projects-i18n-data");
+    const ALIASES = json<Record<string, string>>("projects-aliases-data");
+    const BLUR_DATA = json<Record<string, { dataUrl: string; width: number; height: number }>>("projects-blur-data");
     type Illustration =
         | { kind: "svg"; markup: string }
-        | { kind: "photo"; src: string; alt: string };
-    const PROJECT_ILLUSTRATIONS: Record<string, Illustration | null> =
-        JSON.parse(document.getElementById("projects-illustrations-data")!.textContent!);
+        | { kind: "photo"; src: string; alt: string; caption?: string };
+    const ILLUSTRATIONS = json<Record<string, Illustration | null>>("projects-illustrations-data");
+    const TRACKS = json<Record<string, { color: string; label: string; cta: string }>>("projects-tracks-data");
+    const LABELS = json<Record<string, string>>("projects-labels-data");
+
+    /* ── Deep-link slug map (slug → index), with aliases for merged cards ── */
+    const PROJECT_SLUGS = PROJECTS.map((p) => p.slug);
+    const TRACK_OF = PROJECTS.map((p) => p.track);
+    const slugToIndex: Record<string, number> = {};
+    PROJECT_SLUGS.forEach((slug, i) => { slugToIndex[slug] = i; });
+    function indexForHash(hash: string): number | null {
+        const slug = hash in slugToIndex ? hash : ALIASES[hash];
+        return slug != null && slug in slugToIndex ? slugToIndex[slug] : null;
+    }
+
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
     /** Build a photo diorama with blur-up placeholder. */
-    function photoDiorama(src: string, alt: string): string {
+    function photoDiorama(src: string, alt: string, caption?: string): string {
         const blur = BLUR_DATA[src];
-        if (!blur) {
-            return `<div class="diorama diorama--photo"><img src="${src}" alt="${alt}" style="display:block;width:100%;height:auto;" /></div>`;
-        }
-        return `<div class="diorama diorama--photo">
-            <div class="diorama-blur" style="background-image:url(${blur.dataUrl})">
-                <img src="${src}" alt="${alt}" width="${blur.width}" height="${blur.height}" onload="this.classList.add('loaded')" />
-            </div>
-        </div>`;
+        const img = blur
+            ? `<div class="diorama-blur" style="background-image:url(${blur.dataUrl})">
+                <img src="${src}" alt="${esc(alt)}" width="${blur.width}" height="${blur.height}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" />
+              </div>`
+            : `<img src="${src}" alt="${esc(alt)}" style="display:block;width:100%;height:auto;" />`;
+        const cap = caption ? `<figcaption class="diorama-caption">${esc(caption)}</figcaption>` : "";
+        return `<figure class="diorama-figure"><div class="diorama diorama--photo">${img}</div>${cap}</figure>`;
     }
 
     /** Render the illustration for a given project slug, branching by kind. */
     function renderIllustration(slug: string): string {
-        const il = PROJECT_ILLUSTRATIONS[slug];
+        const il = ILLUSTRATIONS[slug];
         if (!il) return "";
         if (il.kind === "svg") return il.markup;
-        return photoDiorama(il.src, il.alt);
+        return photoDiorama(il.src, il.alt, il.caption);
     }
 
     const N = PROJECTS.length;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let scrollPos = 0;       // continuous fractional scroll position
     let currentIdx = 0;      // integer index of selected item (set when settled)
@@ -145,11 +197,19 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
 
     const section = document.querySelector("[data-testid='projects-section']") as HTMLElement;
     const detailCard = document.querySelector("[data-testid='detail-card']") as HTMLElement;
+    const detailViewEl = section?.querySelector(".detail-view") as HTMLElement | null;
     const spinBtn = document.querySelector("[data-testid='spin-button']") as HTMLElement;
     const openBtn = document.querySelector("[data-testid='open-button']") as HTMLElement;
+    // Rotate the icon, not the button: a rotated button's corners overflow the
+    // section and the browser scrolled the clipped section to reveal them (jitter).
+    const spinIcon = spinBtn?.querySelector(".spin-icon") as SVGElement | null;
     const arrowUp = document.querySelector("[data-testid='roller-arrow-up']") as HTMLElement;
     const arrowDown = document.querySelector("[data-testid='roller-arrow-down']") as HTMLElement;
-    const backBtn = document.querySelector("[data-testid='back-button']") as HTMLElement;
+    const backBtns = Array.from(section.querySelectorAll(".back-button")) as HTMLElement[];
+    const nextBtn = document.querySelector("[data-testid='next-button']") as HTMLElement;
+    const positionEl = document.querySelector("[data-testid='detail-position']") as HTMLElement;
+    const hookEl = document.querySelector("[data-testid='roller-hook']") as HTMLElement;
+    const legendChips = Array.from(section.querySelectorAll(".legend-chip")) as HTMLElement[];
     const track = document.getElementById("roller-track") as HTMLElement;
     const viewport = document.querySelector("[data-testid='roller']") as HTMLElement;
 
@@ -157,33 +217,32 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     const SLIDE_HEIGHT = window.matchMedia("(min-width: 901px)").matches ? 76 : 60;
     const CENTER_OFFSET = window.matchMedia("(min-height: 600px)").matches ? 1.5 : 1;
 
-    function tagKey(tag: string): string {
-        const t = tag.toLowerCase();
-        if (t === "ai-agent" || t === "ai agent" || t === "ai / rag") return "ai";
-        if (t === "infrastruktur" || t === "infrastructure") return "infra";
-        if (t.includes("legacy") || t === "modernisering" || t === "modernization") return "legacy";
-        if (t === "open source") return "open-source";
-        if (t === "undervisning" || t === "teaching") return "teaching";
-        if (t === "företag" || t === "business" || t === "ledarskap" || t === "leadership" || t === "dataanalys" || t === "data analysis") return "business";
-        if (t === "meta") return "meta";
-        return "creative"; // Personal Project, Game, 3D Visualization, fallback
-    }
-
     // Build slide elements
     PROJECTS.forEach((p, i) => {
         const slide = document.createElement("div");
         slide.className = "roller-slide";
         slide.setAttribute("role", "option");
         slide.dataset.index = String(i);
-        const key = tagKey(p.tag);
-        slide.innerHTML = `<span class="roller-slide__tag" data-key="${key}">${p.tag}</span><span class="roller-slide__title">${p.title}</span>`;
+        slide.dataset.track = p.track;
+        const color = TRACKS[p.track]?.color ?? "#8888a0";
+        slide.innerHTML = `<span class="roller-slide__tag" style="--chip:${color}">${esc(p.tag)}</span><span class="roller-slide__title">${esc(p.title)}</span>`;
         track.appendChild(slide);
     });
 
     const slides = Array.from(track.querySelectorAll(".roller-slide")) as HTMLElement[];
 
-    function mod(n: number, m: number): number {
-        return ((n % m) + m) % m;
+    // ── Hook line under the roller ───────────────────────
+    let hookIdx = -1;
+    function showHook(idx: number) {
+        if (idx === hookIdx) return;
+        hookIdx = idx;
+        const p = PROJECTS[idx];
+        hookEl.textContent = p.hook;
+        hookEl.style.setProperty("--chip", TRACKS[p.track]?.color ?? "var(--purple)");
+        hookEl.classList.remove("roller-hook--in");
+        void hookEl.offsetWidth; // restart the fade-in
+        hookEl.classList.add("roller-hook--in");
+        legendChips.forEach((c) => c.classList.toggle("is-current", c.dataset.track === p.track));
     }
 
     // ── Rendering (continuous) ────────────────────────────
@@ -236,6 +295,8 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
                 }
             }
         });
+
+        if (isSettled && !isSpinning) showHook(centerIdx);
     }
 
     // ── Smooth navigation animation ──────────────────────
@@ -280,19 +341,16 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         navAnimId = requestAnimationFrame(animate);
     }
 
-    function next() {
+    function goTo(idx: number) {
         if (isSpinning || isDetailView) return;
-        targetIdx = mod(targetIdx + 1, N);
+        targetIdx = mod(idx, N);
         animateTo(targetIdx);
     }
+    const next = () => goTo(targetIdx + 1);
+    const prev = () => goTo(targetIdx - 1);
 
-    function prev() {
-        if (isSpinning || isDetailView) return;
-        targetIdx = mod(targetIdx - 1, N);
-        animateTo(targetIdx);
-    }
-
-    // Initial render
+    // Start somewhere random so the arrival spin doesn't always land on the same case
+    scrollPos = currentIdx = targetIdx = Math.floor(Math.random() * N);
     render();
 
     // ── Touch / pointer drag ─────────────────────────────
@@ -300,18 +358,21 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     let dragStartPos = 0;
     let isDragging = false;
 
+    function stopSpin() {
+        if (spinAnimId) { cancelAnimationFrame(spinAnimId); spinAnimId = null; }
+        isSpinning = false;
+        isSettling = false;
+        spinVelocity = 0;
+        section?.classList.remove("is-spinning");
+        viewport?.classList.remove("roller-spinning");
+        spinBtn?.classList.remove("spinning");
+    }
+
     viewport?.addEventListener("pointerdown", (e: PointerEvent) => {
         if (isDetailView) return;
         e.stopPropagation();
         // Cancel any active spin — user takes over
-        if (isSpinning) {
-            if (spinAnimId) { cancelAnimationFrame(spinAnimId); spinAnimId = null; }
-            isSpinning = false;
-            isSettling = false;
-            spinVelocity = 0;
-            viewport?.classList.remove("roller-spinning");
-            spinBtn?.classList.remove("spinning");
-        }
+        if (isSpinning) stopSpin();
         if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
         isDragging = true;
         dragStartY = e.clientY;
@@ -375,10 +436,18 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     let currentFriction = 0.97;
     let spinStartIdx = 0;
     let isFirstSpin = true;
-    const SKIP_FIRST_SPIN = new Set([
-        slugToIndex["tdd-command-generator"],
-        slugToIndex["tdd-with-ai-presentation"],
-    ].filter(i => i != null));
+    /** The first spin of a visit lands on a flagship case, never a side quest. */
+    const FIRST_SPIN_TARGETS = new Set(PROJECTS.map((p, i) => (p.flagship ? i : -1)).filter((i) => i >= 0));
+
+    function startSpinLoop() {
+        isSpinning = true;
+        spinStartIdx = currentIdx;
+        lastSpinTime = performance.now();
+        section?.classList.add("is-spinning");
+        viewport?.classList.add("roller-spinning");
+        spinBtn?.classList.add("spinning");
+        spinAnimId = requestAnimationFrame(spinLoop);
+    }
 
     function spin() {
         if (isDetailView) return;
@@ -390,14 +459,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         // Randomize friction each spin so duration feels different
         currentFriction = FRICTION_MIN + Math.random() * (FRICTION_MAX - FRICTION_MIN);
 
-        if (!isSpinning) {
-            isSpinning = true;
-            spinStartIdx = currentIdx;
-            lastSpinTime = performance.now();
-            viewport?.classList.add("roller-spinning");
-            spinBtn?.classList.add("spinning");
-            spinAnimId = requestAnimationFrame(spinLoop);
-        }
+        if (!isSpinning) startSpinLoop();
     }
 
     let isSettling = false;
@@ -410,31 +472,24 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         const dt = Math.min((now - lastSpinTime) / 1000, 0.05);
         lastSpinTime = now;
 
-        // Settling phase — smooth ease into the target slot
+        // Settling phase — elastic ease into the target slot
         if (isSettling) {
             const t = Math.min((now - settleStart) / SETTLE_DURATION, 1);
-            // Overshoot ease: slight bounce past target then back
-            const eased = t < 0.7
-                ? 1.2 * (t / 0.7) * (t / 0.7) * (3 - 2 * (t / 0.7)) // smooth overshoot
-                : 1.0 + 0.2 * (1 - ((t - 0.7) / 0.3)) * (1 - ((t - 0.7) / 0.3)) * -1 + 0.2; // settle back
-            // Simpler: use an elastic-ish ease
             const elastic = t === 1 ? 1 : 1 - Math.pow(2, -10 * t) * Math.cos((t * 10 - 0.75) * (2 * Math.PI / 3));
             scrollPos = settleFrom + (settleTo - settleFrom) * elastic;
             btnAngle += (1 - t) * 2; // gentle residual button rotation
-            if (spinBtn) spinBtn.style.transform = `rotate(${btnAngle}deg)`;
+            if (spinIcon) spinIcon.style.transform = `rotate(${btnAngle}deg)`;
             render();
 
             if (t >= 1) {
                 scrollPos = mod(settleTo, N);
                 currentIdx = mod(settleTo, N);
                 targetIdx = currentIdx;
-                isSpinning = false;
-                isSettling = false;
-                viewport?.classList.remove("roller-spinning");
-                spinBtn?.classList.remove("spinning");
-                spinAnimId = null;
+                stopSpin();
                 render();
-                setTimeout(() => transitionToDetail(), 400);
+                // No auto-open: the hook line + "Read more" invite the click.
+                section?.classList.add("just-landed");
+                setTimeout(() => section?.classList.remove("just-landed"), 900);
                 return;
             }
 
@@ -446,63 +501,106 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         spinVelocity *= currentFriction;
         scrollPos += spinVelocity * dt;
         btnAngle += spinVelocity * dt * 60;
-        if (spinBtn) spinBtn.style.transform = `rotate(${btnAngle}deg)`;
+        if (spinIcon) spinIcon.style.transform = `rotate(${btnAngle}deg)`;
         render();
 
         if (spinVelocity < SETTLE_THRESHOLD) {
-            // Transition to settle phase
             isSettling = true;
             settleStart = now;
             settleFrom = scrollPos;
-            settleTo = Math.round(scrollPos);
-            // Never land on the same item we started on
-            if (mod(settleTo, N) === mod(spinStartIdx, N)) {
-                settleTo += (scrollPos >= spinStartIdx) ? 1 : -1;
-            }
-            // Don't land on TDD projects on the very first spin
-            if (isFirstSpin && SKIP_FIRST_SPIN.has(mod(settleTo, N))) {
-                settleTo += 1;
-            }
-            if (isFirstSpin) isFirstSpin = false;
+            settleTo = pickLanding(
+                Math.round(scrollPos),
+                spinStartIdx,
+                N,
+                isFirstSpin ? FIRST_SPIN_TARGETS : new Set(),
+            );
+            isFirstSpin = false;
             spinVelocity = 0;
         }
 
         spinAnimId = requestAnimationFrame(spinLoop);
     }
 
-    // ── Detail view transitions ──────────────────────────
+    // ── Detail view ──────────────────────────────────────
+    function cardHtml(p: ProjectData): string {
+        const color = TRACKS[p.track]?.color ?? "var(--purple)";
+        const facts = p.facts.length
+            ? `<ul class="detail-facts" aria-label="${esc(LABELS.facts)}">${p.facts
+                  .map((f) => `<li class="detail-fact"><span class="detail-fact__value">${esc(f.value)}</span><span class="detail-fact__label">${esc(f.label)}</span></li>`)
+                  .join("")}</ul>`
+            : "";
+        const block = (label: string, html: string, extra = "") =>
+            `<section class="detail-section${extra}"><h4>${esc(label)}</h4><p>${html}</p></section>`;
+        const quote = p.quote
+            ? `<blockquote class="detail-quote"><p>“${esc(p.quote.text)}”</p><footer>${esc(p.quote.name)}, ${esc(p.quote.relation)}</footer></blockquote>`
+            : "";
+        const links = p.links.length
+            ? `<div class="detail-links"><span class="detail-small-label">${esc(LABELS.links)}</span>${p.links
+                  .map((l) => `<a class="detail-link" href="${esc(l.href)}" target="_blank" rel="noopener noreferrer">${esc(l.label)} <span aria-hidden="true">↗</span></a>`)
+                  .join("")}</div>`
+            : "";
+        const nerdy = `<div class="detail-nerdy"><span class="detail-small-label">${esc(LABELS.underHood)}</span><ul>${p.nerdy
+            .map((n) => `<li>${esc(n)}</li>`)
+            .join("")}</ul></div>`;
+        const cta = `<div class="detail-cta"><p>${esc(TRACKS[p.track]?.cta ?? "")}</p><button class="detail-cta__button" data-testid="detail-cta">${esc(LABELS.cta)} <span aria-hidden="true">→</span></button></div>`;
+
+        return `
+            <div class="detail-card__inner" style="--chip:${color}">
+                <div class="detail-meta">
+                    <span class="project-tag">${esc(p.tag)}</span>
+                    <span class="detail-context">${esc(p.context)}</span>
+                </div>
+                <h3>${esc(p.title)}</h3>
+                <p class="detail-hook">${esc(p.hook)}</p>
+                ${facts}
+                ${renderIllustration(p.slug)}
+                ${block(LABELS.problem, p.problem)}
+                ${block(LABELS.did, p.did)}
+                ${block(LABELS.outcome, p.outcome, " detail-section--outcome")}
+                ${quote}
+                ${links}
+                ${nerdy}
+                ${cta}
+            </div>`;
+    }
+
+    function fillDetail(idx: number) {
+        const p = PROJECTS[idx];
+        detailCard.innerHTML = cardHtml(p);
+        detailCard.querySelector("[data-testid='detail-cta']")?.addEventListener("click", goToContact);
+        if (positionEl) positionEl.textContent = LABELS.position.replace("{i}", String(idx + 1)).replace("{n}", String(N));
+        if (detailViewEl) detailViewEl.scrollTop = 0;
+        history.replaceState(null, "", "#" + p.slug);
+    }
+
     function transitionToDetail() {
         if (isDetailView || isSpinning) return;
         isDetailView = true;
-        const p = PROJECTS[currentIdx];
-        if (detailCard) {
-            const illustration = renderIllustration(PROJECT_SLUGS[currentIdx]);
-            detailCard.innerHTML = `
-                ${illustration}
-                <div class="project-tag" data-key="${tagKey(p.tag)}">${p.tag}</div>
-                <h3>${p.title}</h3>
-                <p>${p.description}</p>
-                <button class="back-button back-button--bottom" aria-label="${backBtn?.getAttribute("aria-label") ?? "Back"}">
-                    <span class="back-arrow">&#x2190;</span> ${backBtn?.dataset.label ?? "Back"}
-                </button>
-            `;
-            // Wire up the bottom back button
-            detailCard.querySelector(".back-button--bottom")?.addEventListener("click", () => transitionToRoller());
-        }
+        fillDetail(currentIdx);
         section?.classList.add("detail-active");
         document.getElementById("slide-dots")?.classList.add("hidden");
-        // Reset scroll positions so detail shows from the top
-        const detailView = section?.querySelector(".detail-view") as HTMLElement | null;
-        if (detailView) detailView.scrollTop = 0;
         const parentSlide = section?.closest(".keen-slider__slide") as HTMLElement | null;
         if (parentSlide) parentSlide.scrollTop = 0;
         // Tell keen-slider to freeze
         document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: true } }));
-        // Update URL hash for deep linking
-        const slug = PROJECT_SLUGS[currentIdx];
-        if (slug) {
-            history.replaceState(null, "", "#" + slug);
-        }
+        // Move focus into the card for keyboard and screen-reader users
+        (detailCard.querySelector("h3") as HTMLElement | null)?.setAttribute("tabindex", "-1");
+        (detailCard.querySelector("h3") as HTMLElement | null)?.focus({ preventScroll: true });
+    }
+
+    /** Swap the open card for another project, keeping the roller in sync. */
+    function showProject(idx: number) {
+        idx = mod(idx, N);
+        if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
+        scrollPos = idx;
+        currentIdx = idx;
+        targetIdx = idx;
+        render();
+        if (!isDetailView) { transitionToDetail(); return; }
+        detailCard.classList.remove("card-swap");
+        void detailCard.offsetWidth;
+        detailCard.classList.add("card-swap");
+        fillDetail(idx);
     }
 
     function transitionToRoller() {
@@ -513,20 +611,33 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         // Reset scroll positions so swiping works immediately
         const parentSlide = section?.closest(".keen-slider__slide");
         if (parentSlide) parentSlide.scrollTop = 0;
-        const dv = section?.querySelector(".detail-view") as HTMLElement | null;
-        if (dv) dv.scrollTop = 0;
+        if (detailViewEl) detailViewEl.scrollTop = 0;
         // Tell keen-slider to unfreeze
         document.dispatchEvent(new CustomEvent("detail-view-toggle", { detail: { active: false } }));
         // Clear URL hash
         history.replaceState(null, "", location.pathname);
+        openBtn?.focus({ preventScroll: true });
+    }
+
+    /** CTA: close the card and jump to the contact slide (the last one). */
+    function goToContact() {
+        transitionToRoller();
+        const last = document.querySelectorAll("#slider > .keen-slider__slide").length - 1;
+        document.dispatchEvent(new CustomEvent("slider-goto", { detail: { index: last } }));
     }
 
     // ── Event listeners ──────────────────────────────────
     spinBtn?.addEventListener("click", spin);
     openBtn?.addEventListener("click", () => transitionToDetail());
-    backBtn?.addEventListener("click", () => transitionToRoller());
+    backBtns.forEach((b) => b.addEventListener("click", () => transitionToRoller()));
+    nextBtn?.addEventListener("click", () => showProject(currentIdx + 1));
     arrowUp?.addEventListener("click", () => prev());
     arrowDown?.addEventListener("click", () => next());
+    legendChips.forEach((chip) => chip.addEventListener("click", () => {
+        if (isSpinning || isDetailView) return;
+        const idx = nextInTrack(currentIdx, TRACK_OF, chip.dataset.track ?? "");
+        if (idx >= 0) goTo(idx);
+    }));
 
     // Click a slide to open it
     track?.addEventListener("click", (e: MouseEvent) => {
@@ -549,7 +660,8 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         if (isSpinning || isDetailView) return;
         if (e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); prev(); }
         if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); next(); }
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); spin(); }
+        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); transitionToDetail(); }
+        if (e.key === " ") { e.preventDefault(); e.stopPropagation(); spin(); }
     });
 
     let wheelAccum = 0;
@@ -576,12 +688,16 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     }, { capture: true, passive: false });
 
     document.addEventListener("keydown", (e: KeyboardEvent) => {
-        if (e.key === "Escape" && isDetailView) { e.preventDefault(); transitionToRoller(); }
+        if (!isDetailView) return;
+        if (e.key === "Escape") { e.preventDefault(); transitionToRoller(); }
+        const inField = (e.target as HTMLElement)?.closest?.("input, textarea, [contenteditable]");
+        if (inField) return;
+        if (e.key === "ArrowRight") { e.preventDefault(); showProject(currentIdx + 1); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); showProject(currentIdx - 1); }
     });
 
     // Prevent touch/mouse events on the detail view from propagating to
     // keen-slider, which would interpret them as slide-change swipes.
-    const detailViewEl = section?.querySelector(".detail-view") as HTMLElement | null;
     function stopIfDetail(e: Event) {
         if (isDetailView) e.stopPropagation();
     }
@@ -591,24 +707,21 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     /** Roll to a project and open it. Snaps to the target before opening so a
      *  slow frame (e.g. while the slider is still moving) can't open the wrong card. */
     function openDetailAt(idx: number) {
+        if (isSpinning) stopSpin();
         targetIdx = idx;
         animateTo(idx, 300);
-        setTimeout(() => {
-            if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
-            scrollPos = idx;
-            currentIdx = idx;
-            render();
-            transitionToDetail();
-        }, 350);
+        setTimeout(() => showProject(idx), 350);
     }
 
-    // Browser back/forward: close detail if hash no longer matches
+    // Browser back/forward and hash edits: follow the hash, also while a card is open
     window.addEventListener("popstate", () => {
-        const hash = location.hash.replace(/^#/, "");
-        if (isDetailView && !(hash in slugToIndex)) {
-            transitionToRoller();
-        } else if (!isDetailView && hash in slugToIndex) {
-            openDetailAt(slugToIndex[hash]);
+        const idx = indexForHash(location.hash.replace(/^#/, ""));
+        if (idx == null) {
+            if (isDetailView) transitionToRoller();
+        } else if (isDetailView) {
+            if (idx !== currentIdx) showProject(idx);
+        } else if (isOnProjectsSlide) {
+            openDetailAt(idx);
         }
     });
 
@@ -617,28 +730,30 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     let hasAutoSpun = false;
     let isOnProjectsSlide = false;
 
+    /** A short, charming spin on arrival that always lands on a flagship case. */
     function autoSpin() {
         if (isSpinning || isDetailView) return;
+        if (prefersReducedMotion) {
+            const targets = [...FIRST_SPIN_TARGETS];
+            if (targets.length) {
+                const idx = targets[Math.floor(Math.random() * targets.length)];
+                scrollPos = currentIdx = targetIdx = idx;
+                isFirstSpin = false;
+                render();
+            }
+            return;
+        }
         spinVelocity = 28 + Math.random() * 8;
         currentFriction = FRICTION_MAX;
-        isSpinning = true;
-        spinStartIdx = currentIdx;
-        lastSpinTime = performance.now();
-        viewport?.classList.add("roller-spinning");
-        spinBtn?.classList.add("spinning");
-        spinAnimId = requestAnimationFrame(spinLoop);
+        startSpinLoop();
     }
 
     function silentReset() {
         if (spinAnimId) { cancelAnimationFrame(spinAnimId); spinAnimId = null; }
         if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
-        isSpinning = false;
-        isSettling = false;
-        spinVelocity = 0;
+        stopSpin();
         isDetailView = false;
         section?.classList.remove("detail-active");
-        viewport?.classList.remove("roller-spinning");
-        spinBtn?.classList.remove("spinning");
         document.getElementById("slide-dots")?.classList.remove("hidden");
         // Clear URL hash so returning to the projects slide doesn't re-open detail
         if (location.hash) history.replaceState(null, "", location.pathname);
@@ -661,10 +776,11 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
                 isOnProjectsSlide = true;
 
                 // Deep link: if hash matches a project slug, navigate directly
-                const hash = location.hash.replace(/^#/, "");
-                if (hash && hash in slugToIndex) {
+                const hashIdx = indexForHash(location.hash.replace(/^#/, ""));
+                if (hashIdx != null) {
                     hasAutoSpun = true; // skip auto-spin
-                    openDetailAt(slugToIndex[hash]);
+                    isFirstSpin = false;
+                    openDetailAt(hashIdx);
                 } else if (!hasAutoSpun) {
                     hasAutoSpun = true;
                     autoSpin();
@@ -691,7 +807,9 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         display: grid;
         justify-items: center;
         width: 100%;
-        overflow: hidden;
+        /* clip, not hidden: a hidden-overflow box is still a scroll container,
+           and focusing the spin button used to scroll it ~8px (layout jitter). */
+        overflow: clip;
         /* Establish containing block so the absolutely-positioned .detail-view
            (when inactive) is clipped by overflow:hidden.  Without this, the
            detail-view's populated content extends into the keen-slider slide's
@@ -716,11 +834,115 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
     }
 
+    .roller-view .section-heading {
+        margin-bottom: 18px;
+    }
+
     .detail-active .roller-view {
         transform: translateX(-100%);
         opacity: 0;
         pointer-events: none;
         position: absolute;
+    }
+
+    /* ===== Legend: value categories + count ===== */
+    .roller-legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 6px 8px;
+        margin-bottom: 14px;
+        font-family: var(--mono);
+    }
+
+    .roller-count {
+        font-size: 11px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-right: 4px;
+    }
+
+    .legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 10px;
+        cursor: pointer;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--chip);
+    }
+
+    .legend-chip:hover,
+    .legend-chip:focus-visible,
+    .legend-chip.is-current {
+        color: var(--text);
+        border-color: color-mix(in srgb, var(--chip) 60%, transparent);
+        background: color-mix(in srgb, var(--chip) 12%, transparent);
+    }
+
+    /* ===== Hook line under the roller ===== */
+    .roller-hook {
+        max-width: 520px;
+        min-height: calc(2 * 1.45em);
+        margin: 10px auto 0;
+        font-size: 16px;
+        line-height: 1.45;
+        color: var(--text);
+        text-wrap: balance;
+        transition: opacity 0.2s ease, filter 0.2s ease;
+    }
+
+    .roller-hook::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--chip, var(--purple));
+        margin-right: 8px;
+        vertical-align: 0.1em;
+    }
+
+    .roller-hook--in {
+        animation: hook-in 0.35s ease both;
+    }
+
+    @keyframes hook-in {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    .is-spinning .roller-hook {
+        opacity: 0.18;
+        filter: blur(2px);
+    }
+
+    .roller-hint {
+        margin-top: 10px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+    }
+
+    @media (hover: none), (max-width: 900px) {
+        .roller-hint { display: none; }
     }
 
     /* ===== VIEW 2: Detail View ===== */
@@ -729,12 +951,17 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         flex-direction: column;
         align-items: flex-start;
         text-align: left;
-        max-width: 640px;
+        max-width: 680px;
         width: 100%;
         transform: translateX(100%);
         opacity: 0;
         pointer-events: none;
         position: absolute;
+        /* While hidden, keep the (populated) card inside the section's box so
+           it never inflates the slide's scroll height and blocks swiping. */
+        top: 0;
+        max-height: 100%;
+        overflow: hidden;
         transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
     }
 
@@ -752,8 +979,8 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         scrollbar-color: var(--text-muted) transparent;
         /* Horizontal padding so the back-button's hover glow (extends ~20px)
            isn't clipped by the scroll container's overflow boundary. */
-        padding: 4px 22px;
-        margin: -4px -22px;
+        padding: 4px 22px 0;
+        margin: -4px -22px 0;
     }
 
     .detail-active .detail-view::-webkit-scrollbar {
@@ -784,14 +1011,13 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         position: relative;
         z-index: 1;
     }
 
     .back-button--bottom {
-        margin-top: 24px;
-        margin-bottom: 0;
+        margin: 0;
     }
 
     .back-button:hover {
@@ -809,59 +1035,307 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         transform: translateX(-4px);
     }
 
+    /* Sticky footer: Back / position / Next always visible, with a fade that
+       tells the reader there is more card below. */
+    .detail-footer {
+        position: sticky;
+        bottom: 10px;
+        z-index: 3;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 14px;
+        padding: 6px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 -18px 30px -8px var(--bg);
+    }
+
+    .detail-footer .back-button {
+        border-color: transparent;
+        background: transparent;
+    }
+
+    .detail-position {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+    }
+
+    .next-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--purple-dim);
+        border: 1px solid var(--purple);
+        color: var(--text);
+        font-family: var(--kendev);
+        font-size: 14px;
+        font-weight: 500;
+        padding: 8px 18px;
+        border-radius: 100px;
+        cursor: pointer;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .next-button:hover {
+        background: var(--purple);
+        box-shadow: 0 0 24px var(--purple-glow-strong);
+    }
+
+    .next-arrow { transition: transform 0.2s ease; }
+    .next-button:hover .next-arrow { transform: translateX(3px); }
+
     .detail-card {
         background: var(--bg-card);
         border: 1px solid var(--purple-dim);
         border-radius: 16px;
-        padding: 36px;
+        padding: 32px 36px 28px;
         width: 100%;
-        box-shadow: 0 0 60px var(--purple-glow);
+        box-shadow: 0 0 18px var(--purple-glow);
+    }
+
+    .detail-card.card-swap .detail-card__inner {
+        animation: card-swap 0.35s ease both;
+    }
+
+    @keyframes card-swap {
+        from { opacity: 0; transform: translateX(16px); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        margin-bottom: 12px;
     }
 
     .detail-card .project-tag {
         display: inline-block;
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 11px;
         color: var(--chip, var(--purple));
         background: color-mix(in srgb, var(--chip, #888) 14%, transparent);
         border: 1px solid color-mix(in srgb, var(--chip, var(--border)) 55%, transparent);
         text-transform: uppercase;
-        letter-spacing: 2.5px;
+        letter-spacing: 2px;
         padding: 3px 12px;
         border-radius: 999px;
-        margin-bottom: 14px;
     }
 
-    .detail-card .project-tag[data-key="ai"]          { --chip: #a874e0; }
-    .detail-card .project-tag[data-key="legacy"]      { --chip: #e8a352; }
-    .detail-card .project-tag[data-key="open-source"] { --chip: #5fd095; }
-    .detail-card .project-tag[data-key="infra"]       { --chip: #5fcae0; }
-    .detail-card .project-tag[data-key="creative"]    { --chip: #e07ab0; }
-    .detail-card .project-tag[data-key="business"]    { --chip: #e0c057; }
-    .detail-card .project-tag[data-key="teaching"]    { --chip: #7faff0; }
-    .detail-card .project-tag[data-key="meta"]        { --chip: #8888a0; }
+    .detail-context {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
 
     .detail-card h3 {
-        font-size: 28px;
+        font-size: 30px;
         font-weight: 800;
-        margin-bottom: 16px;
-        line-height: 1.2;
+        margin-bottom: 10px;
+        line-height: 1.15;
+        letter-spacing: -0.5px;
+        outline: none;
+    }
+
+    .detail-hook {
+        font-size: 19px;
+        line-height: 1.45;
+        color: var(--text);
+        margin-bottom: 22px;
+        text-wrap: pretty;
+    }
+
+    /* Fact strip: same tile language as the numbers slide */
+    .detail-facts {
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+
+    .detail-fact {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-top: 2px solid color-mix(in srgb, var(--chip) 70%, transparent);
+        border-radius: 10px;
+        padding: 12px 14px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .detail-fact__value {
+        font-family: var(--mono);
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: var(--chip);
+        white-space: nowrap;
+    }
+
+    .detail-fact__label {
+        font-size: 13px;
+        line-height: 1.3;
+        color: var(--text-dim);
+    }
+
+    .detail-section {
+        margin-top: 18px;
+    }
+
+    .detail-section h4,
+    .detail-small-label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 6px;
     }
 
     .detail-card p {
         font-size: 16px;
         color: var(--text-dim);
-        line-height: 1.7;
+        line-height: 1.65;
     }
 
-    .detail-card p a {
+    .detail-card p.detail-hook {
+        color: var(--text);
+        font-size: 19px;
+        line-height: 1.45;
+    }
+
+    .detail-card em {
+        font-style: normal;
+        color: var(--text);
+        font-weight: 600;
+        background: linear-gradient(transparent 62%, color-mix(in srgb, var(--chip) 30%, transparent) 62%);
+    }
+
+    .detail-section--outcome {
+        border-left: 2px solid var(--chip);
+        padding-left: 14px;
+    }
+
+    .detail-section--outcome h4 { color: var(--chip); }
+    .detail-section--outcome p { color: var(--text); }
+
+    .detail-quote {
+        margin-top: 22px;
+        padding: 14px 18px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .detail-quote p {
+        font-style: italic;
+        font-size: 15px !important;
+        color: var(--text) !important;
+    }
+
+    .detail-quote footer {
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .detail-links {
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px 16px;
+    }
+
+    .detail-links .detail-small-label {
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .detail-link {
         color: var(--purple);
         text-decoration: none;
-        transition: color 0.2s ease;
+        font-size: 15px;
+        border-bottom: 1px solid color-mix(in srgb, var(--purple) 40%, transparent);
+        transition: color 0.2s ease, border-color 0.2s ease;
     }
 
-    .detail-card p a:hover {
+    .detail-link:hover {
         color: var(--text);
+        border-color: var(--text);
+    }
+
+    .detail-nerdy {
+        margin-top: 22px;
+    }
+
+    .detail-nerdy ul {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .detail-nerdy li {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-dim);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 8px;
+    }
+
+    .detail-cta {
+        margin-top: 26px;
+        padding: 16px 18px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--chip) 9%, var(--bg));
+        border: 1px solid color-mix(in srgb, var(--chip) 35%, transparent);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .detail-cta p {
+        color: var(--text) !important;
+        font-size: 15px !important;
+        flex: 1 1 240px;
+    }
+
+    .detail-cta__button {
+        flex: 0 0 auto;
+        font-family: var(--kendev);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--bg);
+        background: var(--chip);
+        border: none;
+        border-radius: 100px;
+        padding: 9px 18px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .detail-cta__button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 24px color-mix(in srgb, var(--chip) 45%, transparent);
     }
 
     /* ===== Roller Wrapper ===== */
@@ -881,6 +1355,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         background: var(--bg-card);
         overflow: hidden;
         touch-action: none; /* We handle pointer events ourselves */
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .roller-viewport:focus {
@@ -891,6 +1366,16 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     .roller-viewport.roller-spinning {
         border-color: var(--purple-dim);
         box-shadow: 0 0 24px var(--purple-glow);
+    }
+
+    .just-landed .roller-highlight {
+        animation: landed 0.9s ease;
+    }
+
+    @keyframes landed {
+        0%   { box-shadow: inset 0 0 0 0 transparent; }
+        30%  { box-shadow: inset 0 0 40px var(--purple-glow-strong); }
+        100% { box-shadow: inset 0 0 0 0 transparent; }
     }
 
     /* ===== Track (contains slides) ===== */
@@ -950,15 +1435,6 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         transition: opacity 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .roller-slide__tag[data-key="ai"]          { --chip: #a874e0; }
-    .roller-slide__tag[data-key="legacy"]      { --chip: #e8a352; }
-    .roller-slide__tag[data-key="open-source"] { --chip: #5fd095; }
-    .roller-slide__tag[data-key="infra"]       { --chip: #5fcae0; }
-    .roller-slide__tag[data-key="creative"]    { --chip: #e07ab0; }
-    .roller-slide__tag[data-key="business"]    { --chip: #e0c057; }
-    .roller-slide__tag[data-key="teaching"]    { --chip: #7faff0; }
-    .roller-slide__tag[data-key="meta"]        { --chip: #8888a0; }
-
     .roller-slide__title {
         font-size: 15px;
         font-weight: 600;
@@ -983,10 +1459,6 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         box-shadow: 0 0 12px color-mix(in srgb, var(--chip, var(--purple)) 35%, transparent);
     }
 
-    .roller-slide--near {
-        /* opacity handled by JS inline style */
-    }
-
     .roller-slide--near .roller-slide__tag {
         opacity: 0.7;
     }
@@ -994,10 +1466,6 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     .roller-slide--near .roller-slide__title {
         font-size: 14px;
         color: var(--text-dim);
-    }
-
-    .roller-slide--far {
-        /* opacity handled by JS inline style */
     }
 
     .roller-slide--far .roller-slide__tag {
@@ -1041,20 +1509,9 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     .roller-actions {
         display: flex;
         justify-content: center;
+        align-items: center;
         gap: 12px;
-        margin-top: 16px;
-    }
-
-    .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
+        margin-top: 12px;
     }
 
     .action-button {
@@ -1064,7 +1521,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         padding: 10px 24px;
         border-radius: 100px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -1081,23 +1538,21 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         display: flex;
         align-items: center;
         justify-content: center;
+        flex: 0 0 auto;
     }
 
+    /* Hover = glow only. The button's transform belongs to the spin rotation;
+       a hover lift here used to fight it and nudge the layout. */
     .action-button--spin:hover {
         background: var(--purple-dim);
         color: var(--text);
         box-shadow: 0 0 30px var(--purple-glow-strong);
-        transform: translateY(-2px);
     }
 
     .action-button--spin.spinning {
         transition: none;
         border-color: var(--purple);
         box-shadow: 0 0 24px var(--purple-glow-strong);
-    }
-
-    .action-button--spin.spinning:hover {
-        transform: none;
     }
 
     .spin-icon {
@@ -1107,25 +1562,52 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     }
 
     .action-button--open {
+        height: 52px;
+        padding: 0 26px;
         background: var(--purple-dim);
         border: 1px solid var(--purple);
         color: var(--text);
+        font-family: var(--kendev);
+        font-size: 15px;
+        transition: background 0.3s ease, box-shadow 0.3s ease, opacity 0.2s ease;
     }
 
     .action-button--open:hover {
         background: var(--purple);
         box-shadow: 0 0 30px var(--purple-glow-strong);
-        transform: translateY(-2px);
+    }
+
+    .open-arrow { transition: transform 0.2s ease; }
+    .action-button--open:hover .open-arrow { transform: translateX(3px); }
+
+    .is-spinning .action-button--open {
+        opacity: 0.4;
+        pointer-events: none;
     }
 
     /* ===== Diorama illustration ===== */
+    .diorama-figure {
+        margin: 0 0 6px;
+    }
+
     .diorama {
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: 12px;
         overflow: hidden;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         padding: 8px 0;
+    }
+
+    .diorama-figure .diorama {
+        margin-bottom: 6px;
+    }
+
+    .diorama-caption {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 14px;
     }
 
     .diorama svg {
@@ -1134,9 +1616,48 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         height: auto;
     }
 
+    .diorama--chart {
+        padding: 10px 6px;
+    }
+
     .diorama--photo {
         padding: 0;
+        aspect-ratio: 16 / 9;
     }
+
+    .diorama--photo .diorama-blur {
+        height: 100%;
+    }
+
+    .diorama--photo img {
+        height: 100% !important;
+        object-fit: cover;
+        object-position: center top;
+    }
+
+    /* Chart typography (SVG text inside .diorama--chart) */
+    .diorama--chart text { font-family: var(--mono); }
+    .fx-label { font-size: 13px; }
+    .fx-label:not([fill]) { fill: var(--text-dim); }
+    .fx-num { font-size: 16px; font-weight: 700; }
+    .fx-big { font-size: 26px; font-weight: 700; }
+    .fx-axis { font-size: 11px; fill: var(--text-muted); }
+    .fx-chip { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+    .fx-chip:not([fill]) { fill: var(--text-dim); }
+    .fx-quote { font-family: var(--kendev) !important; font-size: 15px; font-weight: 600; fill: var(--text); }
+    .fx-rule { font-family: var(--kendev) !important; font-size: 16px; font-weight: 700; fill: var(--text); }
+    .fx-code { font-size: 14px; }
+
+    .fx-flip { fill: #e0605a; opacity: 0.7; }
+    .detail-active .fx-flip { animation: fx-flip 0.35s ease forwards; }
+    @keyframes fx-flip { to { fill: #3ecf8e; opacity: 0.85; } }
+
+    .fx-draw { stroke-dasharray: 1; stroke-dashoffset: 0; }
+    .detail-active .fx-draw { animation: fx-draw 1.4s 0.25s ease-out both; }
+    @keyframes fx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+    .fx-flow { animation: fx-flow 1.2s linear infinite; }
+    @keyframes fx-flow { to { stroke-dashoffset: -16; } }
 
     /* Blur-up placeholder for photo dioramas */
     .diorama-blur {
@@ -1231,6 +1752,13 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         animation: diorama-float-slow 5s ease-in-out 0.7s infinite;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+        .detail-active .fx-flip { animation: none; fill: #3ecf8e; opacity: 0.85; }
+        .detail-active .fx-draw, .fx-flow, .roller-hook--in,
+        .detail-card.card-swap .detail-card__inner, .just-landed .roller-highlight { animation: none; }
+        .detail-active .diorama-el { animation: none; }
+    }
+
     /* ===== Tall viewports: show 4 roulette items ===== */
     @media (min-height: 600px) {
         .roller-section { --visible-slots: 4; --center-offset: 1.5; }
@@ -1246,7 +1774,14 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         .roller-slide--near .roller-slide__title { font-size: 16px; }
         .roller-slide--far .roller-slide__title { font-size: 14px; }
         .action-button--spin { width: 58px; height: 58px; }
+        .action-button--open { height: 58px; }
         .spin-icon { width: 30px; height: 30px; }
+    }
+
+    /* ===== Short desktop viewports: tighten the roller column ===== */
+    @media (min-width: 901px) and (max-height: 860px) {
+        .roller-view .section-heading { font-size: 44px; margin-bottom: 12px; }
+        .roller-arrow { margin: 2px 0; }
     }
 
     /* ===== Print fallback ===== */
@@ -1254,19 +1789,37 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
 
     /* ===== Mobile ===== */
     @media (max-width: 600px) {
+        .roller-view .section-heading { margin-bottom: 12px; }
+        .roller-legend { gap: 5px 6px; margin-bottom: 10px; }
+        .roller-count { width: 100%; margin: 0 0 2px; }
+        .legend-chip { font-size: 10px; padding: 2px 8px; letter-spacing: 0.5px; }
         .roller-viewport { width: calc(100vw - 70px); }
+        .roller-arrow { margin: 2px 0; }
         .roller-slide__title { font-size: 13px; }
         .roller-slide--selected .roller-slide__title { font-size: 15px; }
-        .detail-active .detail-view { max-height: calc(100dvh - 80px); }
-        .detail-card { padding: 16px; }
-        .detail-card h3 { font-size: 22px; }
+        .roller-hook { font-size: 14px; min-height: calc(3 * 1.45em); margin-top: 6px; padding: 0 4px; }
+        .detail-active .detail-view { max-height: calc(100dvh - 80px); padding: 2px 12px 0; margin: -2px -12px 0; }
+        .detail-card { padding: 18px 16px 16px; }
+        .detail-card h3 { font-size: 23px; }
+        .detail-hook, .detail-card p.detail-hook { font-size: 16px; margin-bottom: 16px; }
         .detail-card p { font-size: 15px; }
-        .roller-actions { gap: 8px; }
-        .action-button { font-size: 13px; padding: 8px 18px; }
+        .detail-facts { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 18px; }
+        .detail-fact { padding: 8px 8px 7px; }
+        .detail-fact__value { font-size: 17px; white-space: normal; }
+        .detail-fact__label { font-size: 11px; }
+        .detail-footer { padding: 24px 0 10px; }
+        .detail-footer .back-button { padding: 7px 14px; font-size: 13px; }
+        .next-button { padding: 7px 14px; font-size: 13px; }
+        .roller-actions { gap: 10px; margin-top: 8px; }
         .action-button--spin { width: 44px; height: 44px; padding: 0; }
+        .action-button--open { height: 44px; padding: 0 20px; font-size: 14px; }
         .spin-icon { width: 22px; height: 22px; }
         .diorama { margin-bottom: 12px; padding: 4px 0; }
-        .diorama svg { max-height: 80px; }
+        .diorama:not(.diorama--chart) svg { max-height: 80px; }
+    }
+
+    @media (max-width: 360px) {
+        .detail-position { display: none; }
     }
 
     /* ===== Print ===== */
@@ -1279,5 +1832,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
         .project-tag { font-family: var(--mono); font-size: 8px; color: var(--purple); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; }
         .project-card h3 { font-size: 11px; margin-bottom: 3px; }
         .project-card p { font-size: 9px; line-height: 1.3; color: var(--text-dim); }
+        .project-card p + p { margin-top: 3px; }
+        .project-card em { font-style: normal; color: var(--text); }
     }
 </style>
