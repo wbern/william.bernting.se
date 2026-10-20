@@ -1,42 +1,98 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
+import { getSkillProfiles, getSkillCombos } from "../i18n/skills";
+import { projectEntries } from "../i18n/projects";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
-const skills = [
-    { label: "Agentic AI", featured: true },
-    { label: "Test-Driven Development", featured: true },
-    { label: "Claude / LLMs", featured: true },
-    { label: "Node.js", featured: false },
-    { label: "TypeScript", featured: false },
-    { label: "React", featured: false },
-    { label: "Next.js", featured: false },
-    { label: "C#", featured: false },
-    { label: "Vue", featured: false },
-    { label: "Angular", featured: false },
-    { label: "DevOps / CI/CD", featured: false },
-    { label: "AWS / Azure", featured: false },
-    { label: "Project Delivery", featured: false },
-    { label: "Monorepos", featured: false },
-    { label: "Micro-frontends", featured: false },
-    { label: "Coaching", featured: false },
-    { label: "Spec-kit", featured: false },
-    { label: "TanStack", featured: false },
-    { label: "Astro.js", featured: false },
-];
+const projectTitle = (slug: string | null) =>
+    slug ? (projectEntries.find((p) => p.slug === slug)?.[lang].title ?? null) : null;
+
+const skills = getSkillProfiles(lang).map((s) => ({ ...s, proofTitle: projectTitle(s.proofSlug) }));
+const combos = getSkillCombos(lang).map((c) => ({ ...c, slugTitle: projectTitle(c.slug) }));
+const pillars = skills.filter((s) => s.pillar);
+const tools = skills.filter((s) => !s.pillar).sort((a, b) => (b.years ?? 0) - (a.years ?? 0));
+
+const numberLocale = lang === "sv" ? "sv-SE" : "en-GB";
+const fmtYears = (y: number | null) =>
+    y === null ? "" : y.toLocaleString(numberLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// Fruit colours, shared by the canvas and the pillar cards (tier → colour).
+const FRUIT_COLORS = ["#ff3366", "#ff6688", "#aa66dd", "#ffaa22", "#ff4444", "#ffdd44", "#44dd66", "#ff9a76"];
+
+const strings = {
+    lang: numberLocale,
+    years: t("skills.card.years"),
+    yearsShort: t("skills.card.yearsShort"),
+    at: t("skills.card.at"),
+    pillar: t("skills.card.pillar"),
+    combo: t("skills.card.combo"),
+    tryIt: t("skills.card.try"),
+};
 ---
 
-{/* Canvas fills the entire slide; heading floats on top */}
-<div class="skills-pit" data-skills={JSON.stringify(skills)}>
-    <canvas class="skills-canvas"></canvas>
-</div>
-<div class="section-inner skills-heading-overlay" style="text-align: center;">
-    <div class="section-label reveal">{t("skills.label")}</div>
-    <h2 class="section-heading reveal reveal-delay-1">
-        {t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}
-    </h2>
+<div class="skills-slide">
+    <div class="skills-copy">
+        <div class="section-label reveal">{t("skills.label")}</div>
+        <h2 class="section-heading skills-heading reveal reveal-delay-1">
+            {t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}
+        </h2>
+        <p class="skills-sub">{t("skills.sub")}</p>
+
+        <div class="skills-pillars-label">{t("skills.pillars.label")}</div>
+        <ol class="skills-pillars" aria-label={t("skills.pillars.label")}>
+            {pillars.map((p) => (
+                <li class="skills-pillar" data-skill={p.id} style={`--fruit: ${FRUIT_COLORS[p.tier]}`}>
+                    <h3 class="skills-pillar-title"><span class="skills-pillar-dot" aria-hidden="true"></span>{p.label}</h3>
+                    <p class="skills-pillar-value">{p.value}</p>
+                    <p class="skills-pillar-proof">{p.proof}</p>
+                    {p.proofSlug && p.proofTitle && (
+                        <a class="skills-pillar-link" href={`#${p.proofSlug}`} data-project={p.proofSlug}>
+                            {p.proofTitle}<span aria-hidden="true"> →</span>
+                        </a>
+                    )}
+                </li>
+            ))}
+        </ol>
+    </div>
+
+    <div class="skills-stage">
+        <canvas class="skills-canvas" role="img" aria-label={t("skills.aria.canvas")}></canvas>
+        <div class="skills-card" hidden>
+            <button type="button" class="skills-card-close" aria-label={t("skills.card.close")}>×</button>
+            <div class="skills-card-kicker"></div>
+            <div class="skills-card-title"></div>
+            <p class="skills-card-body"></p>
+            <p class="skills-card-proof"></p>
+            <p class="skills-card-meta"></p>
+            <a class="skills-card-link" href="#"></a>
+        </div>
+        <div class="skills-caption">
+            <p class="skills-caption-text">{t("skills.caption")}</p>
+            <p class="skills-caption-hint">
+                <span>{t("skills.hint")}</span>
+                <span class="skills-combos" aria-live="polite"><span data-combos-found>0</span>/{combos.length} {t("skills.combos.found")}</span>
+            </p>
+        </div>
+    </div>
+
+    {/* Screen readers, crawlers and print get the whole bowl as text. */}
+    <ul class="sr-only skills-list" aria-label={t("skills.aria.list")}>
+        {pillars.map((p) => (
+            <li>{p.label}: {p.value} {p.proof}</li>
+        ))}
+        {tools.map((s) => (
+            <li>{s.label}, {fmtYears(s.years)} {t("skills.card.years")} ({s.employers.join(", ")}): {s.value}</li>
+        ))}
+    </ul>
+
+    <script
+        type="application/json"
+        class="skills-data"
+        set:html={JSON.stringify({ skills, combos, strings, colors: FRUIT_COLORS })}
+    />
 </div>
 
 <!-- Print fallback -->
@@ -45,64 +101,344 @@ const skills = [
         <div class="section-label">{t("skills.label")}</div>
         <h2 class="section-heading">{t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}</h2>
         <div class="skills-cloud-print">
-            {skills.map(s => (
-                <span class:list={["skill-pill-print", { featured: s.featured }]}>{s.label}</span>
-            ))}
+            {pillars.map((s) => <span class="skill-pill-print featured">{s.label}</span>)}
+            {tools.map((s) => <span class="skill-pill-print">{s.label} · {fmtYears(s.years)} {t("skills.card.yearsShort")}</span>)}
         </div>
     </div>
 </div>
 
 <style>
-    /* Canvas covers the entire slide */
-    .skills-pit {
+    .skills-slide {
         position: absolute;
         inset: 0;
-        overflow: hidden;
-        z-index: 0;
+        display: grid;
+        grid-template-columns: minmax(300px, 430px) minmax(0, 1fr);
+        column-gap: clamp(28px, 4vw, 64px);
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 64px clamp(56px, 6vw, 96px) 28px clamp(32px, 5vw, 80px);
+    }
+
+    .skills-copy {
+        align-self: center;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .skills-heading {
+        font-size: clamp(32px, 4vw, 52px);
+        margin-bottom: 12px;
+    }
+
+    .skills-sub {
+        color: var(--text);
+        font-size: 17px;
+        line-height: 1.5;
+        max-width: 34ch;
+        margin-bottom: 22px;
+    }
+
+    .skills-pillars-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+
+    .skills-pillars {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .skills-pillar {
+        position: relative;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--fruit);
+        border-radius: 12px;
+        padding: 12px 16px 12px 16px;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    }
+
+    .skills-pillar.is-lit,
+    .skills-pillar:hover {
+        border-color: color-mix(in srgb, var(--fruit) 45%, var(--border));
+        border-left-color: var(--fruit);
+        box-shadow: 0 0 24px color-mix(in srgb, var(--fruit) 18%, transparent);
+    }
+
+    .skills-pillar-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 4px;
+    }
+
+    .skills-pillar-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--fruit);
+        box-shadow: 0 0 8px var(--fruit);
+        flex: none;
+    }
+
+    .skills-pillar-value {
+        color: var(--text-dim);
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    .skills-pillar-proof {
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--text);
+        margin-top: 6px;
+    }
+
+    .skills-pillar-link,
+    .skills-card-link {
+        display: inline-block;
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--purple);
+        text-decoration: none;
+    }
+
+    .skills-pillar-link:hover,
+    .skills-card-link:hover { text-decoration: underline; }
+
+    .skills-card-link[hidden] { display: none; }
+
+    .skills-pillar-link:focus-visible,
+    .skills-card-link:focus-visible,
+    .skills-card-close:focus-visible {
+        outline: 2px solid var(--purple);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    /* ── Stage: canvas + floating card + caption ── */
+    .skills-stage {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
     }
 
     .skills-canvas {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         display: block;
         cursor: default;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
     }
 
-    .skills-canvas.hovering-drop {
-        cursor: pointer;
-    }
+    .skills-canvas.poke { cursor: pointer; }
+    .skills-canvas.grab { cursor: grab; }
+    .skills-canvas.grabbing { cursor: grabbing; }
 
-    .skills-canvas.grabbing {
-        cursor: grabbing;
-    }
-
-    .skills-canvas.grab {
-        cursor: grab;
-    }
-
-    /* Heading floats at top of slide, pointer-events pass through to canvas */
-    .skills-heading-overlay {
+    .skills-card {
+        --c: var(--purple);
         position: absolute;
-        top: 60px;
-        left: 40px;
-        right: 40px;
-        z-index: 1;
+        left: 0;
+        top: 0;
+        z-index: 2;
+        width: min(320px, calc(100% - 16px));
+        background: rgba(19, 19, 26, 0.96);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--c);
+        border-radius: 12px;
+        padding: 12px 34px 12px 16px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 24px color-mix(in srgb, var(--c) 14%, transparent);
+        backdrop-filter: blur(6px);
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .skills-card.is-open {
+        opacity: 1;
+        transform: none;
+    }
+
+    .skills-card.is-pinned { pointer-events: auto; }
+
+    .skills-card[data-kind="combo"] {
+        --c: #ffd166;
+        background: linear-gradient(180deg, rgba(255, 209, 102, 0.08), rgba(19, 19, 26, 0.96) 60%);
+    }
+
+    .skills-card-close {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        width: 26px;
+        height: 26px;
+        border: 0;
+        background: none;
+        color: var(--text-dim);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        display: none;
+    }
+
+    .skills-card.is-pinned .skills-card-close { display: block; }
+
+    .skills-card-kicker {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--c);
+        margin-bottom: 4px;
+    }
+
+    .skills-card-title {
+        font-size: 17px;
+        font-weight: 700;
+        line-height: 1.25;
+        margin-bottom: 4px;
+    }
+
+    .skills-card-body {
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--text);
+    }
+
+    .skills-card-proof {
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--text-dim);
+        margin-top: 6px;
+    }
+
+    .skills-card-meta {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        color: var(--text-dim);
+        margin-top: 8px;
+    }
+
+    .skills-card-proof:empty,
+    .skills-card-meta:empty { display: none; }
+
+    .skills-caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        text-align: center;
         pointer-events: none;
     }
 
-    @media (max-width: 600px) {
-        .skills-heading-overlay {
-            top: 40px;
-            left: 20px;
-            right: 20px;
+    .skills-caption-text {
+        font-size: 14px;
+        color: var(--text-dim);
+        line-height: 1.4;
+    }
+
+    .skills-caption-hint {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        letter-spacing: 0.5px;
+        color: var(--purple);
+    }
+
+    .skills-combos { color: var(--text-muted); }
+    .skills-combos.has-found { color: #ffd166; }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* ── Narrow screens: stack copy over the bowl, pillars as a swipeable row ── */
+    @media (max-width: 860px) {
+        .skills-slide {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: auto minmax(0, 1fr);
+            padding: 36px 20px 14px;
+            row-gap: 6px;
         }
+
+        .skills-copy { align-self: start; }
+        .skills-heading { font-size: 30px; margin-bottom: 6px; }
+        .skills-sub { font-size: 14px; margin-bottom: 10px; max-width: 40ch; }
+        .skills-pillars-label { display: none; }
+
+        .skills-pillars {
+            flex-direction: row;
+            gap: 10px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            margin: 0 -20px;
+            padding: 0 20px 2px;
+            scroll-padding: 0 20px;
+        }
+
+        .skills-pillars::-webkit-scrollbar { display: none; }
+
+        .skills-pillar {
+            flex: 0 0 78%;
+            scroll-snap-align: start;
+            padding: 10px 14px;
+        }
+
+        .skills-pillar-title { font-size: 15px; margin-bottom: 2px; }
+        .skills-pillar-value { font-size: 13px; line-height: 1.4; }
+        /* The proof lives in the fruit's card on phones (tap the big fruit). */
+        .skills-pillar-proof { display: none; }
+        .skills-pillar-link { margin-top: 4px; }
+
+        .skills-card {
+            width: auto;
+            right: 0;
+        }
+
+        .skills-caption-text { font-size: 12px; }
+        .skills-caption-hint { font-size: 10px; gap: 2px 10px; letter-spacing: 0; }
+    }
+
+    @media (max-width: 600px) {
+        .skills-slide { padding-right: 28px; }
+        .skills-pillars { margin-right: -28px; padding-right: 28px; }
     }
 
     /* Print */
     .skills-print-fallback { display: none; }
     @media print {
-        .skills-pit { display: none !important; }
-        .skills-heading-overlay { display: none !important; }
+        .skills-slide { display: none !important; }
         .skills-print-fallback { display: block !important; }
         .skills-cloud-print {
             display: flex; flex-wrap: wrap; gap: 3px; justify-content: center;
@@ -118,776 +454,439 @@ const skills = [
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .skills-canvas { display: none; }
-        .skills-heading-overlay { display: none; }
-        .skills-print-fallback {
-            display: block !important;
-        }
-        .skills-cloud-print {
-            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-        }
-        .skill-pill-print {
-            font-family: var(--mono); font-size: 14px; padding: 8px 18px;
-            border-radius: 100px; border: 1px solid var(--border);
-            background: var(--bg-card); color: var(--text-dim);
-        }
-        .skill-pill-print.featured {
-            border-color: var(--purple-dim); color: var(--purple);
-            background: var(--purple-glow);
-        }
+        .skills-pillar,
+        .skills-card { transition: none; }
     }
 </style>
 
 <script>
 (function () {
-    const pit = document.querySelector<HTMLElement>('.skills-pit');
-    if (!pit) return;
-    const canvas = pit.querySelector<HTMLCanvasElement>('.skills-canvas');
-    if (!canvas) return;
+    const root = document.querySelector<HTMLElement>('.skills-slide');
+    if (!root) return;
+    const stage = root.querySelector<HTMLElement>('.skills-stage')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('.skills-canvas')!;
+    const card = root.querySelector<HTMLElement>('.skills-card')!;
     const ctx = canvas.getContext('2d')!;
 
-    const skillsData: { label: string; featured: boolean }[] =
-        JSON.parse(pit.dataset.skills || '[]');
-    if (!skillsData.length) return;
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    // ─── Fruit tiers ───
-    // Cherry, Strawberry, Grape, Orange, Apple, Pineapple, Watermelon
-    interface TierDef {
-        radius: number;
-        stroke: string;
-        glow: string;
-        name: string;
-        skills: string[];
+    interface SkillData {
+        id: string; label: string; pillar: boolean; tier: number;
+        years: number | null; employers: string[]; value: string;
+        proof: string | null; proofSlug: string | null; proofTitle: string | null;
     }
+    interface ComboData {
+        pair: [string, string]; title: string; body: string;
+        slug: string | null; slugTitle: string | null;
+    }
+    const data: {
+        skills: SkillData[]; combos: ComboData[]; colors: string[];
+        strings: Record<'lang' | 'years' | 'yearsShort' | 'at' | 'pillar' | 'combo' | 'tryIt', string>;
+    } = JSON.parse(root.querySelector('.skills-data')?.textContent || '{}');
+    if (!data.skills?.length) return;
+    const S = data.strings;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const TIERS: TierDef[] = [
-        { radius: 18, stroke: '#ff3366', glow: 'rgba(255,51,102,0.4)',
-          name: 'cherry', skills: ['C#', 'Vue', 'Angular', 'Monorepos', 'Micro-frontends', 'Spec-kit', 'TanStack', 'Astro.js'] },
-        { radius: 24, stroke: '#ff6688', glow: 'rgba(255,102,136,0.4)',
-          name: 'strawberry', skills: ['Node.js', 'React', 'Next.js'] },
-        { radius: 32, stroke: '#aa66dd', glow: 'rgba(170,102,221,0.4)',
-          name: 'grape', skills: ['TypeScript', 'DevOps / CI/CD'] },
-        { radius: 40, stroke: '#ffaa22', glow: 'rgba(255,170,34,0.4)',
-          name: 'orange', skills: ['AWS / Azure', 'Project Delivery', 'Coaching'] },
-        { radius: 50, stroke: '#ff4444', glow: 'rgba(255,68,68,0.4)',
-          name: 'apple', skills: ['Agentic AI', 'Claude / LLMs', 'Test-Driven Development'] },
-        { radius: 62, stroke: '#ffdd44', glow: 'rgba(255,221,68,0.4)',
-          name: 'pineapple', skills: ['Agentic AI', 'Claude / LLMs'] },
-        { radius: 76, stroke: '#44dd66', glow: 'rgba(68,221,102,0.4)',
-          name: 'watermelon', skills: ['Agentic AI', 'Test-Driven Development'] },
+    const fmtYears = (y: number) =>
+        y.toLocaleString(S.lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const skillById = new Map(data.skills.map((s) => [s.id, s]));
+    const comboKey = (a: string, b: string) => [a, b].sort().join('+');
+    const comboByKey = new Map(data.combos.map((c) => [comboKey(c.pair[0], c.pair[1]), c]));
+    const foundCombos = new Set<string>();
+
+    // Drop order: pillars first so they settle at the bottom, then tools by
+    // years so the small ones land on top where their labels stay readable.
+    const dropOrder = [
+        ...data.skills.filter((s) => s.pillar),
+        ...data.skills.filter((s) => !s.pillar).sort((a, b) => (b.years ?? 0) - (a.years ?? 0)),
     ];
+    const DROP_X = [0.5, 0.2, 0.8, 0.38, 0.62, 0.14, 0.86, 0.5, 0.28, 0.72, 0.42, 0.58, 0.22];
 
-    const MAX_SPAWN_TIER = 4; // tiers 0-4 are spawnable
-
-    // ─── Static skill-to-tier mapping ───
-    // Each tier cycles through its skill pool
-    const tierSpawnIdx: number[] = TIERS.map(() => 0);
-    function skillForTier(tier: number): string {
-        const pool = TIERS[tier].skills;
-        const label = pool[tierSpawnIdx[tier] % pool.length];
-        tierSpawnIdx[tier]++;
-        return label;
-    }
+    // ─── Fruit sizes: tools by tier (years), pillars all the same, biggest ───
+    const TOOL_RADIUS = [30, 35, 41, 48, 56];
+    const PILLAR_RADIUS = 66;
+    const baseRadius = (s: SkillData) => (s.pillar ? PILLAR_RADIUS : TOOL_RADIUS[s.tier]);
+    const GOLD = '#ffd166';
 
     // ─── Physics constants ───
-    const GRAVITY   = 600;
-    const BOUNCE    = 0.25;
-    const AIR_DRAG  = 0.998;
-    const DT_CAP    = 0.033;
-    const MAX_FRUITS = 25;
-    const MAX_SPEED = 800; // velocity cap to prevent tunneling
-    const AUTO_DROP_INTERVAL = 1800;
-    const IDLE_TIMEOUT = 8000;
-    const MERGE_DURATION = 150;
-    const FONT_SM   = '600 11px "JetBrains Mono", monospace';
-    const FONT_MD   = '600 13px "JetBrains Mono", monospace';
-    const FONT_LG   = '600 16px "JetBrains Mono", monospace';
+    const GRAVITY = 900;
+    const BOUNCE = 0.25;
+    const AIR_DRAG = 0.998;
+    const DT_CAP = 0.033;
+    const MAX_SPEED = 1100;
+    const FILL_INTERVAL = 230;
+    const THROW_WINDOW = 1400;     // ms after release a thrown fruit can still make a combo
+    const COMBO_COOLDOWN = 3500;
+    const IDLE_BEFORE_DEMO = 2600; // ms after the bowl is full
+    const IDLE_HOP_EVERY = 6500;
     const BOWL_STROKE = '#9b4dca';
-    const BOWL_GLOW  = 'rgba(155, 77, 202, 0.35)';
+    const BOWL_GLOW = 'rgba(155, 77, 202, 0.35)';
 
-    // ─── Fruit interface ───
     interface Fruit {
-        x: number; y: number;
-        vx: number; vy: number;
-        radius: number;
-        tier: number;
-        label: string;
-        alive: boolean;
-        opacity: number;
-        merging: boolean;
-        mergeTarget: { x: number; y: number } | null;
-        mergeTimer: number;
-        scaleAnim: number; // 1.0 = normal, >1 = pop-in
-        mass: number;
-        age: number;
+        skill: SkillData;
+        x: number; y: number; vx: number; vy: number;
+        r: number; mass: number;
         grabbed: boolean;
-        // For tier 6 fade-out
-        maxLifetime: number;
-        lifetime: number;
+        thrownAt: number;
+        scaleAnim: number;
+        flash: number; // 0..1 highlight pulse
     }
-
-    // ─── Merge particles ───
     interface Particle {
-        x: number; y: number;
-        vx: number; vy: number;
-        life: number;
-        maxLife: number;
-        color: string;
-        size: number;
+        x: number; y: number; vx: number; vy: number;
+        life: number; maxLife: number; color: string; size: number;
     }
-
-    // ─── Bowl geometry ───
     interface Bowl {
-        x: number; y: number; // top-left of bowl bounding rect
-        w: number; h: number;
-        cx: number;           // center x
-        wallThickness: number;
-        cornerRadius: number;
-        taperInset: number;   // how much narrower the bottom is on each side
-        // Wall segments for collision (inner edges)
-        leftWall:  { x1: number; y1: number; x2: number; y2: number };
+        x: number; y: number; w: number; h: number;
+        taperInset: number; cornerRadius: number;
+        leftWall: { x1: number; y1: number; x2: number; y2: number };
         rightWall: { x1: number; y1: number; x2: number; y2: number };
         bottomWall: { x1: number; y1: number; x2: number; y2: number };
-        bottom:    number; // y of inner bottom
-        dropZoneTop: number; // y above which is the "drop zone"
+        bottom: number;
     }
 
     const fruits: Fruit[] = [];
     const particles: Particle[] = [];
-    let bowl: Bowl = {} as Bowl;
+    let bowl = {} as Bowl;
+    let W = 0, H = 0, scale = 1, compact = false;
     let animId: number | null = null;
     let running = false;
-    let W = 0, H = 0;
-    let ageCounter = 0;
-
-    // ─── Auto-pilot state ───
-    let lastAutoDrop = 0;
-    let userControlActive = false;
+    let fillIdx = 0;
+    let lastFill = 0;
+    let filledAt = 0;
+    let userInteracted = false;
     let lastUserAction = 0;
+    let lastHop = 0;
+    let demoDone = false;
+    let settling = false; // reduced motion: simulating off-screen, no combos
+    const comboCooldown = new Map<string, number>();
 
-    // ─── Drop preview ───
-    let previewX: number | null = null;
-    let previewTier: number = 0;
-    let previewLabel: string = '';
-    let nextDropReady = true;
+    // Kinematic tween used by the one-time demo throw.
+    let tween: { f: Fruit; target: Fruit; fx: number; fy: number; t0: number; dur: number } | null = null;
 
-    // ─── Drag state ───
-    let dragFruit: Fruit | null = null;
-    let dragOffX = 0, dragOffY = 0;
-    let prevMouseX = 0, prevMouseY = 0;
-    let mouseVX = 0, mouseVY = 0;
-
-    // randomSkillLabel no longer used — skills are assigned per-tier via skillForTier()
-
-    function fontForTier(tier: number): string {
-        if (tier <= 1) return FONT_SM;
-        if (tier <= 3) return FONT_MD;
-        return FONT_LG;
-    }
-
+    // ─── Layout ───
     function resize() {
         const dpr = window.devicePixelRatio || 1;
-        W = pit.offsetWidth;
-        H = pit.offsetHeight;
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
+        W = stage.clientWidth;
+        H = stage.clientHeight;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        compact = W < 520;
 
-        // Compute bowl geometry — taller and higher on desktop
-        const bw = Math.min(480, W - 80);
-        const bh = Math.min(460, H * 0.62);
+        const caption = root.querySelector<HTMLElement>('.skills-caption');
+        const captionH = (caption?.offsetHeight ?? 40) + (compact ? 10 : 18);
+        const bw = Math.min(W - (compact ? 4 : 24), 640);
+        const bh = Math.max(160, Math.min(H * (compact ? 0.8 : 0.7), 500, H - captionH - 40));
         const bx = (W - bw) / 2;
-        const by = H - bh - 60; // more breathing room from bottom
-        const wallT = 4;
+        const by = H - captionH - bh;
         const corner = 20;
-
-        // Slight taper: top is wider, bottom is narrower
-        const taperInset = 15;
-
+        const taper = compact ? 10 : 18;
         bowl = {
-            x: bx, y: by, w: bw, h: bh,
-            cx: W / 2,
-            wallThickness: wallT,
-            cornerRadius: corner,
-            taperInset: taperInset,
-            leftWall: {
-                x1: bx + taperInset, y1: by + bh - corner,
-                x2: bx, y2: by
-            },
-            rightWall: {
-                x1: bx + bw - taperInset, y1: by + bh - corner,
-                x2: bx + bw, y2: by
-            },
-            bottomWall: {
-                x1: bx + taperInset, y1: by + bh - corner,
-                x2: bx + bw - taperInset, y2: by + bh - corner
-            },
+            x: bx, y: by, w: bw, h: bh, taperInset: taper, cornerRadius: corner,
+            leftWall: { x1: bx + taper, y1: by + bh - corner, x2: bx, y2: by },
+            rightWall: { x1: bx + bw - taper, y1: by + bh - corner, x2: bx + bw, y2: by },
+            bottomWall: { x1: bx + taper, y1: by + bh - corner, x2: bx + bw - taper, y2: by + bh - corner },
             bottom: by + bh - corner,
-            dropZoneTop: by - 60,
         };
+        scale = Math.max(0.6, Math.min(1.12, bw / 540, bh / 400));
+        for (const f of fruits) setRadius(f);
     }
 
-    // ─── Create a fruit ───
-    function createFruit(x: number, y: number, tier: number, label: string, scaleAnim: number = 1.0): Fruit {
-        const t = TIERS[tier];
-        ageCounter++;
-        return {
-            x, y, vx: 0, vy: 0,
-            radius: t.radius,
-            tier,
-            label,
-            alive: true,
-            opacity: 1,
-            merging: false,
-            mergeTarget: null,
-            mergeTimer: 0,
-            scaleAnim,
-            mass: t.radius * t.radius, // mass proportional to area
-            age: ageCounter,
-            grabbed: false,
-            maxLifetime: tier === 6 ? 8000 : 0, // tier 6 fades after 8s
-            lifetime: 0,
+    function setRadius(f: Fruit) {
+        f.r = baseRadius(f.skill) * scale;
+        f.mass = f.r * f.r;
+    }
+
+    function spawn(skill: SkillData, xFrac: number): Fruit {
+        const f: Fruit = {
+            skill, x: 0, y: 0, vx: 0, vy: 0, r: 0, mass: 0,
+            grabbed: false, thrownAt: -Infinity, scaleAnim: 1, flash: 0,
         };
-    }
-
-    // ─── Auto-drop a fruit into the bowl ───
-    function autoDropFruit() {
-        const aliveCount = fruits.filter(f => f.alive && !f.merging).length;
-        if (aliveCount >= MAX_FRUITS) return;
-        const tier = Math.floor(Math.random() * (MAX_SPAWN_TIER + 1));
-        const label = skillForTier(tier);
-        const margin = TIERS[tier].radius + 20;
-        const dropX = bowl.x + margin + Math.random() * (bowl.w - margin * 2);
-        const f = createFruit(dropX, bowl.y - TIERS[tier].radius - 10, tier, label);
-        f.vy = 20;
+        setRadius(f);
+        const inner = bowl.w - f.r * 2 - 8;
+        f.x = bowl.x + f.r + 4 + inner * xFrac;
+        f.y = f.r + 4;
+        f.vy = 60;
         fruits.push(f);
+        return f;
     }
 
-    // ─── User drop a fruit ───
-    function userDropFruit(x: number) {
-        const aliveCount = fruits.filter(f => f.alive && !f.merging).length;
-        if (aliveCount >= MAX_FRUITS) return;
-        const tier = previewTier;
-        const label = previewLabel;
-        const clampedX = Math.max(bowl.x + TIERS[tier].radius + 5,
-                                   Math.min(bowl.x + bowl.w - TIERS[tier].radius - 5, x));
-        const f = createFruit(clampedX, bowl.y - TIERS[tier].radius - 5, tier, label);
-        f.vy = 10;
-        fruits.push(f);
-        prepareNextDrop();
-    }
-
-    function prepareNextDrop() {
-        previewTier = Math.floor(Math.random() * (MAX_SPAWN_TIER + 1));
-        previewLabel = skillForTier(previewTier);
-        nextDropReady = true;
-    }
-
-    // ─── Spawn merge particles ───
-    function spawnParticles(x: number, y: number, color: string) {
-        const count = 6 + Math.floor(Math.random() * 3);
+    // ─── Particles ───
+    function spawnParticles(x: number, y: number, color: string, count = 8, speed = 160) {
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.5;
-            const speed = 80 + Math.random() * 120;
+            const v = speed * (0.5 + Math.random() * 0.8);
             particles.push({
-                x, y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1,
-                maxLife: 0.4 + Math.random() * 0.3,
-                color,
-                size: 2 + Math.random() * 3,
+                x, y, vx: Math.cos(angle) * v, vy: Math.sin(angle) * v,
+                life: 1, maxLife: 0.5 + Math.random() * 0.4, color, size: 2 + Math.random() * 3,
             });
         }
     }
 
-    // ─── Circle-line-segment collision ───
-    function circleLineCollision(
-        cx: number, cy: number, r: number,
-        x1: number, y1: number, x2: number, y2: number
-    ): { nx: number; ny: number; depth: number } | null {
+    // ─── Collision helpers ───
+    function circleLineCollision(cx: number, cy: number, r: number,
+        x1: number, y1: number, x2: number, y2: number) {
         const dx = x2 - x1, dy = y2 - y1;
         const len2 = dx * dx + dy * dy;
         if (len2 === 0) return null;
         let t = ((cx - x1) * dx + (cy - y1) * dy) / len2;
         t = Math.max(0, Math.min(1, t));
-        const closestX = x1 + t * dx;
-        const closestY = y1 + t * dy;
-        const distX = cx - closestX;
-        const distY = cy - closestY;
+        const distX = cx - (x1 + t * dx);
+        const distY = cy - (y1 + t * dy);
         const dist = Math.sqrt(distX * distX + distY * distY);
         if (dist < r) {
-            const nx = dist > 0 ? distX / dist : 0;
-            const ny = dist > 0 ? distY / dist : -1;
-            return { nx, ny, depth: r - dist };
+            return { nx: dist > 0 ? distX / dist : 0, ny: dist > 0 ? distY / dist : -1, depth: r - dist };
         }
         return null;
     }
 
-    // ─── Hit-test: find fruit under cursor ───
-    function hitTest(mx: number, my: number): Fruit | null {
-        for (let i = fruits.length - 1; i >= 0; i--) {
-            const f = fruits[i];
-            if (!f.alive || f.merging || f.opacity < 0.5) continue;
-            const dx = mx - f.x, dy = my - f.y;
-            if (dx * dx + dy * dy <= f.radius * f.radius) return f;
+    function bounceOff(f: Fruit, hit: { nx: number; ny: number; depth: number } | null) {
+        if (!hit) return false;
+        f.x += hit.nx * hit.depth;
+        f.y += hit.ny * hit.depth;
+        const vDotN = f.vx * hit.nx + f.vy * hit.ny;
+        if (vDotN < 0) {
+            f.vx -= (1 + BOUNCE) * vDotN * hit.nx;
+            f.vy -= (1 + BOUNCE) * vDotN * hit.ny;
         }
-        return null;
+        return true;
     }
 
-    function isInDropZone(my: number): boolean {
-        return my < bowl.y && my > bowl.dropZoneTop;
+    /** Keep a fruit inside the bowl, or inside the column above it. Nothing escapes. */
+    function confine(f: Fruit) {
+        bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.leftWall.x1, bowl.leftWall.y1, bowl.leftWall.x2, bowl.leftWall.y2));
+        bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.rightWall.x1, bowl.rightWall.y1, bowl.rightWall.x2, bowl.rightWall.y2));
+        if (bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.bottomWall.x1, bowl.bottomWall.y1, bowl.bottomWall.x2, bowl.bottomWall.y2))) {
+            f.vx *= 0.9;
+        }
+        if (f.y + f.r > bowl.bottom) {
+            f.y = bowl.bottom - f.r;
+            if (f.vy > 0) f.vy = -f.vy * BOUNCE;
+            f.vx *= 0.9;
+        }
+        // Side bounds: tapered inside the bowl, straight walls in the column above.
+        const t = Math.max(0, Math.min(1, (f.y - bowl.y) / (bowl.bottom - bowl.y)));
+        const left = bowl.x + bowl.taperInset * t + f.r;
+        const right = bowl.x + bowl.w - bowl.taperInset * t - f.r;
+        if (f.x < left) { f.x = left; if (f.vx < 0) f.vx = -f.vx * BOUNCE; }
+        if (f.x > right) { f.x = right; if (f.vx > 0) f.vx = -f.vx * BOUNCE; }
+        // Ceiling: thrown fruit never leaves the stage (so never covers the heading).
+        if (f.y - f.r < 2) { f.y = f.r + 2; if (f.vy < 0) f.vy = -f.vy * BOUNCE; }
     }
 
-    function isInBowlArea(mx: number, my: number): boolean {
-        return mx >= bowl.x - 20 && mx <= bowl.x + bowl.w + 20 &&
-               my >= bowl.dropZoneTop && my <= bowl.y + bowl.h + 20;
+    function clampVelocity(f: Fruit) {
+        const speed = Math.hypot(f.vx, f.vy);
+        if (speed > MAX_SPEED) { f.vx *= MAX_SPEED / speed; f.vy *= MAX_SPEED / speed; }
     }
 
-    // ─── Canvas position helper ───
-    function getCanvasPos(e: MouseEvent | Touch): { x: number; y: number } {
-        const rect = canvas.getBoundingClientRect();
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
-
-    // ─── Pointer handlers ───
-    let touchDropPending = false; // touch-only: preview before drop
-
-    function onPointerDown(mx: number, my: number, isTouch = false) {
-        // Check if clicking a fruit in the bowl first
-        const hit = hitTest(mx, my);
-        if (hit) {
-            dragFruit = hit;
-            hit.grabbed = true;
-            dragOffX = mx - hit.x;
-            dragOffY = my - hit.y;
-            prevMouseX = mx;
-            prevMouseY = my;
-            mouseVX = 0;
-            mouseVY = 0;
-            userControlActive = true;
-            lastUserAction = performance.now();
-            return true;
-        }
-        // Check if clicking in drop zone to release a fruit
-        if (isInDropZone(my) && mx >= bowl.x && mx <= bowl.x + bowl.w && nextDropReady) {
-            userControlActive = true;
-            lastUserAction = performance.now();
-            if (isTouch) {
-                // Touch: show preview, drop on release
-                touchDropPending = true;
-                previewX = mx;
-            } else {
-                // Mouse: drop immediately (click)
-                userDropFruit(mx);
-            }
-            return true;
-        }
-        return false;
-    }
-
-    function onPointerMove(mx: number, my: number) {
-        if (dragFruit) {
-            mouseVX = (mx - prevMouseX) * 60;
-            mouseVY = (my - prevMouseY) * 60;
-            prevMouseX = mx;
-            prevMouseY = my;
-            dragFruit.x = mx - dragOffX;
-            dragFruit.y = my - dragOffY;
-            dragFruit.vx = 0;
-            dragFruit.vy = 0;
-            return;
-        }
-        // Update drop preview position
-        if (isInDropZone(my) && mx >= bowl.x && mx <= bowl.x + bowl.w) {
-            previewX = mx;
-            userControlActive = true;
-            lastUserAction = performance.now();
-        } else if (isInBowlArea(mx, my)) {
-            // Keep preview visible when hovering near bowl
-            previewX = Math.max(bowl.x + TIERS[previewTier].radius + 5,
-                               Math.min(bowl.x + bowl.w - TIERS[previewTier].radius - 5, mx));
-            userControlActive = true;
-            lastUserAction = performance.now();
-        } else {
-            previewX = null;
-        }
-    }
-
-    function onPointerUp() {
-        if (touchDropPending) {
-            touchDropPending = false;
-            if (previewX !== null && nextDropReady) {
-                userDropFruit(previewX);
-            }
-            previewX = null;
-            return;
-        }
-        if (!dragFruit) return;
-        dragFruit.vx = mouseVX;
-        dragFruit.vy = mouseVY;
-        dragFruit.grabbed = false;
-        dragFruit = null;
-    }
-
-    function onPointerLeave() {
-        previewX = null;
-        touchDropPending = false;
-        if (dragFruit) {
-            dragFruit.vx = mouseVX;
-            dragFruit.vy = mouseVY;
-            dragFruit.grabbed = false;
-            dragFruit = null;
-        }
-    }
-
-    // Mouse events
-    canvas.addEventListener('mousedown', (e) => {
-        const pos = getCanvasPos(e);
-        if (onPointerDown(pos.x, pos.y)) {
-            e.stopPropagation();
-        }
-    });
-    canvas.addEventListener('mousemove', (e) => {
-        const pos = getCanvasPos(e);
-        onPointerMove(pos.x, pos.y);
-        if (dragFruit) {
-            e.stopPropagation();
-            canvas.classList.add('grabbing');
-            canvas.classList.remove('grab', 'hovering-drop');
-        } else if (isInDropZone(pos.y) && pos.x >= bowl.x && pos.x <= bowl.x + bowl.w) {
-            canvas.classList.add('hovering-drop');
-            canvas.classList.remove('grab', 'grabbing');
-        } else if (hitTest(pos.x, pos.y)) {
-            canvas.classList.add('grab');
-            canvas.classList.remove('hovering-drop', 'grabbing');
-        } else {
-            canvas.classList.remove('grab', 'hovering-drop', 'grabbing');
-        }
-    });
-    canvas.addEventListener('mouseup', (e) => {
-        if (dragFruit) e.stopPropagation();
-        onPointerUp();
-        canvas.classList.remove('grabbing');
-    });
-    canvas.addEventListener('mouseleave', () => {
-        onPointerLeave();
-        canvas.classList.remove('grab', 'hovering-drop', 'grabbing');
-    });
-
-    // Touch events
-    canvas.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        const pos = getCanvasPos(e.touches[0]);
-        if (onPointerDown(pos.x, pos.y, true)) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => {
-        if (!dragFruit && !touchDropPending) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const pos = getCanvasPos(e.touches[0]);
-        if (touchDropPending) {
-            // Update preview position as finger moves
-            previewX = Math.max(bowl.x + TIERS[previewTier].radius + 5,
-                               Math.min(bowl.x + bowl.w - TIERS[previewTier].radius - 5, pos.x));
-        } else {
-            onPointerMove(pos.x, pos.y);
-        }
-    }, { passive: false });
-    canvas.addEventListener('touchend', (e) => {
-        if (dragFruit || touchDropPending) e.stopPropagation();
-        onPointerUp();
-    });
-    canvas.addEventListener('touchcancel', () => {
-        onPointerLeave();
-    });
+    const isActive = (f: Fruit, now: number) => f.grabbed || now - f.thrownAt < THROW_WINDOW;
 
     // ─── Physics step ───
-    function step(dt: number) {
-        // Update particles
+    function step(dt: number, now: number) {
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.vy += 200 * dt; // gravity on particles
+            p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt;
             p.life -= dt / p.maxLife;
             if (p.life <= 0) particles.splice(i, 1);
         }
 
-        // Update merging fruits
         for (const f of fruits) {
-            if (!f.alive) continue;
-            if (f.merging && f.mergeTarget) {
-                f.mergeTimer += dt * 1000;
-                const t = Math.min(f.mergeTimer / MERGE_DURATION, 1);
-                f.x += (f.mergeTarget.x - f.x) * t * 0.3;
-                f.y += (f.mergeTarget.y - f.y) * t * 0.3;
-                f.scaleAnim = 1 - t * 0.8;
-                if (f.mergeTimer >= MERGE_DURATION) {
-                    f.alive = false;
-                }
-                continue;
-            }
-            // Scale pop animation
-            if (f.scaleAnim > 1.01) {
-                f.scaleAnim += (1 - f.scaleAnim) * 8 * dt;
-                if (f.scaleAnim < 1.01) f.scaleAnim = 1;
-            }
-            // Tier 6 lifetime fade
-            if (f.maxLifetime > 0) {
-                f.lifetime += dt * 1000;
-                if (f.lifetime > f.maxLifetime * 0.7) {
-                    f.opacity = Math.max(0, 1 - (f.lifetime - f.maxLifetime * 0.7) / (f.maxLifetime * 0.3));
-                    if (f.opacity <= 0) f.alive = false;
-                }
-            }
-            // Fade dying
-            if (f.opacity < 1 && f.maxLifetime === 0) {
-                f.opacity -= 1.5 * dt;
-                if (f.opacity <= 0) f.alive = false;
-            }
-        }
-
-        // ─── Clamp velocity to prevent tunneling ───
-        function clampVelocity(f: Fruit) {
-            const speed = Math.sqrt(f.vx * f.vx + f.vy * f.vy);
-            if (speed > MAX_SPEED) {
-                const scale = MAX_SPEED / speed;
-                f.vx *= scale;
-                f.vy *= scale;
-            }
-        }
-
-        // ─── Resolve bowl wall collisions for a single fruit ───
-        function resolveBowlCollision(f: Fruit) {
-            // Left wall
-            const lw = bowl.leftWall;
-            const lhit = circleLineCollision(f.x, f.y, f.radius, lw.x1, lw.y1, lw.x2, lw.y2);
-            if (lhit) {
-                f.x += lhit.nx * lhit.depth;
-                f.y += lhit.ny * lhit.depth;
-                const vDotN = f.vx * lhit.nx + f.vy * lhit.ny;
-                if (vDotN < 0) {
-                    f.vx -= (1 + BOUNCE) * vDotN * lhit.nx;
-                    f.vy -= (1 + BOUNCE) * vDotN * lhit.ny;
-                }
-            }
-
-            // Right wall
-            const rw = bowl.rightWall;
-            const rhit = circleLineCollision(f.x, f.y, f.radius, rw.x1, rw.y1, rw.x2, rw.y2);
-            if (rhit) {
-                f.x += rhit.nx * rhit.depth;
-                f.y += rhit.ny * rhit.depth;
-                const vDotN = f.vx * rhit.nx + f.vy * rhit.ny;
-                if (vDotN < 0) {
-                    f.vx -= (1 + BOUNCE) * vDotN * rhit.nx;
-                    f.vy -= (1 + BOUNCE) * vDotN * rhit.ny;
-                }
-            }
-
-            // Bottom wall (line segment across bottom)
-            const bw = bowl.bottomWall;
-            const bhit = circleLineCollision(f.x, f.y, f.radius, bw.x1, bw.y1, bw.x2, bw.y2);
-            if (bhit) {
-                f.x += bhit.nx * bhit.depth;
-                f.y += bhit.ny * bhit.depth;
-                const vDotN = f.vx * bhit.nx + f.vy * bhit.ny;
-                if (vDotN < 0) {
-                    f.vx -= (1 + BOUNCE) * vDotN * bhit.nx;
-                    f.vy -= (1 + BOUNCE) * vDotN * bhit.ny;
-                }
-                f.vx *= 0.9; // friction on bottom
-            }
-
-            // Hard bottom clamp (safety)
-            const bottomY = bowl.bottom;
-            if (f.y + f.radius > bottomY) {
-                f.y = bottomY - f.radius;
-                if (f.vy > 0) f.vy = -f.vy * BOUNCE;
-                f.vx *= 0.9;
-            }
-
-            // ─── Hard wall clamp using interpolated taper (prevents escape) ───
-            // At any y inside the bowl, compute exact left/right inner bounds
-            if (f.y + f.radius > bowl.y && f.y - f.radius < bowl.bottom) {
-                const wallRange = bowl.bottom - bowl.y;
-                const t = Math.max(0, Math.min(1, (f.y - bowl.y) / wallRange));
-                const leftBound = bowl.x + bowl.taperInset * t + f.radius;
-                const rightBound = bowl.x + bowl.w - bowl.taperInset * t - f.radius;
-                if (f.x < leftBound) {
-                    f.x = leftBound;
-                    if (f.vx < 0) f.vx = -f.vx * BOUNCE;
-                }
-                if (f.x > rightBound) {
-                    f.x = rightBound;
-                    if (f.vx > 0) f.vx = -f.vx * BOUNCE;
-                }
-            }
-
-            // Keep in canvas bounds (safety — kill if way out)
-            if (f.x - f.radius < -100 || f.x + f.radius > W + 100 || f.y + f.radius > H + 100) {
-                f.alive = false;
-                return;
-            }
-            if (f.x - f.radius < 0) { f.x = f.radius; f.vx = Math.abs(f.vx) * BOUNCE; }
-            if (f.x + f.radius > W) { f.x = W - f.radius; f.vx = -Math.abs(f.vx) * BOUNCE; }
-            if (f.y + f.radius > H) { f.y = H - f.radius; f.vy = -Math.abs(f.vy) * BOUNCE; }
-        }
-
-        // Physics for non-merging alive fruits
-        for (const f of fruits) {
-            if (!f.alive || f.merging || f.grabbed) continue;
-
+            if (f.scaleAnim > 1.005) f.scaleAnim += (1 - f.scaleAnim) * 8 * dt;
+            else f.scaleAnim = 1;
+            if (f.flash > 0) f.flash = Math.max(0, f.flash - dt * 0.9);
+            if (f.grabbed) continue;
             f.vy += GRAVITY * dt;
-            f.vx *= AIR_DRAG;
-            f.vy *= AIR_DRAG;
+            f.vx *= AIR_DRAG; f.vy *= AIR_DRAG;
             clampVelocity(f);
-
-            f.x += f.vx * dt;
-            f.y += f.vy * dt;
-
-            resolveBowlCollision(f);
+            f.x += f.vx * dt; f.y += f.vy * dt;
+            confine(f);
         }
 
-        // Fruit-fruit collisions with merge detection
-        for (let iter = 0; iter < 3; iter++) {
+        for (let iter = 0; iter < 4; iter++) {
             for (let i = 0; i < fruits.length; i++) {
                 const a = fruits[i];
-                if (!a.alive || a.merging) continue;
                 for (let j = i + 1; j < fruits.length; j++) {
                     const b = fruits[j];
-                    if (!b.alive || b.merging) continue;
-
-                    const dx = b.x - a.x;
-                    const dy = b.y - a.y;
+                    const dx = b.x - a.x, dy = b.y - a.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = a.radius + b.radius;
-
+                    const minDist = a.r + b.r;
                     if (dist >= minDist) continue;
-
                     const overlap = minDist - dist;
                     const nx = dist > 0 ? dx / dist : 0;
                     const ny = dist > 0 ? dy / dist : -1;
 
-                    // Check for merge on first iteration
-                    if (iter === 0 && a.tier === b.tier && a.tier < 6 &&
-                        !a.grabbed && !b.grabbed) {
-                        // Trigger merge!
-                        const midX = (a.x + b.x) / 2;
-                        const midY = (a.y + b.y) / 2;
-                        a.merging = true;
-                        b.merging = true;
-                        a.mergeTarget = { x: midX, y: midY };
-                        b.mergeTarget = { x: midX, y: midY };
-                        a.mergeTimer = 0;
-                        b.mergeTimer = 0;
-
-                        // Schedule spawn of merged fruit
-                        const newTier = a.tier + 1;
-                        const newLabel = skillForTier(newTier);
-                        const strokeColor = TIERS[newTier].stroke;
-
-                        setTimeout(() => {
-                            const nf = createFruit(midX, midY, newTier, newLabel, 1.8);
-                            nf.vy = -30; // slight upward pop
-                            fruits.push(nf);
-                            spawnParticles(midX, midY, strokeColor);
-                        }, MERGE_DURATION);
-
-                        continue; // skip normal collision
+                    if (iter === 0 && !settling && (isActive(a, now) || isActive(b, now))) {
+                        tryCombo(a, b, now);
                     }
 
-                    // Positional correction
-                    if (a.grabbed) {
-                        b.x += nx * overlap;
-                        b.y += ny * overlap;
-                    } else if (b.grabbed) {
-                        a.x -= nx * overlap;
-                        a.y -= ny * overlap;
-                    } else {
-                        const totalMass = a.mass + b.mass;
-                        const aRatio = b.mass / totalMass;
-                        const bRatio = a.mass / totalMass;
-                        a.x -= nx * overlap * aRatio;
-                        a.y -= ny * overlap * aRatio;
-                        b.x += nx * overlap * bRatio;
-                        b.y += ny * overlap * bRatio;
+                    if (a.grabbed && b.grabbed) continue;
+                    if (a.grabbed) { b.x += nx * overlap; b.y += ny * overlap; }
+                    else if (b.grabbed) { a.x -= nx * overlap; a.y -= ny * overlap; }
+                    else {
+                        const total = a.mass + b.mass;
+                        a.x -= nx * overlap * (b.mass / total); a.y -= ny * overlap * (b.mass / total);
+                        b.x += nx * overlap * (a.mass / total); b.y += ny * overlap * (a.mass / total);
                     }
 
-                    // Impulse-based velocity response (first iteration only)
                     if (iter === 0) {
                         if (a.grabbed || b.grabbed) {
                             const other = a.grabbed ? b : a;
                             const sign = a.grabbed ? 1 : -1;
-                            other.vx += nx * sign * 150;
-                            other.vy += ny * sign * 150;
+                            other.vx += nx * sign * 120; other.vy += ny * sign * 120;
                         } else {
-                            const dvx = a.vx - b.vx;
-                            const dvy = a.vy - b.vy;
-                            const dvDotN = dvx * nx + dvy * ny;
+                            const dvDotN = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
                             if (dvDotN > 0) {
-                                const totalMass = a.mass + b.mass;
-                                const impulse = (1 + BOUNCE) * dvDotN / totalMass;
-                                a.vx -= impulse * b.mass * nx;
-                                a.vy -= impulse * b.mass * ny;
-                                b.vx += impulse * a.mass * nx;
-                                b.vy += impulse * a.mass * ny;
+                                const impulse = (1 + BOUNCE) * dvDotN / (a.mass + b.mass);
+                                a.vx -= impulse * b.mass * nx; a.vy -= impulse * b.mass * ny;
+                                b.vx += impulse * a.mass * nx; b.vy += impulse * a.mass * ny;
                             }
                         }
                     }
                 }
             }
-        }
-
-        // Second pass: re-check bowl collisions after fruit-fruit resolution
-        // Prevents fruits pushed through walls by overlap correction
-        for (const f of fruits) {
-            if (!f.alive || f.merging || f.grabbed) continue;
-            clampVelocity(f);
-            resolveBowlCollision(f);
+            for (const f of fruits) if (!f.grabbed) confine(f);
         }
     }
 
-    // ─── Draw bowl ───
-    function drawBowl() {
-        ctx.save();
-
-        const { x, y, w, h, cornerRadius: cr } = bowl;
-        const taperInset = 15;
-
-        // Glow
-        ctx.shadowColor = BOWL_GLOW;
-        ctx.shadowBlur = 20;
-        ctx.strokeStyle = BOWL_STROKE;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        ctx.beginPath();
-        // Left wall top (wider) to bottom (narrower)
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + taperInset, y + h - cr);
-        // Bottom-left corner
-        ctx.quadraticCurveTo(x + taperInset, y + h, x + taperInset + cr, y + h);
-        // Bottom
-        ctx.lineTo(x + w - taperInset - cr, y + h);
-        // Bottom-right corner
-        ctx.quadraticCurveTo(x + w - taperInset, y + h, x + w - taperInset, y + h - cr);
-        // Right wall bottom to top
-        ctx.lineTo(x + w, y);
-
-        ctx.stroke();
-        ctx.restore();
+    // ─── Combos ───
+    function tryCombo(a: Fruit, b: Fruit, now: number) {
+        const key = comboKey(a.skill.id, b.skill.id);
+        const combo = comboByKey.get(key);
+        if (!combo) return;
+        if (now - (comboCooldown.get(key) ?? -Infinity) < COMBO_COOLDOWN) return;
+        comboCooldown.set(key, now);
+        const mx = (a.x * b.r + b.x * a.r) / (a.r + b.r);
+        const my = (a.y * b.r + b.y * a.r) / (a.r + b.r);
+        spawnParticles(mx, my, GOLD, 14, 240);
+        spawnParticles(mx, my, data.colors[a.skill.tier], 5, 160);
+        spawnParticles(mx, my, data.colors[b.skill.tier], 5, 160);
+        a.flash = 1; b.flash = 1;
+        a.scaleAnim = 1.12; b.scaleAnim = 1.12;
+        foundCombos.add(key);
+        updateComboCounter();
+        const anchor = a.y < b.y ? a : b;
+        showCard({ kind: 'combo', combo, fruit: anchor, pinned: true, autoHide: tween ? 6500 : 0 });
     }
 
+    function updateComboCounter() {
+        const el = root.querySelector('[data-combos-found]');
+        if (el) el.textContent = String(foundCombos.size);
+        root.querySelector('.skills-combos')?.classList.toggle('has-found', foundCombos.size > 0);
+    }
+
+    // ─── Floating card ───
+    type CardState =
+        | { kind: 'skill'; fruit: Fruit; pinned: boolean; autoHide?: number }
+        | { kind: 'combo'; combo: ComboData; fruit: Fruit; pinned: boolean; autoHide?: number };
+    let cardState: CardState | null = null;
+    let cardHideTimer = 0;
+    const cardEls = {
+        kicker: card.querySelector<HTMLElement>('.skills-card-kicker')!,
+        title: card.querySelector<HTMLElement>('.skills-card-title')!,
+        body: card.querySelector<HTMLElement>('.skills-card-body')!,
+        proof: card.querySelector<HTMLElement>('.skills-card-proof')!,
+        meta: card.querySelector<HTMLElement>('.skills-card-meta')!,
+        link: card.querySelector<HTMLAnchorElement>('.skills-card-link')!,
+    };
+
+    function setLink(slug: string | null, title: string | null) {
+        if (slug && title) {
+            cardEls.link.hidden = false;
+            cardEls.link.href = '#' + slug;
+            cardEls.link.dataset.project = slug;
+            cardEls.link.textContent = title + ' →';
+        } else {
+            cardEls.link.hidden = true;
+            delete cardEls.link.dataset.project;
+        }
+    }
+
+    function partnersOf(id: string): string[] {
+        return data.combos
+            .filter((c) => c.pair.includes(id))
+            .map((c) => {
+                const other = c.pair[0] === id ? c.pair[1] : c.pair[0];
+                const done = foundCombos.has(comboKey(c.pair[0], c.pair[1]));
+                return (skillById.get(other)?.label ?? other) + (done ? ' ✓' : '');
+            });
+    }
+
+    function showCard(state: CardState) {
+        clearTimeout(cardHideTimer);
+        cardState = state;
+        if (state.kind === 'skill') {
+            const s = state.fruit.skill;
+            card.dataset.kind = s.pillar ? 'pillar' : 'tool';
+            card.style.setProperty('--c', data.colors[s.tier]);
+            cardEls.kicker.textContent = s.pillar ? S.pillar : `${fmtYears(s.years ?? 0)} ${S.years}`;
+            cardEls.title.textContent = s.label;
+            cardEls.body.textContent = s.value;
+            cardEls.proof.textContent = s.pillar ? (s.proof ?? '') : '';
+            const meta: string[] = [];
+            if (!s.pillar && s.employers.length) meta.push(`${S.at}: ${s.employers.join(' · ')}`);
+            const partners = partnersOf(s.id);
+            if (partners.length) meta.push(`${S.tryIt}: ${partners.join(', ')}`);
+            cardEls.meta.textContent = meta.join('\n');
+            setLink(s.pillar ? s.proofSlug : null, s.pillar ? s.proofTitle : null);
+            lightPillar(s.pillar ? s.id : null);
+        } else {
+            const c = state.combo;
+            card.dataset.kind = 'combo';
+            card.style.removeProperty('--c');
+            const [a, b] = c.pair.map((id) => skillById.get(id)?.label ?? id);
+            cardEls.kicker.textContent = `${S.combo}: ${a} + ${b}`;
+            cardEls.title.textContent = c.title;
+            cardEls.body.textContent = c.body;
+            cardEls.proof.textContent = '';
+            cardEls.meta.textContent = '';
+            setLink(c.slug, c.slugTitle);
+            lightPillar(null);
+        }
+        cardEls.meta.style.whiteSpace = 'pre-line';
+        card.hidden = false;
+        card.classList.toggle('is-pinned', state.pinned);
+        positionCard();
+        requestAnimationFrame(() => card.classList.add('is-open'));
+        if (state.autoHide) {
+            cardHideTimer = window.setTimeout(() => {
+                if (!card.matches(':hover')) hideCard();
+            }, state.autoHide);
+        }
+        if (reducedMotion) draw();
+    }
+
+    function hideCard() {
+        clearTimeout(cardHideTimer);
+        cardState = null;
+        card.classList.remove('is-open', 'is-pinned');
+        lightPillar(null);
+        window.setTimeout(() => { if (!cardState) card.hidden = true; }, 200);
+        if (reducedMotion) draw();
+    }
+
+    function positionCard() {
+        if (!cardState || card.hidden) return;
+        const f = cardState.fruit;
+        if (compact) {
+            // Phones: a full-width card at the top of the stage, away from the thumb.
+            card.style.left = '0px';
+            card.style.top = '0px';
+            return;
+        }
+        const cw = card.offsetWidth, ch = card.offsetHeight;
+        let x = f.x - cw / 2;
+        let y = f.y - f.r - ch - 14;
+        x = Math.max(4, Math.min(W - cw - 4, x));
+        if (y < 4) y = Math.min(H - ch - 4, f.y + f.r + 14);
+        card.style.left = `${Math.round(x)}px`;
+        card.style.top = `${Math.round(Math.max(4, y))}px`;
+    }
+
+    function lightPillar(id: string | null) {
+        root.querySelectorAll<HTMLElement>('.skills-pillar').forEach((el) => {
+            el.classList.toggle('is-lit', el.dataset.skill === id);
+        });
+    }
+
+    // ─── Drawing ───
     // ─── Draw fruit shapes — Suika-style round circles ───
     function drawCherry(x: number, y: number, r: number) {
         // Cherry: solid round red ball with stem + tiny leaf
@@ -1196,213 +1195,494 @@ const skills = [
         ctx.fill();
     }
 
-    function drawFruitShape(x: number, y: number, r: number, tier: number, alpha: number) {
-        const t = TIERS[tier];
-        ctx.save();
-        ctx.globalAlpha = alpha;
-
-        // Subtle glow behind fruit
-        ctx.shadowColor = t.glow;
-        ctx.shadowBlur = 12;
-
-        // Draw the specific fruit
-        if (tier === 0) drawCherry(x, y, r);
-        else if (tier === 1) drawStrawberry(x, y, r);
-        else if (tier === 2) drawGrape(x, y, r);
-        else if (tier === 3) drawOrange(x, y, r);
-        else if (tier === 4) drawApple(x, y, r);
-        else if (tier === 5) drawPineapple(x, y, r);
-        else if (tier === 6) drawWatermelon(x, y, r);
-
-        ctx.shadowBlur = 0;
-        ctx.restore();
-    }
-
-    // ─── Draw a fruit with label ───
-    function drawFruit(f: Fruit) {
-        ctx.save();
-        ctx.globalAlpha = f.opacity;
-
-        const r = f.radius * f.scaleAnim;
-
-        // Draw the fruit shape
-        drawFruitShape(f.x, f.y, r, f.tier, f.opacity);
-
-        // Skill label with dark backdrop for readability
-        ctx.globalAlpha = f.opacity;
-        ctx.font = fontForTier(f.tier);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const maxWidth = r * 1.9;
-
-        // Word-wrap: greedily fill lines within maxWidth
-        const words = f.label.split(' ');
-        const lines: string[] = [];
-        let currentLine = words[0] || '';
-        for (let w = 1; w < words.length; w++) {
-            const candidate = currentLine + ' ' + words[w];
-            if (ctx.measureText(candidate).width <= maxWidth) {
-                currentLine = candidate;
-            } else {
-                lines.push(currentLine);
-                currentLine = words[w];
-            }
-        }
-        lines.push(currentLine);
-
-        const lineHeight = f.tier <= 1 ? 13 : (f.tier <= 3 ? 15 : 18);
-        const totalH = lines.length * lineHeight;
-        const labelY = f.y;
-        const startY = labelY - totalH / 2 + lineHeight / 2;
-
-        // Dark rounded backdrop behind text
-        const textMetrics = lines.map(l => ctx.measureText(l).width);
-        const maxTextW = Math.min(Math.max(...textMetrics) + 12, maxWidth + 12);
-        const padY = 4;
-        ctx.globalAlpha = f.opacity * 0.82;
-        ctx.fillStyle = '#000000';
-        const bgH = totalH + padY * 2;
-        const bgY = labelY - bgH / 2;
-        const bgR = Math.min(6, bgH / 2);
+    function drawPeach(x: number, y: number, r: number) {
+        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+        grad.addColorStop(0, '#ffd6b0');
+        grad.addColorStop(0.45, '#ff9a76');
+        grad.addColorStop(1, '#c4504a');
         ctx.beginPath();
-        ctx.roundRect(f.x - maxTextW / 2, bgY, maxTextW, bgH, bgR);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
         ctx.fill();
+        // Crease
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(150, 50, 40, 0.28)';
+        ctx.lineWidth = Math.max(1.5, r * 0.05);
+        ctx.beginPath();
+        ctx.moveTo(x + r * 0.05, y - r * 0.9);
+        ctx.quadraticCurveTo(x + r * 0.4, y, x + r * 0.05, y + r * 0.95);
+        ctx.stroke();
+        ctx.restore();
+        // Leaf
+        ctx.beginPath();
+        ctx.ellipse(x + r * 0.2, y - r * 0.88, r * 0.2, r * 0.08, -0.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#44aa44';
+        ctx.fill();
+        // Highlight
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.32, y - r * 0.28, r * 0.16, r * 0.24, -0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.fill();
+    }
 
-        // Text
-        ctx.globalAlpha = f.opacity;
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < lines.length; i++) {
-            ctx.fillText(lines[i], f.x, startY + i * lineHeight, maxWidth);
-        }
+    const DRAWERS = [drawCherry, drawStrawberry, drawGrape, drawOrange, drawApple, drawPineapple, drawWatermelon, drawPeach];
 
+    function drawBowl() {
+        const { x, y, w, h, cornerRadius: cr, taperInset: ti } = bowl;
+        ctx.save();
+        ctx.shadowColor = BOWL_GLOW;
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = BOWL_STROKE;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + ti, y + h - cr);
+        ctx.quadraticCurveTo(x + ti, y + h, x + ti + cr, y + h);
+        ctx.lineTo(x + w - ti - cr, y + h);
+        ctx.quadraticCurveTo(x + w - ti, y + h, x + w - ti, y + h - cr);
+        ctx.lineTo(x + w, y);
+        ctx.stroke();
         ctx.restore();
     }
 
-    // ─── Draw drop preview ghost ───
-    function drawPreview() {
-        if (previewX === null || !nextDropReady) return;
+    function drawFruitBody(f: Fruit, now: number) {
+        const r = f.r * f.scaleAnim;
+        const color = data.colors[f.skill.tier];
         ctx.save();
+        if (f.skill.pillar) {
+            // Gold halo: "this is what I sell".
+            const pulse = 0.5 + 0.5 * Math.sin(now / 700 + f.skill.tier);
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, r + 5 * scale, 0, Math.PI * 2);
+            ctx.strokeStyle = GOLD;
+            ctx.globalAlpha = 0.55 + 0.25 * pulse;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = GOLD;
+            ctx.shadowBlur = 14;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12 + f.flash * 30;
+        DRAWERS[f.skill.tier](f.x, f.y, r);
+        if (f.flash > 0) {
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, r + 2, 0, Math.PI * 2);
+            ctx.strokeStyle = GOLD;
+            ctx.globalAlpha = f.flash;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
 
-        const t = TIERS[previewTier];
-        const py = bowl.y - t.radius - 15;
+    function wrapLabel(text: string, maxW: number): string[] {
+        if (ctx.measureText(text).width <= maxW) return [text];
+        // Prefer breaking after " / " or "-" or a space, whichever balances best.
+        const breaks: number[] = [];
+        for (let i = 1; i < text.length - 1; i++) {
+            if (text[i] === ' ' || text[i - 1] === '-') breaks.push(i);
+        }
+        let best: string[] = [text];
+        let bestW = Infinity;
+        for (const i of breaks) {
+            const a = text.slice(0, i).trimEnd();
+            const b = text.slice(i).trimStart();
+            const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
+            if (w < bestW) { bestW = w; best = [a, b]; }
+        }
+        return best;
+    }
 
-        // Dashed drop line
-        ctx.globalAlpha = 0.25;
-        ctx.setLineDash([4, 6]);
-        ctx.strokeStyle = t.stroke;
-        ctx.lineWidth = 1;
+    function drawLabel(f: Fruit, focused: boolean) {
+        const s = f.skill;
+        const pill = s.pillar;
+        const nameSize = compact ? (pill ? 13 : 11) : Math.round((pill ? 15 : 12.5) * Math.max(0.86, scale));
+        const nameFont = `${pill ? 700 : 600} ${nameSize}px Inter, system-ui, sans-serif`;
+        const subFont = `500 ${compact ? 9.5 : 10.5}px "JetBrains Mono", monospace`;
+        ctx.save();
+        ctx.font = nameFont;
+        const lines = wrapLabel(s.label, compact ? Math.max(f.r * 1.6, 54) : Math.max(f.r * 1.7, 64));
+        const sub = pill ? '' : `${fmtYears(s.years ?? 0)} ${S.yearsShort}`;
+        const lineH = nameSize * 1.15;
+        const subH = sub ? nameSize * 0.95 : 0;
+        let textW = Math.max(...lines.map((l) => ctx.measureText(l).width));
+        if (sub) { ctx.font = subFont; textW = Math.max(textW, ctx.measureText(sub).width); }
+        const padX = 6, padY = 3;
+        const boxW = textW + padX * 2;
+        const boxH = lines.length * lineH + subH + padY * 2;
+        // Keep the label on the canvas even when the fruit hugs the edge.
+        const bx = Math.max(2, Math.min(W - boxW - 2, f.x - boxW / 2));
+        const by = f.y - boxH / 2;
+        const cx = bx + boxW / 2;
+        ctx.globalAlpha = focused ? 0.95 : 0.78;
+        ctx.fillStyle = '#0a0a0f';
         ctx.beginPath();
-        ctx.moveTo(previewX, py + t.radius);
-        ctx.lineTo(previewX, bowl.y + 20);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Ghost fruit shape
-        drawFruitShape(previewX, py, t.radius, previewTier, 0.3);
-
-        // Label
-        ctx.globalAlpha = 0.4;
-        ctx.font = fontForTier(previewTier);
-        ctx.fillStyle = '#ffffff';
+        ctx.roundRect(bx, by, boxW, boxH, Math.min(7, boxH / 2));
+        ctx.fill();
+        if (focused) {
+            ctx.strokeStyle = pill ? GOLD : data.colors[s.tier];
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 1;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(previewLabel, previewX, py, t.radius * 1.6);
-
+        ctx.font = nameFont;
+        ctx.fillStyle = '#ffffff';
+        lines.forEach((l, i) => ctx.fillText(l, cx, by + padY + lineH * (i + 0.5)));
+        if (sub) {
+            ctx.font = subFont;
+            ctx.fillStyle = '#b8b8cc';
+            ctx.fillText(sub, cx, by + padY + lines.length * lineH + subH * 0.5);
+        }
         ctx.restore();
     }
 
-    // ─── Draw particles ───
     function drawParticles() {
         for (const p of particles) {
             ctx.save();
-            ctx.globalAlpha = p.life;
+            ctx.globalAlpha = Math.max(0, p.life);
             ctx.shadowColor = p.color;
             ctx.shadowBlur = 8;
             ctx.fillStyle = p.color;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
     }
 
-    function draw() {
+    function draw(now = performance.now()) {
         ctx.clearRect(0, 0, W, H);
         drawBowl();
-        drawPreview();
-        for (const f of fruits) {
-            if (f.alive) drawFruit(f);
-        }
+        for (const f of fruits) drawFruitBody(f, now);
+        // Labels in a second pass so no fruit ever covers another fruit's name;
+        // the focused one goes last so it's always on top.
+        const focus = cardState?.fruit ?? hoverFruit ?? null;
+        for (const f of fruits) if (f !== focus) drawLabel(f, false);
+        if (focus && fruits.includes(focus)) drawLabel(focus, true);
         drawParticles();
     }
 
+    // ─── Input ───
+    let hoverFruit: Fruit | null = null;
+    let press: {
+        fruit: Fruit | null; x: number; y: number; t: number;
+        offX: number; offY: number; dragging: boolean; touch: boolean; decided: boolean;
+    } | null = null;
+    let lastPX = 0, lastPY = 0, lastPT = 0, velX = 0, velY = 0;
+    let longPressTimer = 0;
+
+    function pos(e: MouseEvent | Touch) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function hitTest(x: number, y: number, slop = 0): Fruit | null {
+        // Smallest first wins, so a cherry sitting on a pillar is still grabbable.
+        let best: Fruit | null = null;
+        for (const f of fruits) {
+            const d = Math.hypot(x - f.x, y - f.y);
+            if (d <= f.r + slop && (!best || f.r < best.r)) best = f;
+        }
+        return best;
+    }
+
+    const inBowlColumn = (x: number, y: number) =>
+        x >= bowl.x - 10 && x <= bowl.x + bowl.w + 10 && y <= bowl.y + bowl.h + 10;
+
+    function markUser() {
+        userInteracted = true;
+        lastUserAction = performance.now();
+        if (tween) { tween.f.grabbed = false; tween = null; }
+    }
+
+    function startDrag() {
+        if (!press?.fruit || reducedMotion) return;
+        press.dragging = true;
+        press.fruit.grabbed = true;
+        press.fruit.vx = 0; press.fruit.vy = 0;
+        press.fruit.scaleAnim = 1.08;
+        canvas.classList.add('grabbing');
+        markUser();
+    }
+
+    function moveDrag(x: number, y: number) {
+        if (!press?.dragging || !press.fruit) return;
+        const now = performance.now();
+        const dt = Math.max(1, now - lastPT) / 1000;
+        velX = velX * 0.5 + ((x - lastPX) / dt) * 0.5;
+        velY = velY * 0.5 + ((y - lastPY) / dt) * 0.5;
+        lastPX = x; lastPY = y; lastPT = now;
+        const f = press.fruit;
+        f.x = Math.max(bowl.x + f.r, Math.min(bowl.x + bowl.w - f.r, x - press.offX));
+        f.y = Math.max(f.r + 2, Math.min(bowl.bottom - f.r, y - press.offY));
+        if (cardState && !cardState.pinned) hideCard();
+    }
+
+    function endPress(x: number, y: number) {
+        clearTimeout(longPressTimer);
+        if (!press) return;
+        const p = press;
+        press = null;
+        canvas.classList.remove('grabbing');
+        if (p.dragging && p.fruit) {
+            const f = p.fruit;
+            f.grabbed = false;
+            f.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, velX));
+            f.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, velY));
+            f.thrownAt = performance.now();
+            return;
+        }
+        const moved = Math.hypot(x - p.x, y - p.y);
+        if (moved > 10) return;
+        markUser();
+        if (p.fruit) {
+            const same = cardState?.kind === 'skill' && cardState.fruit === p.fruit && cardState.pinned;
+            if (same) hideCard();
+            else showCard({ kind: 'skill', fruit: p.fruit, pinned: true });
+        } else {
+            if (cardState) hideCard();
+            if (inBowlColumn(x, y)) poke(x, y);
+        }
+    }
+
+    function poke(x: number, y: number) {
+        if (reducedMotion) return;
+        const reach = 170 * Math.max(0.8, scale);
+        for (const f of fruits) {
+            const dx = f.x - x, dy = f.y - y;
+            const d = Math.hypot(dx, dy);
+            if (d > reach) continue;
+            const k = 1 - d / reach;
+            f.vx += (d > 0 ? dx / d : 0) * 260 * k;
+            f.vy -= 420 * k;
+        }
+        spawnParticles(x, y, BOWL_STROKE, 6, 120);
+    }
+
+    // Mouse
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const p = pos(e);
+        const hit = hitTest(p.x, p.y);
+        press = {
+            fruit: hit, x: p.x, y: p.y, t: performance.now(),
+            offX: hit ? p.x - hit.x : 0, offY: hit ? p.y - hit.y : 0,
+            dragging: false, touch: false, decided: true,
+        };
+        lastPX = p.x; lastPY = p.y; lastPT = performance.now(); velX = 0; velY = 0;
+        // Fruit presses belong to the bowl, not to the slider's mouse drag.
+        if (hit) { e.stopPropagation(); e.preventDefault(); }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!running && !reducedMotion) return;
+        const p = pos(e);
+        if (press && !press.touch) {
+            if (!press.dragging && press.fruit && Math.hypot(p.x - press.x, p.y - press.y) > 4) startDrag();
+            if (press.dragging) { moveDrag(p.x, p.y); return; }
+        }
+        if (e.target !== canvas) {
+            if (hoverFruit) { hoverFruit = null; if (cardState && !cardState.pinned) hideCard(); }
+            return;
+        }
+        const hit = hitTest(p.x, p.y);
+        canvas.classList.toggle('grab', !!hit && !reducedMotion);
+        canvas.classList.toggle('poke', !hit && inBowlColumn(p.x, p.y) && !reducedMotion);
+        if (hit !== hoverFruit) {
+            hoverFruit = hit;
+            if (!cardState || !cardState.pinned) {
+                if (hit) showCard({ kind: 'skill', fruit: hit, pinned: false });
+                else if (cardState) hideCard();
+            }
+            if (reducedMotion) draw();
+        }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (!press || press.touch) return;
+        const p = pos(e);
+        endPress(p.x, p.y);
+    });
+
+    // Touch: a vertical swipe always belongs to the slider. A fruit is only
+    // grabbed on a sideways move or a short press-and-hold, so the bowl can
+    // never trap someone trying to scroll past it.
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { press = null; return; }
+        const p = pos(e.touches[0]);
+        const hit = hitTest(p.x, p.y, 8);
+        press = {
+            fruit: hit, x: p.x, y: p.y, t: performance.now(),
+            offX: hit ? p.x - hit.x : 0, offY: hit ? p.y - hit.y : 0,
+            dragging: false, touch: true, decided: false,
+        };
+        lastPX = p.x; lastPY = p.y; lastPT = performance.now(); velX = 0; velY = 0;
+        clearTimeout(longPressTimer);
+        if (hit && !reducedMotion) {
+            longPressTimer = window.setTimeout(() => {
+                if (press && !press.decided && press.fruit) { press.decided = true; startDrag(); }
+            }, 220);
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!press) return;
+        const p = pos(e.touches[0]);
+        if (!press.decided) {
+            const dx = p.x - press.x, dy = p.y - press.y;
+            if (Math.hypot(dx, dy) < 8) return;
+            press.decided = true;
+            clearTimeout(longPressTimer);
+            if (press.fruit && Math.abs(dx) > Math.abs(dy) * 1.2 && !reducedMotion) startDrag();
+            else { press = null; return; } // vertical: hand it to the slider
+        }
+        if (press.dragging) {
+            e.preventDefault();
+            e.stopPropagation();
+            moveDrag(p.x, p.y);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (!press) return;
+        const t = e.changedTouches[0];
+        const p = t ? pos(t) : { x: press.x, y: press.y };
+        const wasTap = !press.dragging && Math.hypot(p.x - press.x, p.y - press.y) <= 10;
+        if (press.dragging) e.stopPropagation();
+        endPress(p.x, p.y);
+        // Stop the emulated mouse events that would re-toggle the card.
+        if (wasTap && e.cancelable) e.preventDefault();
+    });
+
+    canvas.addEventListener('touchcancel', () => {
+        clearTimeout(longPressTimer);
+        if (press?.dragging && press.fruit) press.fruit.grabbed = false;
+        press = null;
+        canvas.classList.remove('grabbing');
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+        if (hitTest(pos(e).x, pos(e).y)) e.preventDefault();
+    });
+
+    card.querySelector('.skills-card-close')?.addEventListener('click', () => hideCard());
+    card.addEventListener('mouseleave', () => {
+        if (cardState?.autoHide) hideCard();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cardState) hideCard();
+    });
+
+    // Close a pinned card when clicking anywhere else on the slide.
+    root.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (!cardState?.pinned || target === canvas || card.contains(target)) return;
+        hideCard();
+    });
+
+    // Project links: same route as the timeline. Set the hash, go to the
+    // projects slide, and Projects.astro opens the matching case.
+    root.addEventListener('click', (e) => {
+        const link = (e.target as HTMLElement).closest<HTMLAnchorElement>('[data-project]');
+        if (!link) return;
+        e.preventDefault();
+        history.replaceState(null, '', `#${link.dataset.project}`);
+        document.dispatchEvent(new CustomEvent('slider-goto', { detail: { index: 1 } }));
+    });
+
+    // Pillar cards ↔ fruit: hovering a card lights its fruit.
+    root.querySelectorAll<HTMLElement>('.skills-pillar').forEach((el) => {
+        const fruitFor = () => fruits.find((f) => f.skill.id === el.dataset.skill);
+        el.addEventListener('mouseenter', () => {
+            const f = fruitFor();
+            if (!f) return;
+            f.flash = 1;
+            if (!reducedMotion && !f.grabbed) f.vy -= 260;
+            if (reducedMotion) draw();
+        });
+    });
+
+    // ─── Demo: once per visit, throw one pillar into another to show a combo ───
+    function startDemo(now: number) {
+        demoDone = true;
+        const f = fruits.find((x) => x.skill.id === 'ai');
+        const target = fruits.find((x) => x.skill.id === 'tdd');
+        if (!f || !target) return;
+        f.grabbed = true;
+        tween = { f, target, fx: f.x, fy: f.y, t0: now, dur: 1200 };
+    }
+
+    function stepTween(now: number) {
+        if (!tween) return;
+        const { f, target, fx, fy, t0, dur } = tween;
+        const k = Math.min(1, (now - t0) / dur);
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        const side = target.x > fx ? -1 : 1;
+        const tx = target.x + side * (f.r + target.r) * 0.55;
+        const ty = target.y - (f.r + target.r) * 0.8;
+        const lift = Math.sin(Math.PI * k) * Math.min(180, bowl.h * 0.55);
+        const x = fx + (tx - fx) * e;
+        const y = fy + (ty - fy) * e - lift;
+        f.x = Math.max(bowl.x + f.r, Math.min(bowl.x + bowl.w - f.r, x));
+        f.y = Math.max(f.r + 2, y);
+        if (k >= 1) {
+            f.grabbed = false;
+            f.vy = 120;
+            f.thrownAt = now;
+            tween = null;
+        }
+    }
+
+    // ─── Loop ───
     function start() {
         if (running) return;
         running = true;
         fruits.length = 0;
         particles.length = 0;
-        lastAutoDrop = 0;
-        ageCounter = 0;
-        tierSpawnIdx.fill(0);
-        userControlActive = false;
-        prepareNextDrop();
+        fillIdx = 0;
+        lastFill = 0;
+        filledAt = 0;
+        lastHop = 0;
+        tween = null;
         resize();
 
-        // Pre-populate bowl with a few fruits so it's not empty at start
-        const initialFruits = [
-            { tier: 0, xOff: -0.25 },
-            { tier: 1, xOff: 0.15 },
-            { tier: 2, xOff: -0.10 },
-            { tier: 0, xOff: 0.30 },
-            { tier: 3, xOff: -0.05 },
-        ];
-        for (const { tier, xOff } of initialFruits) {
-            const fx = bowl.cx + xOff * bowl.w;
-            const fy = bowl.y - TIERS[tier].radius - 20 - Math.random() * 30;
-            const f = createFruit(fx, fy, tier, skillForTier(tier));
-            f.vy = 40 + Math.random() * 30;
-            f.vx = (Math.random() - 0.5) * 40;
-            fruits.push(f);
-        }
-
         let prev = performance.now();
-
         function tick(now: number) {
             const dt = Math.min((now - prev) / 1000, DT_CAP);
             prev = now;
 
-            // Auto-pilot logic
-            if (!userControlActive || (now - lastUserAction > IDLE_TIMEOUT)) {
-                userControlActive = false;
-                previewX = null;
-                if (now - lastAutoDrop > AUTO_DROP_INTERVAL) {
-                    autoDropFruit();
-                    lastAutoDrop = now;
-                }
+            if (fillIdx < dropOrder.length && now - lastFill > FILL_INTERVAL) {
+                spawn(dropOrder[fillIdx], DROP_X[fillIdx % DROP_X.length]);
+                fillIdx++;
+                lastFill = now;
+                if (fillIdx === dropOrder.length) filledAt = now;
             }
 
-            // Overflow recycling: fade oldest/smallest when over limit
-            const aliveNonMerging = fruits.filter(f => f.alive && !f.merging && !f.grabbed);
-            if (aliveNonMerging.length > MAX_FRUITS) {
-                const sorted = aliveNonMerging.sort((a, b) => {
-                    if (a.tier !== b.tier) return a.tier - b.tier; // smallest first
-                    return a.age - b.age; // oldest first
-                });
-                const excess = aliveNonMerging.length - MAX_FRUITS;
-                for (let k = 0; k < excess; k++) {
-                    if (sorted[k].opacity === 1) sorted[k].opacity = 0.99;
-                }
+            if (filledAt && !demoDone && !userInteracted && now - filledAt > IDLE_BEFORE_DEMO) startDemo(now);
+            stepTween(now);
+
+            // A little life when nobody's playing: one fruit hops now and then.
+            if (filledAt && !tween && !press && now - lastUserAction > 8000 && now - lastHop > IDLE_HOP_EVERY
+                && now - filledAt > IDLE_BEFORE_DEMO + 3000) {
+                lastHop = now;
+                const tools = fruits.filter((f) => !f.skill.pillar);
+                const f = tools[Math.floor(Math.random() * tools.length)];
+                if (f) { f.vy -= 300; f.vx += (Math.random() - 0.5) * 120; }
             }
 
-            // GC dead fruits
-            for (let k = fruits.length - 1; k >= 0; k--) {
-                if (!fruits[k].alive) fruits.splice(k, 1);
-            }
-
-            step(dt);
-            draw();
-
+            step(dt, now);
+            draw(now);
+            positionCard();
             animId = requestAnimationFrame(tick);
         }
         animId = requestAnimationFrame(tick);
@@ -1413,32 +1693,68 @@ const skills = [
         running = false;
         fruits.length = 0;
         particles.length = 0;
-        dragFruit = null;
-        previewX = null;
+        press = null;
+        tween = null;
+        hoverFruit = null;
+        if (cardState) hideCard();
         ctx.clearRect(0, 0, W, H);
     }
 
-    let resizeTimer: number;
+    /** Reduced motion: settle the bowl off-screen, draw one still frame. */
+    function renderStill() {
+        fruits.length = 0;
+        resize();
+        settling = true;
+        const now = performance.now();
+        dropOrder.forEach((s, i) => {
+            spawn(s, DROP_X[i % DROP_X.length]);
+            for (let k = 0; k < 45; k++) step(1 / 60, now);
+        });
+        for (let k = 0; k < 240; k++) step(1 / 60, now);
+        for (const f of fruits) { f.vx = 0; f.vy = 0; }
+        settling = false;
+        draw(now);
+    }
+
+    let resizeTimer = 0;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(() => {
+            if (reducedMotion) { renderStill(); return; }
             if (running) resize();
         }, 100);
     });
 
-    // Watch reveal visibility to start/stop
-    const revealSibling = pit.parentElement?.querySelector('.reveal') ||
-                          pit.nextElementSibling?.querySelector('.reveal');
-    if (revealSibling) {
+    // Testing hook (same pattern as window.__numbersGame).
+    (window as unknown as { __skillsBowl: unknown }).__skillsBowl = {
+        fruits: () => fruits.map((f) => ({ id: f.skill.id, x: f.x, y: f.y, r: f.r, tier: f.skill.tier })),
+        bowl: () => ({ ...bowl }),
+        combos: () => [...foundCombos],
+        throwAt: (a: string, b: string) => {
+            const fa = fruits.find((f) => f.skill.id === a);
+            const fb = fruits.find((f) => f.skill.id === b);
+            if (!fa || !fb) return false;
+            markUser();
+            fa.x = fb.x; fa.y = fb.y - (fa.r + fb.r) * 0.9;
+            tryCombo(fa, fb, performance.now());
+            return true;
+        },
+    };
+
+    // Start/stop with the slide's reveal state.
+    const reveal = root.querySelector('.reveal');
+    if (reducedMotion) {
+        const ro = new ResizeObserver(() => renderStill());
+        ro.observe(stage);
+        return;
+    }
+    if (reveal) {
         const mo = new MutationObserver(() => {
-            if (revealSibling.classList.contains('visible')) {
-                if (!running) start();
-            } else {
-                if (running) stop();
-            }
+            if (reveal.classList.contains('visible')) { if (!running) start(); }
+            else if (running) stop();
         });
-        mo.observe(revealSibling, { attributes: true, attributeFilter: ['class'] });
-        if (revealSibling.classList.contains('visible')) start();
+        mo.observe(reveal, { attributes: true, attributeFilter: ['class'] });
+        if (reveal.classList.contains('visible')) start();
     }
 })();
 </script>
