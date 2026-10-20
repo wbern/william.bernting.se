@@ -155,13 +155,34 @@ const t = useTranslations(lang);
                     lastSlideTime = now;
 
                     if (e.deltaY > 0) {
-                        slider.next();
+                        if (isAtLastSlide(slider)) signalEnd();
+                        else slider.next();
                     } else {
                         slider.prev();
                     }
                 },
                 { passive: false }
             );
+        });
+    }
+
+    function isAtLastSlide(slider: any): boolean {
+        return slider.track.details.rel >= slider.slides.length - 1;
+    }
+
+    /** Tell the last slide that the user tried to go past it. */
+    function signalEnd() {
+        document.dispatchEvent(new CustomEvent("slider-end-reached"));
+    }
+
+    // Only the visible slide is focusable / exposed to assistive tech, so
+    // Tab never lands on (and scrolls to) content in an off-screen slide.
+    let inertIndex = -1;
+    function updateInert(index: number) {
+        if (index === inertIndex) return;
+        inertIndex = index;
+        document.querySelectorAll<HTMLElement>("#slider > .keen-slider__slide").forEach((slide, i) => {
+            slide.inert = i !== index;
         });
     }
 
@@ -198,6 +219,7 @@ const t = useTranslations(lang);
                 detailsChanged: (s) => {
                     const slideIndex = s.track.details.rel;
                     updateDots(slideIndex);
+                    updateInert(slideIndex);
                     document.dispatchEvent(new CustomEvent("slide-changed", { detail: { index: slideIndex } }));
                 },
                 animationEnded: (s) => {
@@ -206,6 +228,7 @@ const t = useTranslations(lang);
                 created: () => {
                     // Reveal first slide immediately
                     revealSlide(0);
+                    updateInert(0);
                 },
             },
             [WheelControls]
@@ -228,6 +251,13 @@ const t = useTranslations(lang);
             });
         });
 
+        // Programmatic navigation from slide content (e.g. "Back to top")
+        document.addEventListener("slider-goto", ((e: CustomEvent) => {
+            if (sliderFrozen) return;
+            const idx = Number(e.detail?.index);
+            if (Number.isInteger(idx)) slider.moveToIdx(idx);
+        }) as EventListener);
+
         // Keyboard navigation (with cooldown to prevent rapid-fire from key repeat)
         let lastKeySlideTime = 0;
         const KEY_COOLDOWN_MS = 600;
@@ -238,7 +268,8 @@ const t = useTranslations(lang);
                 const now = performance.now();
                 if (now - lastKeySlideTime < KEY_COOLDOWN_MS) return;
                 lastKeySlideTime = now;
-                slider.next();
+                if (isAtLastSlide(slider)) signalEnd();
+                else slider.next();
             } else if (e.key === "ArrowUp" || e.key === "PageUp") {
                 e.preventDefault();
                 const now = performance.now();

@@ -1,67 +1,872 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
+import { CONTACT, buildMailto, getTestimonials, getTracks } from "../i18n/contact";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
+const tracks = getTracks(lang);
+const reviews = getTestimonials(lang);
+const defaultHref = buildMailto(CONTACT.email);
 ---
 
-<div class="section-inner">
-    <div class="quote-section reveal">
-        <div class="quote-text">
-            {t("quote.text")}
-        </div>
-        <div class="quote-author">&mdash; {t("quote.author")}</div>
+<div class="section-inner finale" data-finale>
+    <header class="finale-head">
+        <div class="section-label reveal">{t("contact.label")}</div>
+        <h2 class="section-heading finale-heading reveal reveal-delay-1">
+            {t("contact.heading.before")}<span class="highlight">{t("contact.heading.highlight")}</span>{t("contact.heading.after")}
+        </h2>
+        <p class="finale-intro reveal reveal-delay-1">{t("contact.intro")}</p>
+    </header>
+
+    <div class="tracks reveal reveal-delay-2" role="group" aria-label={t("contact.tracks.aria")}>
+        {tracks.map((track, i) => (
+            <button
+                type="button"
+                class="track"
+                style={`--track: ${track.color}; --track-ink: ${track.ink};`}
+                aria-pressed="false"
+                data-track={track.id}
+                data-href={track.href}
+                data-cta={track.cta}
+            >
+                <span class="track-top">
+                    <span class="track-num">{String(i + 1).padStart(2, "0")}</span>
+                    <span class="track-check" aria-hidden="true"></span>
+                </span>
+                <span class="track-title">{track.title}</span>
+                <span class="track-body">{track.body}</span>
+                <span class="track-why">{track.why}</span>
+                <span class="track-tag">{track.tag}</span>
+            </button>
+        ))}
     </div>
 
-    <div class="contact-bar reveal reveal-delay-2">
-        <a class="contact-link" href="mailto:william@bernting.se">william@bernting.se</a>
-        <a class="contact-link" href="tel:+46706676047">+46 706 67 60 47</a>
-        <a class="contact-link" href="https://www.linkedin.com/in/williambernting">LinkedIn</a>
-        <a class="contact-link" href="https://www.kendev.se/">kendev.se</a>
-        <span class="contact-link">Gothenburg, Sweden</span>
+    <div class="cta-row reveal reveal-delay-2">
+        <a class="cta-primary" href={defaultHref} data-cta-primary data-default-href={defaultHref} data-default-label={t("contact.cta.default")}>
+            <span class="cta-label">{t("contact.cta.default")}</span>
+            <svg class="cta-arrow" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <span class="cta-aside">{t("contact.cta.aside")}</span>
+        <span class="cta-hint" data-cta-hint>{t("contact.cta.hint")}</span>
     </div>
+
+    <div class="proof reveal reveal-delay-3">
+        <figure class="proof-own">
+            <img class="proof-photo" src="/og-image.jpg" alt={t("contact.proof.photoAlt")} width="64" height="64" loading="lazy" decoding="async" />
+            <div>
+                <blockquote class="proof-own-text">{t("contact.proof.text")}</blockquote>
+                <figcaption class="proof-sign">&mdash; {t("contact.proof.sign")}</figcaption>
+            </div>
+        </figure>
+
+        <figure class="reviews" data-reviews>
+            <div class="reviews-top">
+                <span class="reviews-label">{t("contact.reviews.label")}</span>
+                <button type="button" class="reviews-next" data-reviews-next aria-label={t("contact.reviews.nextAria")}>
+                    <span class="reviews-count" data-reviews-count>1 / {reviews.length}</span>
+                    <span>{t("contact.reviews.next")}</span>
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            <div class="reviews-stage" aria-live="polite">
+                {reviews.map((r, i) => (
+                    <div class="review" data-review hidden={i !== 0}>
+                        <blockquote class="review-text" lang={r.lang}>&ldquo;{r.text}&rdquo;</blockquote>
+                        <figcaption class="review-who">
+                            <span class="review-name">{r.name}</span> &middot; {r.relation[lang]}
+                        </figcaption>
+                    </div>
+                ))}
+            </div>
+        </figure>
+    </div>
+
+    <nav class="dock reveal reveal-delay-3" aria-label={t("contact.label")}>
+        <span class="dock-chip dock-email">
+            <a class="dock-email-link" href={defaultHref}>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 6h18v12H3z M3 7l9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <span>{CONTACT.email}</span>
+            </a>
+            <button type="button" class="dock-copy" data-copy-email={CONTACT.email} data-copied={t("contact.email.copied")} data-failed={t("contact.email.copyFailed")} aria-label={t("contact.email.copy")} title={t("contact.email.copy")}>
+                <svg class="icon-copy" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                <svg class="icon-check" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <span class="dock-toast" data-copy-toast role="status" aria-live="polite"></span>
+        </span>
+        <a class="dock-chip" href={CONTACT.phoneHref} aria-label={`${t("contact.phone")} ${CONTACT.phoneDisplay}`}>
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M6.6 3.5l2.6 3.2-1.7 2.2a12 12 0 0 0 7.6 7.6l2.2-1.7 3.2 2.6-1.4 2.6c-.4.7-1.2 1-2 .8A17 17 0 0 1 3.2 6.9c-.2-.8.1-1.6.8-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            <span>{CONTACT.phoneDisplay}</span>
+        </a>
+        <a class="dock-chip" href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            <span>LinkedIn</span>
+            <span class="sr-only">{t("contact.newTab")}</span>
+        </a>
+        <a class="dock-chip" href={CONTACT.kendev} target="_blank" rel="noopener noreferrer">
+            <span>kendev.se</span>
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M8 16 16 8m-6 0h6v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="sr-only">{t("contact.newTab")}</span>
+        </a>
+        <span class="dock-top-wrap">
+            <button type="button" class="dock-chip dock-top" data-back-to-top>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>{t("contact.backToTop")}</span>
+            </button>
+            <span class="end-nudge" data-end-nudge aria-hidden="true">{t("contact.endNudge")}</span>
+        </span>
+    </nav>
+
+    <p class="zuill reveal reveal-delay-3">
+        <span class="zuill-text">{t("quote.text")}</span>
+        <span class="zuill-author">&mdash; {t("quote.author")}, {t("quote.authorNote")}</span>
+    </p>
 </div>
 
+<script>
+    function initFinale() {
+        const root = document.querySelector<HTMLElement>("[data-finale]");
+        if (!root) return;
+
+        // --- Track picker: tailor the primary CTA to the chosen track ---
+        const trackBtns = Array.from(root.querySelectorAll<HTMLButtonElement>(".track"));
+        const cta = root.querySelector<HTMLAnchorElement>("[data-cta-primary]");
+        const ctaLabel = cta?.querySelector<HTMLElement>(".cta-label");
+        const hint = root.querySelector<HTMLElement>("[data-cta-hint]");
+
+        function selectTrack(btn: HTMLButtonElement | null) {
+            for (const b of trackBtns) b.setAttribute("aria-pressed", String(b === btn));
+            root!.dataset.track = btn?.dataset.track ?? "";
+            if (!cta || !ctaLabel) return;
+            cta.href = btn?.dataset.href ?? cta.dataset.defaultHref ?? cta.href;
+            ctaLabel.textContent = btn?.dataset.cta ?? cta.dataset.defaultLabel ?? "";
+            const cs = btn ? getComputedStyle(btn) : null;
+            cta.style.setProperty("--cta", cs?.getPropertyValue("--track") ?? "");
+            cta.style.setProperty("--cta-ink", cs?.getPropertyValue("--track-ink") ?? "");
+            cta.classList.remove("pulse");
+            void cta.offsetWidth; // restart animation
+            if (btn) cta.classList.add("pulse");
+            hint?.classList.toggle("gone", !!btn);
+        }
+
+        for (const btn of trackBtns) {
+            btn.addEventListener("click", () => {
+                const isOn = btn.getAttribute("aria-pressed") === "true";
+                selectTrack(isOn ? null : btn);
+            });
+            // Spotlight that follows the pointer
+            btn.addEventListener("pointermove", (e) => {
+                const r = btn.getBoundingClientRect();
+                btn.style.setProperty("--mx", `${e.clientX - r.left}px`);
+                btn.style.setProperty("--my", `${e.clientY - r.top}px`);
+            });
+        }
+
+        // --- Recommendation carousel (click to cycle, no auto-rotate) ---
+        const reviews = Array.from(root.querySelectorAll<HTMLElement>("[data-review]"));
+        const nextBtn = root.querySelector<HTMLButtonElement>("[data-reviews-next]");
+        const count = root.querySelector<HTMLElement>("[data-reviews-count]");
+        let reviewIdx = 0;
+        nextBtn?.addEventListener("click", () => {
+            reviews[reviewIdx].hidden = true;
+            reviewIdx = (reviewIdx + 1) % reviews.length;
+            reviews[reviewIdx].hidden = false;
+            if (count) count.textContent = `${reviewIdx + 1} / ${reviews.length}`;
+        });
+
+        // --- Copy email ---
+        const copyBtn = root.querySelector<HTMLButtonElement>("[data-copy-email]");
+        const toast = root.querySelector<HTMLElement>("[data-copy-toast]");
+        let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+        async function copyText(text: string): Promise<boolean> {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.setAttribute("readonly", "");
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                let ok = false;
+                try { ok = document.execCommand("copy"); } catch { ok = false; }
+                ta.remove();
+                return ok;
+            }
+        }
+
+        copyBtn?.addEventListener("click", async () => {
+            const ok = await copyText(copyBtn.dataset.copyEmail ?? "");
+            const chip = copyBtn.closest(".dock-email");
+            chip?.classList.toggle("copied", ok);
+            if (toast) toast.textContent = (ok ? copyBtn.dataset.copied : copyBtn.dataset.failed) ?? "";
+            chip?.classList.add("toasting");
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                chip?.classList.remove("copied", "toasting");
+                if (toast) toast.textContent = "";
+            }, 1800);
+        });
+
+        // --- Back to top + end-of-slider nudge ---
+        root.querySelector("[data-back-to-top]")?.addEventListener("click", () => {
+            document.dispatchEvent(new CustomEvent("slider-goto", { detail: { index: 0 } }));
+        });
+
+        const slide = root.closest<HTMLElement>(".keen-slider__slide");
+        let nudgeTimer: ReturnType<typeof setTimeout> | null = null;
+        document.addEventListener("slider-end-reached", () => {
+            if (!slide) return;
+            slide.classList.remove("end-bump");
+            void slide.offsetWidth;
+            slide.classList.add("end-bump");
+            if (nudgeTimer) clearTimeout(nudgeTimer);
+            nudgeTimer = setTimeout(() => slide.classList.remove("end-bump"), 2400);
+        });
+    }
+
+    initFinale();
+</script>
+
 <style>
-    .quote-section {
-        text-align: center;
-        padding: 40px 0;
+    .finale {
+        --gap: clamp(14px, 2.2vh, 24px);
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+        max-width: 980px;
+        text-align: left;
     }
 
-    .quote-text {
-        font-size: clamp(20px, 3vw, 32px);
-        font-weight: 300;
-        font-style: italic;
+    /* ---------- head ---------- */
+    .finale-heading {
+        margin-bottom: 10px;
+    }
+
+    .finale-intro {
+        color: var(--text-dim);
+        font-size: clamp(15px, 1.4vw, 17px);
+        line-height: 1.55;
+        max-width: 72ch;
+    }
+
+    /* ---------- tracks ---------- */
+    .tracks {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .track {
+        --mx: 50%;
+        --my: 0%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 18px 18px 16px;
+        text-align: left;
+        font: inherit;
         color: var(--text);
-        max-width: 700px;
-        margin: 0 auto 16px;
-        line-height: 1.5;
+        background:
+            radial-gradient(240px circle at var(--mx) var(--my), color-mix(in srgb, var(--track) 14%, transparent), transparent 70%),
+            var(--bg-card);
+        border: 1px solid var(--border, #22222e);
+        border-radius: 14px;
+        cursor: pointer;
+        overflow: hidden;
+        transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     }
 
-    .quote-author {
+    .track::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--track);
+        opacity: 0.55;
+        transition: opacity 0.25s ease, width 0.25s ease;
+    }
+
+    .track:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--track) 55%, transparent);
+    }
+
+    .track:hover::before {
+        opacity: 1;
+    }
+
+    .track[aria-pressed="true"] {
+        border-color: var(--track);
+        box-shadow: 0 0 0 1px var(--track), 0 10px 40px -12px color-mix(in srgb, var(--track) 60%, transparent);
+        transform: translateY(-3px);
+    }
+
+    .track[aria-pressed="true"]::before {
+        opacity: 1;
+        width: 5px;
+    }
+
+    .finale[data-track]:not([data-track=""]) .track[aria-pressed="false"] {
+        opacity: 0.55;
+    }
+
+    .finale[data-track]:not([data-track=""]) .track[aria-pressed="false"]:hover {
+        opacity: 0.9;
+    }
+
+    .track-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .track-num {
         font-family: var(--mono);
-        font-size: 14px;
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: var(--track);
+    }
+
+    .track-check {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-muted);
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .track[aria-pressed="true"] .track-check {
+        background: var(--track);
+        border-color: var(--track);
+    }
+
+    .track[aria-pressed="true"] .track-check::after {
+        content: "";
+        position: absolute;
+        left: 5.5px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border: solid var(--bg);
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .track-title {
+        font-size: clamp(18px, 1.7vw, 21px);
+        font-weight: 750;
+        letter-spacing: -0.3px;
+        line-height: 1.2;
+    }
+
+    .track-body {
+        font-size: 14.5px;
+        line-height: 1.45;
+        color: var(--text);
+    }
+
+    .track-why {
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: var(--text-dim);
+        flex: 1;
+    }
+
+    .track-tag {
+        align-self: flex-start;
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        color: var(--track);
+        padding: 4px 9px;
+        border-radius: 100px;
+        background: color-mix(in srgb, var(--track) 12%, transparent);
+    }
+
+    /* ---------- CTA ---------- */
+    .cta-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+    }
+
+    .cta-primary {
+        --cta: var(--purple);
+        --cta-ink: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 52px;
+        padding: 0 26px;
+        border-radius: 100px;
+        background: var(--cta);
+        color: var(--cta-ink);
+        font-weight: 700;
+        font-size: 16px;
+        text-decoration: none;
+        box-shadow: 0 8px 30px -8px color-mix(in srgb, var(--cta) 70%, transparent);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+    }
+
+    .cta-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px -8px color-mix(in srgb, var(--cta) 85%, transparent);
+    }
+
+    .cta-primary:hover .cta-arrow {
+        transform: translateX(3px);
+    }
+
+    .cta-arrow {
+        transition: transform 0.2s ease;
+    }
+
+    .cta-primary.pulse {
+        animation: ctaPulse 0.5s ease;
+    }
+
+    @keyframes ctaPulse {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .cta-aside {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+
+    .cta-hint {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+        transition: opacity 0.3s ease;
+    }
+
+    .cta-hint.gone {
+        opacity: 0;
+    }
+
+    /* ---------- proof ---------- */
+    .proof {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+        gap: 14px;
+    }
+
+    .proof-own,
+    .reviews {
+        margin: 0;
+        padding: 16px 18px;
+        border-radius: 14px;
+        border: 1px solid var(--border, #22222e);
+        background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+    }
+
+    .proof-own {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+    }
+
+    .proof-photo {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 2px solid var(--purple);
+        box-shadow: 0 0 20px var(--purple-glow-strong);
+    }
+
+    .proof-own-text {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text);
+    }
+
+    .proof-sign {
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--purple);
+    }
+
+    .reviews {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .reviews-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .reviews-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
         color: var(--text-muted);
     }
 
-    .contact-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center;
-        margin-top: 40px;
+    .reviews-next {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0 10px 0 12px;
+        border-radius: 100px;
+        background: transparent;
+        border: 1px solid var(--border, #22222e);
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s;
     }
 
-    .contact-link {
+    .reviews-next:hover {
+        color: var(--purple);
+        border-color: var(--purple);
+    }
+
+    .reviews-count {
+        color: var(--text-muted);
+    }
+
+    .reviews-stage {
+        display: grid;
+    }
+
+    .review {
+        animation: reviewIn 0.35s ease;
+    }
+
+    /* All reviews share one grid cell so the card keeps the height of the
+       longest one and the layout never jumps when cycling. */
+    .review {
+        grid-area: 1 / 1;
+    }
+
+    .review[hidden] {
+        display: block;
+        visibility: hidden;
+        animation: none;
+    }
+
+    @keyframes reviewIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    .review-text {
+        margin: 0;
+        font-size: 15px;
+        font-style: italic;
+        font-weight: 300;
+        line-height: 1.5;
+        color: var(--text);
+    }
+
+    .review-who {
+        margin-top: 6px;
         font-family: var(--mono);
-        font-size: 14px;
+        font-size: 12px;
         color: var(--text-dim);
+    }
+
+    .review-name {
+        color: var(--text);
+    }
+
+    /* ---------- dock ---------- */
+    .dock {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .dock-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 100px;
+        border: 1px solid var(--border, #22222e);
+        background: var(--bg-card);
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+
+    a.dock-chip:hover,
+    button.dock-chip:hover {
+        color: var(--purple);
+        border-color: var(--purple);
+        box-shadow: 0 0 24px var(--purple-glow);
+    }
+
+    .dock-email {
+        position: relative;
+        padding: 0 4px 0 16px;
+        cursor: default;
+    }
+
+    .dock-email-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        color: inherit;
         text-decoration: none;
         transition: color 0.2s;
     }
 
-    .contact-link:hover {
+    .dock-email-link:hover {
         color: var(--purple);
+    }
+
+    .dock-copy {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: color 0.2s, background 0.2s;
+    }
+
+    .dock-copy:hover {
+        color: var(--purple);
+        background: var(--purple-glow);
+    }
+
+    .dock-copy .icon-check { display: none; }
+    .dock-email.copied { border-color: var(--purple); box-shadow: 0 0 24px var(--purple-glow-strong); }
+    .dock-email.copied .dock-copy { color: var(--purple); }
+    .dock-email.copied .icon-copy { display: none; }
+    .dock-email.copied .icon-check { display: block; }
+
+    .dock-toast {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        transform: translate(-50%, 4px);
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: var(--purple);
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .dock-toast:empty { padding: 0; }
+
+    .dock-email.toasting .dock-toast {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+
+    .dock-top-wrap {
+        position: relative;
+        margin-left: auto;
+    }
+
+    .end-nudge {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 8px);
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: var(--bg-card-hover);
+        border: 1px solid var(--purple);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateY(4px);
+        pointer-events: none;
+        transition: opacity 0.25s, transform 0.25s;
+    }
+
+    :global(.end-bump) .finale {
+        animation: endBump 0.55s cubic-bezier(0.3, 1.6, 0.5, 1);
+    }
+
+    :global(.end-bump) .dock-top {
+        color: var(--purple);
+        border-color: var(--purple);
+        box-shadow: 0 0 28px var(--purple-glow-strong);
+    }
+
+    :global(.end-bump) .end-nudge {
+        opacity: 1;
+        transform: none;
+    }
+
+    @keyframes endBump {
+        0% { transform: none; }
+        35% { transform: translateY(-14px); }
+        100% { transform: none; }
+    }
+
+    /* ---------- Zuill ---------- */
+    .zuill {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        align-items: baseline;
+        font-size: 13px;
+        color: var(--text-muted);
+        border-top: 1px solid var(--border, #22222e);
+        padding-top: 14px;
+    }
+
+    .zuill-text {
+        font-style: italic;
+        color: var(--text-dim);
+    }
+
+    .zuill-author {
+        font-family: var(--mono);
+        font-size: 12px;
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* ---------- focus ---------- */
+    .track:focus-visible,
+    .cta-primary:focus-visible,
+    .dock-chip:focus-visible,
+    .dock-email-link:focus-visible,
+    .dock-copy:focus-visible,
+    .reviews-next:focus-visible {
+        outline: 2px solid var(--purple);
+        outline-offset: 3px;
+    }
+
+    /* ---------- responsive ---------- */
+    @media (max-width: 860px) {
+        .tracks {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .track {
+            padding: 14px 16px;
+            gap: 6px;
+        }
+
+        .proof {
+            grid-template-columns: 1fr;
+        }
+
+        .dock-top-wrap {
+            margin-left: 0;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .finale {
+            --gap: 18px;
+            padding-right: 14px; /* keep clear of the slide dots */
+        }
+
+        .finale-heading {
+            margin-bottom: 6px;
+        }
+
+        .cta-primary {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .cta-hint {
+            width: 100%;
+            text-align: center;
+        }
+
+        .cta-hint.gone {
+            display: none;
+        }
+
+        .cta-aside {
+            display: none;
+        }
+
+        /* Compact cards on phones: the "why" line unfolds on tap */
+        .track-why {
+            display: none;
+        }
+
+        .track[aria-pressed="true"] .track-why {
+            display: block;
+            animation: reviewIn 0.3s ease;
+        }
+
+        .dock-chip {
+            font-size: 12.5px;
+        }
+
+        .dock-email {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .end-nudge {
+            right: auto;
+            left: 0;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .track,
+        .cta-primary,
+        .review,
+        :global(.end-bump) .finale {
+            animation: none !important;
+            transition: none !important;
+        }
     }
 </style>
