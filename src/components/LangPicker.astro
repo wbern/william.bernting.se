@@ -31,6 +31,30 @@ const altPath =
   )}
 </nav>
 
+<script>
+  // Mobile: hide the picker while the current slide (or a scroller inside it)
+  // is scrolled away from its top, so it never covers slide content.
+  const picker = document.querySelector<HTMLElement>(".lang-picker");
+  const slider = document.getElementById("slider");
+  if (picker && slider) {
+    const THRESHOLD = 8;
+    const setTucked = (on: boolean) => picker.classList.toggle("is-tucked", on);
+    document.addEventListener(
+      "scroll",
+      (e) => {
+        const el = e.target;
+        if (el instanceof HTMLElement && slider.contains(el)) setTucked(el.scrollTop > THRESHOLD);
+      },
+      { capture: true, passive: true },
+    );
+    // Slide changes flip `inert`; re-check against the newly active slide.
+    new MutationObserver(() => {
+      const active = slider.querySelector<HTMLElement>(":scope > .keen-slider__slide:not([inert])");
+      setTucked(!!active && active.scrollTop > THRESHOLD);
+    }).observe(slider, { subtree: true, attributeFilter: ["inert"] });
+  }
+</script>
+
 <style>
   .lang-picker {
     position: fixed;
@@ -68,9 +92,24 @@ const altPath =
   }
 
   @media (max-width: 600px) {
+    /* A pill with its own backdrop so it never sits naked on slide text,
+       and it tucks away while the visitor scrolls down inside a slide. */
     .lang-picker {
-      top: 12px;
-      right: 32px;
+      top: 8px;
+      right: 28px;
+      padding: 5px 8px;
+      border-radius: 100px;
+      background: color-mix(in srgb, var(--bg, #0a0a0f) 72%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border, #222233) 80%, transparent);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .lang-picker.is-tucked {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
     }
   }
 

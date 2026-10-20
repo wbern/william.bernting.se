@@ -83,28 +83,17 @@ export function createEmptyBoard(size = 4): Board {
   return Array.from({ length: size }, () => Array(size).fill(0));
 }
 
+/**
+ * Opening board: starter tiles only. The intro says "start with two threes",
+ * so nothing on the ladder may be pre-merged; the first 6 has to be earned
+ * (otherwise its fact is on the board while progress still reads 0 of 8).
+ */
 export function seedBoard(
   initialTiles = 6,
   rng: () => number = Math.random,
 ): Board {
   let b = createEmptyBoard();
-  for (let i = 0; i < initialTiles; i++) {
-    b = spawnTile(b, rng);
-    if (i % 2 === 1) {
-      const threes: Array<[number, number]> = [];
-      b.forEach((row, r) =>
-        row.forEach((v, c) => {
-          if (v === STARTING_TILE) threes.push([r, c]);
-        }),
-      );
-      if (threes.length > 0) {
-        const [r, c] = threes[Math.floor(rng() * threes.length)];
-        b = b.map((row, ri) =>
-          ri === r ? row.map((v, ci) => (ci === c ? 6 : v)) : row,
-        );
-      }
-    }
-  }
+  for (let i = 0; i < initialTiles; i++) b = spawnTile(b, rng);
   return b;
 }
 

@@ -48,6 +48,7 @@ const strings = {
                     <h3 class="skills-pillar-title"><span class="skills-pillar-dot" aria-hidden="true"></span>{p.label}</h3>
                     <p class="skills-pillar-value">{p.value}</p>
                     <p class="skills-pillar-proof">{p.proof}</p>
+                    {p.gets && <p class="skills-pillar-gets"><span>{t("skills.pillars.gets")}</span> {p.gets}</p>}
                     {p.proofSlug && p.proofTitle && (
                         <a class="skills-pillar-link" href={`#${p.proofSlug}`} data-project={p.proofSlug}>
                             {p.proofTitle}<span aria-hidden="true"> →</span>
@@ -202,6 +203,23 @@ const strings = {
         line-height: 1.45;
         color: var(--text);
         margin-top: 6px;
+    }
+
+    .skills-pillar-gets {
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--text);
+        margin-top: 6px;
+        font-weight: 600;
+    }
+
+    .skills-pillar-gets span {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--fruit);
+        margin-right: 4px;
     }
 
     .skills-pillar-link,

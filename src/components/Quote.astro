@@ -52,13 +52,13 @@ const defaultHref = buildMailto(CONTACT.email);
     </div>
 
     <div class="proof reveal reveal-delay-3">
-        <figure class="proof-own">
+        <div class="proof-own">
             <img class="proof-photo" src="/og-image.jpg" alt={t("contact.proof.photoAlt")} width="64" height="64" loading="lazy" decoding="async" />
             <div>
-                <blockquote class="proof-own-text">{t("contact.proof.text")}</blockquote>
-                <figcaption class="proof-sign">&mdash; {t("contact.proof.sign")}</figcaption>
+                <span class="proof-kicker">{t("contact.proof.kicker")} <span class="proof-where">&middot; {t("contact.proof.sign")}</span></span>
+                <p class="proof-own-text">{t("contact.proof.text")}</p>
             </div>
-        </figure>
+        </div>
 
         <figure class="reviews" data-reviews>
             <div class="reviews-top">
@@ -503,11 +503,23 @@ const defaultHref = buildMailto(CONTACT.email);
         color: var(--text);
     }
 
-    .proof-sign {
-        margin-top: 6px;
+    .proof-own {
+        border-style: dashed;
+        background: transparent;
+    }
+
+    .proof-kicker {
+        display: block;
+        margin-bottom: 6px;
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
         color: var(--purple);
+    }
+
+    .proof-where {
+        color: var(--text-muted);
     }
 
     .reviews {

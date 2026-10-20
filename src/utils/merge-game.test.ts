@@ -149,6 +149,17 @@ describe("getStatForTile", () => {
   });
 });
 
+describe("seedBoard", () => {
+  it("opens with starter tiles only, so no stat is unlocked before the first merge", () => {
+    for (let i = 0; i < 50; i++) {
+      const board = seedBoard();
+      const values = board.flat().filter((v) => v !== 0);
+      expect(values).toHaveLength(6);
+      expect(values.every((v) => v === 3)).toBe(true);
+    }
+  });
+});
+
 describe("spawnTile", () => {
   it("places a tile of value 3 in an empty cell chosen by the random source", () => {
     const board = [

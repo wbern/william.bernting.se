@@ -33,6 +33,8 @@ interface SkillDef {
     value: Bi;
     /** Pillars: the proof line shown instead of years. */
     proof?: Bi;
+    /** Pillars: one-line client promise ("You get: ...") on the left-column card only. */
+    gets?: Bi;
     proofSlug?: ProjectSlug;
 }
 
@@ -49,6 +51,10 @@ const defs: SkillDef[] = [
             en: "TDD in 90% of the work at Hedin meant bug-free deliveries.",
         },
         proofSlug: "tdd-command-generator",
+        gets: {
+            sv: "Kod som går att ändra utan rädsla.",
+            en: "Code you can change without fear.",
+        },
     },
     {
         id: "ai", pillar: true, aliases: [],
@@ -62,6 +68,10 @@ const defs: SkillDef[] = [
             en: "The pairing tool for a chess event with ~500 kids: AI-coded, not one line typed by hand.",
         },
         proofSlug: "legacy-chess-tool-rewrite",
+        gets: {
+            sv: "Ett team som vet när AI:n går att lita på, och när den inte gör det.",
+            en: "A team that knows when to trust the AI, and when not to.",
+        },
     },
     {
         id: "coaching", pillar: true, aliases: [],
@@ -75,6 +85,10 @@ const defs: SkillDef[] = [
             en: "Supported 14 development teams at Telia. Hired 6 people in 6 months.",
         },
         proofSlug: "sembo-se-startpage",
+        gets: {
+            sv: "Ett team som fortsätter dra åt samma håll när jag har gått vidare.",
+            en: "A team that keeps pulling in the same direction after I move on.",
+        },
     },
     {
         id: "typescript", pillar: false, aliases: ["TypeScript"],
@@ -291,6 +305,7 @@ export interface SkillProfile {
     value: string;
     proof: string | null;
     proofSlug: ProjectSlug | null;
+    gets: string | null;
 }
 
 export interface SkillCombo {
@@ -317,6 +332,7 @@ export function getSkillProfiles(lang: Lang, now: Date = new Date()): SkillProfi
             value: d.value[lang],
             proof: d.proof?.[lang] ?? null,
             proofSlug: d.proofSlug ?? null,
+            gets: d.gets?.[lang] ?? null,
         };
     });
 }

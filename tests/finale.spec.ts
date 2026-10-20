@@ -88,7 +88,7 @@ for (const locale of LOCALES) {
 
     test("location is localised", async ({ page }) => {
       await openFinale(page, locale.prefix);
-      const sign = await page.locator(".proof-sign").textContent();
+      const sign = await page.locator(".proof-where").textContent();
       expect(sign).toContain(locale.label === "sv" ? "Göteborg" : "Gothenburg");
     });
   });
