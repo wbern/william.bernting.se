@@ -21,8 +21,22 @@ async function gotoStatsSlide(page: Page) {
 
 type MergeApi = {
   setBoard(b: number[][]): void;
-  attemptMerge(from: { row: number; col: number }, to: { row: number; col: number }): void;
+  getBoard(): number[][];
+  getUnlocked(): string[];
+  attemptMerge(from: { row: number; col: number }, to: { row: number; col: number }): boolean;
 };
+
+function api(page: Page) {
+  return {
+    setBoard: (b: number[][]) =>
+      page.evaluate((board) => (window as unknown as { __numbersGame: MergeApi }).__numbersGame.setBoard(board), b),
+    merge: (from: { row: number; col: number }, to: { row: number; col: number }) =>
+      page.evaluate(
+        ([f, t]) => (window as unknown as { __numbersGame: MergeApi }).__numbersGame.attemptMerge(f, t),
+        [from, to] as const,
+      ),
+  };
+}
 
 test.describe("numbers game", () => {
   test("renders a 4x4 board seeded with several starting tiles", async ({ page }) => {
@@ -33,22 +47,22 @@ test.describe("numbers game", () => {
     expect(tileCount).toBeGreaterThanOrEqual(4);
   });
 
-  test("attemptMerge on two adjacent equal tiles merges them and updates score", async ({ page }) => {
+  test("the first merge into a stat reveals its story and counts toward progress", async ({ page }) => {
     await gotoStatsSlide(page);
-    await page.evaluate(() => {
-      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
-      if (!api) throw new Error("numbers game test hook not exposed");
-      api.setBoard([
-        [3, 3, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ]);
-      api.attemptMerge({ row: 0, col: 0 }, { row: 0, col: 1 });
-    });
-    const mergedTile = page.locator('[data-board] .numbers-tile[data-value="6"]');
-    await expect(mergedTile.first()).toBeVisible();
-    expect(await page.locator("[data-score]").textContent()).toBe("6");
+    const game = api(page);
+    await game.setBoard([
+      [3, 3, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+    await expect(page.locator("[data-progress-count]")).toHaveText("0");
+    await game.merge({ row: 0, col: 0 }, { row: 0, col: 1 });
+    await expect(page.locator('[data-board] .numbers-tile[data-value="6"]').first()).toBeVisible();
+    await expect(page.locator("[data-progress-count]")).toHaveText("1");
+    await expect(page.locator("[data-reveal]")).toHaveAttribute("data-stat", "recruited");
+    await expect(page.locator("[data-reveal-story]")).toContainText(/NetConsult/);
+    await expect(page.locator('.numbers-chip[data-stat-key="recruited"]')).toHaveAttribute("data-unlocked", "true");
   });
 
   test("dragging a tile onto an adjacent equal neighbor merges them", async ({ page }) => {
@@ -75,24 +89,72 @@ test.describe("numbers game", () => {
     await expect(page.locator('[data-board] .numbers-tile[data-value="6"]').first()).toBeVisible();
   });
 
-  test("clicking the game-over banner restarts the game", async ({ page }) => {
+  test("the game-over panel's restart button starts a fresh game", async ({ page }) => {
     await gotoStatsSlide(page);
-    await page.evaluate(() => {
-      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
-      api!.setBoard([
-        [3, 6, 12, 24],
-        [48, 96, 192, 384],
-        [768, 1536, 3072, 6144],
-        [12288, 24576, 49152, 98304],
-      ]);
-    });
+    await api(page).setBoard([
+      [3, 6, 12, 24],
+      [48, 96, 192, 384],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
     const gameover = page.locator("[data-gameover]");
     await expect(gameover).toBeVisible();
-    await gameover.click();
+    await gameover.locator("[data-restart]").click();
     await expect(gameover).toBeHidden();
-    expect(await page.locator("[data-score]").textContent()).toBe("0");
-    const tileCount = await page.locator("[data-board] .numbers-tile").count();
-    expect(tileCount).toBeGreaterThanOrEqual(4);
+    expect(await page.locator("[data-board] .numbers-tile").count()).toBeGreaterThanOrEqual(4);
+    await expect(page.locator("[data-progress-count]")).toHaveText("0");
+  });
+
+  test("forming the top tile shows the finish panel, and its CTA moves on to the timeline", async ({ page }) => {
+    await gotoStatsSlide(page);
+    const game = api(page);
+    await game.setBoard([
+      [384, 0, 0, 384],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+    await game.merge({ row: 0, col: 0 }, { row: 0, col: 3 });
+    // The top tile stays on the board instead of exploding back to a 3.
+    await expect(page.locator('[data-board] .numbers-tile[data-value="768"]')).toHaveCount(1);
+    await expect(page.locator("[data-reveal]")).toHaveAttribute("data-stat", "users");
+    const finish = page.locator("[data-finish]");
+    await expect(finish).toBeVisible();
+    await finish.locator("[data-finish-cta]").click();
+    await page.waitForFunction(() => {
+      const slide = document.querySelectorAll<HTMLElement>(".keen-slider__slide")[3];
+      return slide && Math.abs(slide.getBoundingClientRect().top) < 2;
+    }, null, { timeout: 5_000 });
+  });
+
+  test("clicking a number chip shows its story without playing", async ({ page }) => {
+    await gotoStatsSlide(page);
+    const chip = page.locator('.numbers-chip[data-stat-key="kids"]');
+    await chip.evaluate((el) => (el as HTMLElement).click());
+    await expect(chip).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("[data-reveal-value]")).toHaveText("~500");
+    await expect(page.locator("[data-reveal-story]")).toContainText(/Schack4an/);
+    await expect(page.locator("[data-reveal-locked]")).toBeVisible();
+    await expect(page.locator("[data-progress-count]")).toHaveText("0");
+  });
+
+  test("keyboard: Enter picks a tile, arrows move, Enter on its twin merges", async ({ page }) => {
+    await gotoStatsSlide(page);
+    await api(page).setBoard([
+      [3, 0, 3, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+    await page.locator('[data-board] .numbers-cell[data-row="0"][data-col="0"] .numbers-tile').focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect(page.locator('[data-board] .numbers-tile[data-value="6"]').first()).toBeVisible();
+    await expect(page.locator("[data-progress-count]")).toHaveText("1");
+    // Arrow keys stayed inside the board: still on the numbers slide.
+    const top = await page.evaluate(() => document.querySelectorAll<HTMLElement>(".keen-slider__slide")[2].getBoundingClientRect().top);
+    expect(Math.abs(top)).toBeLessThan(2);
   });
 
   test("dragging any 6 onto another 6 merges them across 10 non-adjacent scenarios", async ({ page }) => {
@@ -145,20 +207,47 @@ test.describe("numbers game", () => {
     await expect(starterTiles).toHaveCount(0);
   });
 
-  test("milestone tile displays the stat achievement inside the tile", async ({ page }) => {
+  test("milestone tile displays the stat inside the tile, without a fake approximation mark", async ({ page }) => {
     await gotoStatsSlide(page);
-    await page.evaluate(() => {
-      const api = (window as unknown as { __numbersGame?: MergeApi }).__numbersGame;
-      api!.setBoard([
-        [48, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ]);
+    await api(page).setBoard([
+      [48, 192, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+    const teams = page.locator('[data-board] .numbers-tile[data-stat="teams"]');
+    await expect(teams).toHaveCount(1);
+    await expect(teams.locator(".numbers-tile-value")).toHaveText("14");
+    await expect(teams).toContainText(/Telia/i);
+    const projects = page.locator('[data-board] .numbers-tile[data-stat="projects"]');
+    await expect(projects.locator(".numbers-tile-value")).toHaveText("77");
+    await expect(page.locator(".numbers-tile-value[data-approx]")).toHaveCount(0);
+  });
+
+  test("stat labels fit their tiles without clipping", async ({ page }) => {
+    await gotoStatsSlide(page);
+    await api(page).setBoard([
+      [6, 12, 24, 48],
+      [96, 192, 384, 768],
+      [3, 0, 0, 0],
+      [0, 0, 0, 3],
+    ]);
+    await page.waitForTimeout(300);
+    const clipped = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>(".numbers-tile-prefix, .numbers-tile-stat, .numbers-tile-value")]
+        .filter((el) => el.scrollWidth > el.clientWidth + 1)
+        .map((el) => el.textContent),
+    );
+    expect(clipped).toEqual([]);
+  });
+
+  test("the slide fits the viewport on desktop so the first scroll moves on", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "desktop layout only");
+    await gotoStatsSlide(page);
+    const { sh, ch } = await page.evaluate(() => {
+      const slide = document.querySelectorAll<HTMLElement>(".keen-slider__slide")[2];
+      return { sh: slide.scrollHeight, ch: slide.clientHeight };
     });
-    const milestone = page.locator('[data-board] .numbers-tile[data-stat="prototypes"]');
-    await expect(milestone).toHaveCount(1);
-    await expect(milestone).toContainText(/47/);
-    await expect(milestone).toContainText(/prototyp/i);
+    expect(sh).toBeLessThanOrEqual(ch);
   });
 });

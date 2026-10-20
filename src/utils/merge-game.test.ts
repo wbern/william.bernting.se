@@ -10,6 +10,9 @@ import {
   hasValidMerge,
   nextSpawnPlan,
   ensureMergeAvailable,
+  findHintPair,
+  MAX_STAT_TILE,
+  STAT_LADDER,
 } from "./merge-game";
 import type { Board } from "./merge-game";
 
@@ -65,9 +68,9 @@ describe("mergeTilesAt", () => {
     expect(result.merged).toBe(false);
   });
 
-  it("explodes two 12288 tiles into a fresh starter instead of producing a no-stat 24576", () => {
+  it("explodes two top tiles into a fresh starter instead of producing a no-stat tile", () => {
     const board = [
-      [12288, 12288, 0, 0],
+      [768, 768, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -75,35 +78,74 @@ describe("mergeTilesAt", () => {
     const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 1 });
     expect(result.merged).toBe(true);
     expect(result.exploded).toBe(true);
+    expect(result.won).toBe(false);
     expect(result.board[0][0]).toBe(0);
     expect(result.board[0][1]).toBe(3);
-    expect(result.gained).toBe(24576);
+    expect(result.gained).toBe(1536);
+  });
+
+  it("wins when a merge forms the top tile, keeping the tile on the board", () => {
+    const board = [
+      [384, 0, 0, 384],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 3 });
+    expect(result.won).toBe(true);
+    expect(result.exploded).toBe(false);
+    expect(result.value).toBe(MAX_STAT_TILE);
+    expect(result.board[0][3]).toBe(768);
+  });
+
+  it("reports the produced value so the UI can reveal the matching stat", () => {
+    const board = [
+      [24, 24, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = mergeTilesAt(board, { row: 0, col: 0 }, { row: 0, col: 1 });
+    expect(result.value).toBe(48);
+    expect(result.won).toBe(false);
+  });
+});
+
+describe("STAT_LADDER", () => {
+  it("has a stat on every doubling from 6 up to the top tile, with no gaps", () => {
+    const tiles = STAT_LADDER.map((s) => s.tile);
+    expect(tiles[0]).toBe(6);
+    expect(tiles[tiles.length - 1]).toBe(MAX_STAT_TILE);
+    for (let i = 1; i < tiles.length; i++) expect(tiles[i]).toBe(tiles[i - 1] * 2);
+    for (const t of tiles) expect(getStatForTile(t)).toBeDefined();
+  });
+
+  it("uses each stat key once", () => {
+    const keys = STAT_LADDER.map((s) => s.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
 
 describe("getStatForTile", () => {
-  it("maps tile 48 to the prototypes stat", () => {
-    expect(getStatForTile(48)).toBe("prototypes");
-  });
-
   it("maps tile 6 to the recruited stat", () => {
     expect(getStatForTile(6)).toBe("recruited");
   });
 
-  it("maps tile 96 to the speaking stat", () => {
-    expect(getStatForTile(96)).toBe("speaking");
+  it("maps tile 48 to the teams stat", () => {
+    expect(getStatForTile(48)).toBe("teams");
   });
 
-  it("maps tile 3072 to the linkedin stat", () => {
-    expect(getStatForTile(3072)).toBe("linkedin");
+  it("maps tile 384 to the chess kids stat", () => {
+    expect(getStatForTile(384)).toBe("kids");
   });
 
-  it("maps tile 12288 to the messages stat", () => {
-    expect(getStatForTile(12288)).toBe("messages");
+  it("maps the top tile to the users stat", () => {
+    expect(getStatForTile(768)).toBe("users");
   });
 
   it("returns undefined for tile values that do not represent a stat", () => {
-    expect(getStatForTile(4)).toBeUndefined();
+    expect(getStatForTile(3)).toBeUndefined();
+    expect(getStatForTile(1536)).toBeUndefined();
   });
 });
 
@@ -122,51 +164,84 @@ describe("spawnTile", () => {
 });
 
 describe("spawnRandomMilestone", () => {
-  it("places a milestone-valued tile (not 3) in an empty cell", () => {
+  function added(before: Board, after: Board): number | null {
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (after[r][c] !== before[r][c]) return after[r][c];
+      }
+    }
+    return null;
+  }
+
+  it("places a stat tile strictly below the highest tile on the board", () => {
     const board: Board = [
-      [3, 0, 0, 0],
+      [96, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    const result = spawnRandomMilestone(board, () => 0);
-    // Find the newly added tile
-    let added: number | null = null;
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (result[r][c] !== 0 && result[r][c] !== board[r][c]) {
-          added = result[r][c];
-        }
-      }
+    for (let i = 0; i < 20; i++) {
+      let n = 0;
+      const rng = () => (n++ * 0.137 + i * 0.31) % 1;
+      const value = added(board, spawnRandomMilestone(board, rng));
+      expect([6, 12, 24, 48]).toContain(value);
     }
-    expect(added).not.toBeNull();
-    expect(added).not.toBe(3);
-    // Must be one of the milestone values
-    expect([6, 12, 24, 48, 96, 192, 384, 768, 1536, 6144]).toContain(added);
+  });
+
+  it("never spawns the top tile, even when the board already holds it", () => {
+    const board: Board = [
+      [768, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    for (let i = 0; i < 20; i++) {
+      let n = 0;
+      const rng = () => (n++ * 0.211 + i * 0.17) % 1;
+      expect(added(board, spawnRandomMilestone(board, rng))).not.toBe(768);
+    }
+  });
+
+  it("never adds a third copy of a value", () => {
+    const board: Board = [
+      [24, 6, 6, 0],
+      [12, 12, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    for (let i = 0; i < 20; i++) {
+      let n = 0;
+      const rng = () => (n++ * 0.137 + i * 0.31) % 1;
+      const value = added(board, spawnRandomMilestone(board, rng));
+      expect(value).not.toBe(6);
+      expect(value).not.toBe(12);
+    }
+  });
+
+  it("falls back to a starter tile when nothing qualifies", () => {
+    const board: Board = [
+      [6, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    expect(added(board, spawnRandomMilestone(board, () => 0))).toBe(3);
   });
 
   it("produces varied values across multiple calls", () => {
     const board: Board = [
-      [3, 0, 0, 0],
+      [384, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    // Stepped pseudo-random: should pick different indices
     const values = new Set<number>();
     for (let i = 0; i < 20; i++) {
       let n = 0;
       const rng = () => (n++ * 0.137 + i * 0.31) % 1;
-      const result = spawnRandomMilestone(board, rng);
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          if (result[r][c] !== board[r][c] && result[r][c] !== 0) {
-            values.add(result[r][c]);
-          }
-        }
-      }
+      const value = added(board, spawnRandomMilestone(board, rng));
+      if (value) values.add(value);
     }
-    // With 10 possible milestones and 20 trials, we should see at least 3 different values
     expect(values.size).toBeGreaterThanOrEqual(3);
   });
 });
@@ -263,54 +338,105 @@ describe("spawnNext", () => {
     expect(result[0][0]).toBe(3);
   });
 
-  it("surfaces every milestone stat within 60 merges when the player greedily merges lowest pairs", () => {
-    // Deterministic rng so the test is repeatable
-    let s = 1;
+  it("does not copy the top tile or a value that already has a twin", () => {
+    const board: Board = [
+      [768, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 6, 6],
+      [0, 0, 0, 0],
+    ];
+    for (let seed = 0; seed < 10; seed++) {
+      const rng = () => (seed * 0.137) % 1;
+      const result = spawnNext(board, rng);
+      const flat = result.flat();
+      expect(flat.filter((v) => v === 768)).toHaveLength(1);
+      expect(flat.filter((v) => v === 6)).toHaveLength(2);
+    }
+  });
+});
+
+describe("full game", () => {
+  function playGreedy(seedValue: number, order: "lowest" | "highest") {
+    let s = seedValue;
     const rng = () => {
       s = (s * 16807) % 2147483647;
       return s / 2147483647;
     };
-    let board = seedBoard(6, rng);
-    const seen = new Set<string>();
-    for (let step = 0; step < 60; step++) {
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          const stat = getStatForTile(board[r][c]);
-          if (stat) seen.add(stat);
-        }
-      }
-      // Find any mergeable pair (lowest value first) and merge it
+    let board = ensureMergeAvailable(seedBoard(6, rng), rng);
+    let mode: "active" | "withhold" = "active";
+    const unlocked = new Set<string>();
+    let worstPile = 0;
+    for (let step = 1; step <= 200; step++) {
       const byValue = new Map<number, Array<[number, number]>>();
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          const v = board[r][c];
-          if (v === 0) continue;
+      board.forEach((row, r) =>
+        row.forEach((v, c) => {
+          if (v === 0) return;
           const list = byValue.get(v) ?? [];
           list.push([r, c]);
           byValue.set(v, list);
-        }
+        }),
+      );
+      for (const [v, list] of byValue) {
+        // Piles of spawned stat tiles are the bug we are guarding against.
+        if (v >= 48) worstPile = Math.max(worstPile, list.length);
       }
-      const sorted = [...byValue.entries()].sort(([a], [b]) => a - b);
-      let merged = false;
-      for (const [, positions] of sorted) {
-        if (positions.length < 2) continue;
-        const [fromPos, toPos] = positions;
-        const result = mergeTilesAt(
-          board,
-          { row: fromPos[0], col: fromPos[1] },
-          { row: toPos[0], col: toPos[1] },
-        );
-        if (result.merged) {
-          board = spawnNext(result.board, rng);
-          merged = true;
-          break;
-        }
+      const pairs = [...byValue.entries()]
+        .filter(([, list]) => list.length >= 2)
+        .sort(([a], [b]) => (order === "lowest" ? a - b : b - a));
+      if (pairs.length === 0) return { won: false, step, unlocked, worstPile };
+      const [[fr, fc], [tr, tc]] = pairs[0][1];
+      const result = mergeTilesAt(board, { row: fr, col: fc }, { row: tr, col: tc });
+      const stat = getStatForTile(result.value);
+      if (stat) unlocked.add(stat);
+      if (result.won) return { won: true, step, unlocked, worstPile };
+      let next = result.board;
+      const plan = nextSpawnPlan(next, mode);
+      mode = plan.mode;
+      for (let i = 0; i < plan.count; i++) {
+        next = i === 0 ? spawnNext(next, rng) : spawnRandomMilestone(next, rng);
       }
-      if (!merged) break;
+      board = ensureMergeAvailable(next, rng);
     }
-    const allStats = ["recruited", "teams", "experience", "prototypes", "speaking", "endorsementsReceived", "endorsementsGiven", "coderate", "linkedin", "users"];
-    const missing = allStats.filter((s) => !seen.has(s));
-    expect(missing, `missing stats after 60 merges: ${missing.join(", ")}`).toEqual([]);
+    return { won: false, step: 200, unlocked, worstPile };
+  }
+
+  it("is winnable in a reasonable number of merges and unlocks every stat on the way", () => {
+    for (const seed of [1, 7, 42, 1337, 9001]) {
+      for (const order of ["lowest", "highest"] as const) {
+        const run = playGreedy(seed, order);
+        expect(run.won, `seed=${seed} order=${order}`).toBe(true);
+        expect(run.step, `seed=${seed} order=${order}`).toBeLessThanOrEqual(120);
+        expect([...run.unlocked].sort()).toEqual(STAT_LADDER.map((s) => s.key).sort());
+      }
+    }
+  });
+
+  it("never piles more than two spawned copies of a high stat on the board", () => {
+    for (const seed of [1, 7, 42, 1337, 9001]) {
+      expect(playGreedy(seed, "highest").worstPile, `seed=${seed}`).toBeLessThanOrEqual(3);
+    }
+  });
+});
+
+describe("findHintPair", () => {
+  it("returns the closest pair of the lowest duplicated value", () => {
+    const board: Board = [
+      [3, 0, 0, 6],
+      [0, 0, 0, 6],
+      [0, 0, 0, 0],
+      [3, 0, 3, 0],
+    ];
+    expect(findHintPair(board)).toEqual({ from: { row: 3, col: 0 }, to: { row: 3, col: 2 } });
+  });
+
+  it("returns null when nothing can merge", () => {
+    const board: Board = [
+      [3, 6, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    expect(findHintPair(board)).toBeNull();
   });
 });
 
@@ -343,6 +469,18 @@ describe("ensureMergeAvailable", () => {
     ];
     const result = ensureMergeAvailable(board, () => 0);
     expect(result).toEqual(board);
+  });
+
+  it("starts a fresh pair of starters when only the top tile is left", () => {
+    const board: Board = [
+      [768, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const result = ensureMergeAvailable(board, () => 0);
+    expect(result.flat().filter((v) => v === 3)).toHaveLength(2);
+    expect(result.flat().filter((v) => v === 768)).toHaveLength(1);
   });
 
   it("returns the board unchanged when it is already full", () => {

@@ -2,32 +2,34 @@ export type Board = number[][];
 
 export const STARTING_TILE = 3;
 
+// The stat ladder. Tile values double (6, 12, 24 ... 768) and each rung
+// reveals one fact, ordered so the displayed numbers escalate too:
+// 6 hires -> 7 client products -> 8 tools -> 14 teams -> 15 years ->
+// 77 projects -> ~500 chess kids -> 5 000 users (the top tile / win).
 export type StatKey =
   | "recruited"
+  | "clients"
+  | "tools"
   | "teams"
   | "experience"
-  | "prototypes"
-  | "speaking"
-  | "endorsementsReceived"
-  | "endorsementsGiven"
-  | "coderate"
-  | "linkedin"
-  | "users"
-  | "messages";
+  | "projects"
+  | "kids"
+  | "users";
 
-const STAT_TILES: Record<number, StatKey> = {
-  6: "recruited",
-  12: "teams",
-  24: "experience",
-  48: "prototypes",
-  96: "speaking",
-  192: "endorsementsReceived",
-  384: "endorsementsGiven",
-  1536: "coderate",
-  3072: "linkedin",
-  6144: "users",
-  12288: "messages",
-};
+export const STAT_LADDER: ReadonlyArray<{ tile: number; key: StatKey }> = [
+  { tile: 6, key: "recruited" },
+  { tile: 12, key: "clients" },
+  { tile: 24, key: "tools" },
+  { tile: 48, key: "teams" },
+  { tile: 96, key: "experience" },
+  { tile: 192, key: "projects" },
+  { tile: 384, key: "kids" },
+  { tile: 768, key: "users" },
+];
+
+const STAT_TILES: Record<number, StatKey> = Object.fromEntries(
+  STAT_LADDER.map(({ tile, key }) => [tile, key]),
+);
 
 export function getStatForTile(value: number): StatKey | undefined {
   return STAT_TILES[value];
@@ -35,27 +37,46 @@ export function getStatForTile(value: number): StatKey | undefined {
 
 export type Position = { row: number; col: number };
 
-const MAX_STAT_TILE = 12288;
+/** The top of the ladder. Forming it by a merge wins the game. */
+export const MAX_STAT_TILE = 768;
 
-export function mergeTilesAt(
-  board: Board,
-  from: Position,
-  to: Position,
-): { board: Board; gained: number; merged: boolean; exploded: boolean } {
-  if (from.row === to.row && from.col === to.col) {
-    return { board, gained: 0, merged: false, exploded: false };
-  }
+export type MergeResult = {
+  board: Board;
+  gained: number;
+  merged: boolean;
+  /** Two top tiles merged past the ladder; the cell resets to a starter. */
+  exploded: boolean;
+  /** The merge produced the top tile. */
+  won: boolean;
+  /** Value of the tile the merge produced (0 when nothing merged). */
+  value: number;
+};
+
+export function mergeTilesAt(board: Board, from: Position, to: Position): MergeResult {
+  const none: MergeResult = { board, gained: 0, merged: false, exploded: false, won: false, value: 0 };
+  if (from.row === to.row && from.col === to.col) return none;
   const fromValue = board[from.row][from.col];
   const toValue = board[to.row][to.col];
-  if (fromValue === 0 || toValue === 0 || fromValue !== toValue) {
-    return { board, gained: 0, merged: false, exploded: false };
-  }
+  if (fromValue === 0 || toValue === 0 || fromValue !== toValue) return none;
   const next = board.map((row) => [...row]);
   const sum = next[from.row][from.col] * 2;
   next[from.row][from.col] = 0;
   const exploded = sum > MAX_STAT_TILE;
-  next[to.row][to.col] = exploded ? STARTING_TILE : sum;
-  return { board: next, gained: sum, merged: true, exploded };
+  const value = exploded ? STARTING_TILE : sum;
+  next[to.row][to.col] = value;
+  return { board: next, gained: sum, merged: true, exploded, won: sum === MAX_STAT_TILE, value };
+}
+
+function countValue(board: Board, value: number): number {
+  let n = 0;
+  for (const row of board) for (const v of row) if (v === value) n++;
+  return n;
+}
+
+function maxValue(board: Board): number {
+  let m = 0;
+  for (const row of board) for (const v of row) if (v > m) m = v;
+  return m;
 }
 
 export function createEmptyBoard(size = 4): Board {
@@ -105,17 +126,21 @@ export function spawnNext(board: Board, rng: () => number = Math.random): Board 
   const nonZero: Array<{ row: number; col: number; value: number }> = [];
   for (let r = 0; r < board.length; r++) {
     for (let c = 0; c < board[r].length; c++) {
-      if (board[r][c] !== 0) nonZero.push({ row: r, col: c, value: board[r][c] });
+      const value = board[r][c];
+      // Never copy the top tile (that would hand out the win), and never copy
+      // a value that already has a twin (that is how duplicate piles start).
+      if (value === 0 || value >= MAX_STAT_TILE || countValue(board, value) >= 2) continue;
+      nonZero.push({ row: r, col: c, value });
     }
   }
   const shuffled = [...nonZero].sort(() => rng() - 0.5);
   for (const tile of shuffled) {
-    const neighbors: Array<[number, number]> = [
+    const neighbors = ([
       [tile.row - 1, tile.col],
       [tile.row + 1, tile.col],
       [tile.row, tile.col - 1],
       [tile.row, tile.col + 1],
-    ].filter(
+    ] as Array<[number, number]>).filter(
       ([r, c]) =>
         r >= 0 && r < board.length && c >= 0 && c < board[r].length && board[r][c] === 0,
     );
@@ -128,8 +153,15 @@ export function spawnNext(board: Board, rng: () => number = Math.random): Board 
   return spawnTile(board, rng);
 }
 
-const MILESTONE_VALUES = [6, 12, 24, 48, 96, 192, 384, 768, 1536, 6144] as const;
+// Every rung below the top. The top tile is never spawned: it has to be earned.
+const MILESTONE_VALUES = STAT_LADDER.map(({ tile }) => tile).filter((v) => v < MAX_STAT_TILE);
 
+/**
+ * Drops a stat tile into an empty cell to speed the climb up. Only values
+ * strictly below the highest tile on the board qualify, and never one that
+ * already appears twice, so the board stays a ladder instead of a pile of
+ * duplicates. Falls back to a plain starter tile when nothing qualifies.
+ */
 export function spawnRandomMilestone(
   board: Board,
   rng: () => number = Math.random,
@@ -141,8 +173,11 @@ export function spawnRandomMilestone(
     }
   }
   if (empties.length === 0) return board;
+  const top = maxValue(board);
+  const candidates = MILESTONE_VALUES.filter((v) => v < top && countValue(board, v) < 2);
+  if (candidates.length === 0) return spawnTile(board, rng);
   const [r, c] = empties[Math.floor(rng() * empties.length)];
-  const value = MILESTONE_VALUES[Math.floor(rng() * MILESTONE_VALUES.length)];
+  const value = candidates[Math.floor(rng() * candidates.length)];
   return board.map((row, ri) =>
     ri === r ? row.map((v, ci) => (ci === c ? value : v)) : row,
   );
@@ -179,14 +214,21 @@ export function ensureMergeAvailable(
     for (let c = 0; c < board[r].length; c++) {
       const v = board[r][c];
       if (v === 0) empties.push([r, c]);
-      else if (v < lowest) lowest = v;
+      else if (v < lowest && v < MAX_STAT_TILE) lowest = v;
     }
   }
-  if (empties.length === 0 || lowest === Infinity) return board;
-  const [r, c] = empties[Math.floor(rng() * empties.length)];
-  return board.map((row, ri) =>
-    ri === r ? row.map((v, ci) => (ci === c ? lowest : v)) : row,
-  );
+  if (empties.length === 0) return board;
+  const place = (b: Board, value: number, [r, c]: [number, number]): Board =>
+    b.map((row, ri) => (ri === r ? row.map((v, ci) => (ci === c ? value : v)) : row));
+  if (lowest === Infinity) {
+    // Only the top tile (or nothing) is left: start a fresh pair of starters.
+    if (empties.length < 2) return board;
+    const first = Math.floor(rng() * empties.length);
+    const rest = empties.filter((_, i) => i !== first);
+    const second = rest[Math.floor(rng() * rest.length)];
+    return place(place(board, STARTING_TILE, empties[first]), STARTING_TILE, second);
+  }
+  return place(board, lowest, empties[Math.floor(rng() * empties.length)]);
 }
 
 export function hasValidMerge(board: Board): boolean {
@@ -205,3 +247,37 @@ export function isGameOver(board: Board): boolean {
   return !hasValidMerge(board);
 }
 
+/**
+ * The pair the onboarding hint should demonstrate: the two lowest equal
+ * tiles, preferring the closest pair so the ghost drag is short.
+ */
+export function findHintPair(board: Board): { from: Position; to: Position } | null {
+  const byValue = new Map<number, Position[]>();
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[r].length; c++) {
+      const v = board[r][c];
+      if (v === 0) continue;
+      const list = byValue.get(v) ?? [];
+      list.push({ row: r, col: c });
+      byValue.set(v, list);
+    }
+  }
+  const values = [...byValue.keys()].sort((a, b) => a - b);
+  for (const v of values) {
+    const list = byValue.get(v)!;
+    if (list.length < 2) continue;
+    let best: { from: Position; to: Position } | null = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const d = Math.abs(list[i].row - list[j].row) + Math.abs(list[i].col - list[j].col);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { from: list[i], to: list[j] };
+        }
+      }
+    }
+    return best;
+  }
+  return null;
+}
