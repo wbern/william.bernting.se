@@ -1,206 +1,245 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+const STAGE = "[data-testid='tower-stage']";
 
 /** Navigate to the timeline slide (index 3) and wait for blocks to settle. */
-async function goToTimeline(page: import("@playwright/test").Page) {
-  await page.goto("/");
+async function goToTimeline(page: Page, path = "/") {
+  await page.goto(path);
   await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
-  await page.click("body", { position: { x: 4, y: 4 } }); // neutral corner: the hero centre has links
-
-  for (let i = 0; i < 3; i++) {
-    await page.keyboard.press("ArrowDown");
-    await page.waitForTimeout(700);
-  }
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    document.querySelector("astro-dev-toolbar")?.remove();
+    document.dispatchEvent(new CustomEvent("slider-goto", { detail: { index: 3 } }));
+  });
 
   await page.waitForFunction(
-    () => {
-      const blocks = document.querySelectorAll("[data-testid='tower-stage'] .tower-block");
-      return blocks.length > 0 && Array.from(blocks).every(b => b.classList.contains("settled"));
+    (sel) => {
+      const blocks = document.querySelectorAll(`${sel} .tower-block`);
+      return blocks.length > 0 && Array.from(blocks).every((b) => b.classList.contains("settled"));
     },
+    STAGE,
     { timeout: 15_000 },
   );
 }
 
-test.describe("timeline block drag interaction", () => {
-  test("settled blocks have grab cursor indicating they are draggable", async ({ page }) => {
+const activeSlide = (page: Page) =>
+  page.evaluate(() =>
+    Array.from(document.querySelectorAll(".slide-dot")).findIndex((d) => d.classList.contains("active")),
+  );
+
+const visibleCard = (page: Page) =>
+  page.evaluate(() => (document.querySelector(".tl-card:not([hidden])") as HTMLElement | null)?.dataset.card ?? null);
+
+async function knockDown(page: Page) {
+  await page.locator("[data-knock]").click();
+  await page.waitForFunction(
+    (sel) => document.querySelectorAll(`${sel} .tower-block.freed`).length > 0,
+    STAGE,
+  );
+}
+
+test.describe("timeline: explore the tower", () => {
+  test("blocks are buttons in chronological order, oldest first", async ({ page }) => {
     await goToTimeline(page);
-
-    const cursor = await page.evaluate(() => {
-      const block = document.querySelector("[data-testid='tower-stage'] .tower-block.settled") as HTMLElement;
-      if (!block) return null;
-      return getComputedStyle(block).cursor;
-    });
-
-    expect(cursor).toBe("grab");
+    const jobs = await page.locator(`${STAGE} .tower-block`).evaluateAll((els) =>
+      els.map((el) => ({ tag: el.tagName, job: (el as HTMLElement).dataset.job })),
+    );
+    expect(jobs.every((j) => j.tag === "BUTTON")).toBe(true);
+    expect(jobs[0].job).toBe("hp");
+    expect(jobs[jobs.length - 1].job).toBe("kendev");
   });
 
-  test("mousedown on a settled block adds freed class to enable physics", async ({ page }) => {
+  test("the short-version panel shows before anything is picked", async ({ page }) => {
     await goToTimeline(page);
-
-    // Use last block (topmost visually, most likely to be unobstructed)
-    const settledBlock = page.locator("[data-testid='tower-stage'] .tower-block.settled").last();
-    const box = await settledBlock.boundingBox();
-    expect(box).not.toBeNull();
-
-    // Pin the element by data-block-index so the selector stays stable after class changes
-    const blockIndex = await settledBlock.getAttribute("data-block-index");
-    const block = page.locator(`[data-testid='tower-stage'] .tower-block[data-block-index="${blockIndex}"]`);
-
-    // Verify block has settled class
-    const isSettled = await block.evaluate(el => el.classList.contains("settled"));
-    expect(isSettled).toBe(true);
-
-    // Mouse down on the center of the block
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-
-    // Small wait for event to propagate
-    await page.waitForTimeout(100);
-
-    const hasFreed = await block.evaluate(el => el.classList.contains("freed"));
-    expect(hasFreed).toBe(true);
-
-    await page.mouse.up();
+    await expect(page.locator("[data-arc]")).toBeVisible();
+    expect(await visibleCard(page)).toBeNull();
   });
 
-  test("dragging one block frees all blocks", async ({ page }) => {
+  test("clicking a block opens its story card without freeing the tower", async ({ page }) => {
     await goToTimeline(page);
+    await page.locator(`${STAGE} .tower-block[data-job="telia-lead"]`).click();
 
-    const settledBlock = page.locator("[data-testid='tower-stage'] .tower-block.settled").last();
-    const box = await settledBlock.boundingBox();
-    expect(box).not.toBeNull();
+    expect(await visibleCard(page)).toBe("telia-lead");
+    await expect(page.locator("#tl-card-telia-lead .tl-stat-value")).toHaveText("14");
+    await expect(page.locator(`${STAGE} .tower-block[data-job="telia-lead"]`)).toHaveAttribute("aria-pressed", "true");
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(0);
+  });
 
-    // Mouse down on one block
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-    await page.waitForTimeout(100);
+  test("card arrows walk the tower and close returns to the short version", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator(`${STAGE} .tower-block[data-job="hp"]`).click();
+    await page.locator("#tl-card-hp [data-step='1']").click();
+    expect(await visibleCard(page)).toBe("kits");
+    await page.locator("#tl-card-kits [data-close]").click();
+    expect(await visibleCard(page)).toBeNull();
+    await expect(page.locator("[data-arc]")).toBeVisible();
+  });
 
-    // All blocks should now have freed class, none should have settled
-    const counts = await page.evaluate(() => {
-      const blocks = document.querySelectorAll("[data-testid='tower-stage'] .tower-block");
+  test("arrow keys move between blocks and do not change slide", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator(`${STAGE} .tower-block[data-job="kendev"]`).focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    expect(await visibleCard(page)).toBe("hedin");
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement)?.dataset.job)).toBe("hedin");
+    await page.keyboard.press("Escape");
+    expect(await visibleCard(page)).toBeNull();
+    expect(await activeSlide(page)).toBe(3);
+  });
+
+  test("an arc step opens the block it is about", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the arc list is desktop-only; phones get the hint + sheet");
+    await goToTimeline(page);
+    await page.locator("[data-arc-step='netconsult']").click();
+    expect(await visibleCard(page)).toBe("netconsult");
+  });
+
+  test("'let's talk' goes to the contact slide", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator("[data-arc] [data-goto-contact]").click();
+    await expect.poll(() => activeSlide(page)).toBe(5);
+  });
+
+  test("'see the project' opens that project in the roulette", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator(`${STAGE} .tower-block[data-job="telia-senior"]`).click();
+    await page.locator("#tl-card-telia-senior [data-project]").click();
+    await expect.poll(() => activeSlide(page)).toBe(1);
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe("#telia-se");
+  });
+
+  test("the date gutter never wraps, even beside the shortest block", async ({ page }) => {
+    await goToTimeline(page);
+    const heights = await page.locator(`${STAGE} .row-date`).evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return r.height / parseFloat(getComputedStyle(el).lineHeight || "16");
+      }),
+    );
+    for (const lines of heights) expect(lines).toBeLessThan(1.6);
+  });
+
+  test("labels stay inside the viewport", async ({ page }) => {
+    await goToTimeline(page);
+    const vw = page.viewportSize()!.width;
+    const rights = await page.locator(`${STAGE} .tower-label`).evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().right),
+    );
+    for (const r of rights) expect(r).toBeLessThanOrEqual(vw);
+  });
+});
+
+test.describe("timeline: knock it down (opt-in physics)", () => {
+  test("settled blocks are not grab-cursors until knocked down", async ({ page }) => {
+    await goToTimeline(page);
+    const cursor = await page.locator(`${STAGE} .tower-block`).first().evaluate((el) => getComputedStyle(el).cursor);
+    expect(cursor).toBe("pointer");
+  });
+
+  test("the knock-down button frees every block and shows rebuild", async ({ page }) => {
+    await goToTimeline(page);
+    await knockDown(page);
+
+    const counts = await page.evaluate((sel) => {
+      const blocks = document.querySelectorAll(`${sel} .tower-block`);
       let freed = 0, settled = 0;
-      blocks.forEach(b => {
+      blocks.forEach((b) => {
         if (b.classList.contains("freed")) freed++;
         if (b.classList.contains("settled")) settled++;
       });
       return { freed, settled, total: blocks.length };
-    });
-
+    }, STAGE);
     expect(counts.settled).toBe(0);
     expect(counts.freed).toBe(counts.total);
-
-    await page.mouse.up();
+    await expect(page.locator("[data-knock]")).toHaveAttribute("data-state", "freed");
+    expect(await visibleCard(page)).toBeNull();
   });
 
-  test("dragging a freed block moves it toward the mouse position", async ({ page }) => {
+  test("rebuild stacks the tower again", async ({ page }) => {
     await goToTimeline(page);
+    await knockDown(page);
+    await page.locator("[data-knock]").click();
+    await page.waitForFunction(
+      (sel) => Array.from(document.querySelectorAll(`${sel} .tower-block`)).every((b) => b.classList.contains("settled")),
+      STAGE,
+      { timeout: 15_000 },
+    );
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(0);
+    await expect(page.locator("[data-knock]")).not.toHaveAttribute("data-state", "freed");
+  });
 
-    // Pin a block by index before interaction
-    const settledBlock = page.locator("[data-testid='tower-stage'] .tower-block.settled").last();
-    const box = await settledBlock.boundingBox();
-    expect(box).not.toBeNull();
-    const blockIndex = await settledBlock.getAttribute("data-block-index");
-    const block = page.locator(`[data-testid='tower-stage'] .tower-block[data-block-index="${blockIndex}"]`);
+  test("dragging a freed block moves it toward the mouse position", async ({ page, isMobile }) => {
+    test.skip(isMobile, "mouse drag");
+    await goToTimeline(page);
+    await knockDown(page);
+    await page.waitForTimeout(2500); // let the shove settle
 
-    // Mouse down on center of block
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
+    // Grab whichever block is on top at its own centre (physics piles are random)
+    const job = await page.evaluate((sel) => {
+      for (const el of Array.from(document.querySelectorAll<HTMLElement>(`${sel} .tower-block`))) {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        if (hit && el.contains(hit)) return el.dataset.job!;
+      }
+      return "hp";
+    }, STAGE);
+    const block = page.locator(`${STAGE} .tower-block[data-job="${job}"]`);
+    const box = (await block.boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
     await page.waitForTimeout(50);
-
-    // Drag 150px to the right — use many steps and give the physics engine time
-    // to converge (Matter.js MouseConstraint uses a spring constraint with
-    // stiffness 0.8, not direct positioning, so the block lags the cursor)
-    await page.mouse.move(cx + 150, cy, { steps: 20 });
+    await page.mouse.move(cx + 150, cy - 40, { steps: 20 });
     await page.waitForTimeout(400);
 
-    // Block should have moved — check its new bounding box
-    const newBox = await block.boundingBox();
-    expect(newBox).not.toBeNull();
-    expect(newBox!.x).toBeGreaterThan(box!.x + 10); // moved toward mouse
-
+    const newBox = (await block.boundingBox())!;
+    expect(Math.abs(newBox.x - box.x) + Math.abs(newBox.y - box.y)).toBeGreaterThan(10);
     await page.mouse.up();
   });
 
-  test("throwing a freed block horizontally moves it from its original position", async ({ page }) => {
+  test("dragging a freed block vertically does not trigger a slide change", async ({ page, isMobile }) => {
+    test.skip(isMobile, "mouse drag");
     await goToTimeline(page);
+    await knockDown(page);
+    await page.waitForTimeout(2500);
 
-    const settledBlock = page.locator("[data-testid='tower-stage'] .tower-block.settled").last();
-    const box = await settledBlock.boundingBox();
-    expect(box).not.toBeNull();
-    const blockIndex = await settledBlock.getAttribute("data-block-index");
-    const block = page.locator(`[data-testid='tower-stage'] .tower-block[data-block-index="${blockIndex}"]`);
-
-    // Record original position before any interaction
-    const origX = box!.x;
-
-    // Mouse down, drag right quickly, then release (throw right)
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
-    await page.mouse.move(cx, cy);
-    await page.mouse.down();
-    await page.waitForTimeout(50);
-
-    // Quick rightward drag and release
-    await page.mouse.move(cx + 120, cy, { steps: 5 });
-    await page.waitForTimeout(20);
-    await page.mouse.up();
-
-    // Wait for physics to settle
-    await page.waitForTimeout(1000);
-
-    const posAfterSettle = await block.boundingBox();
-    expect(posAfterSettle).not.toBeNull();
-
-    // Block should have moved from its original position (thrown right)
-    expect(posAfterSettle!.x).not.toBeCloseTo(origX, 0);
-  });
-
-  test("dragging a block vertically does not trigger a slide change", async ({ page }) => {
-    await goToTimeline(page);
-
-    // Record current slide index before interaction
-    const slideBefore = await page.evaluate(() => {
-      const dots = document.querySelectorAll(".slide-dot");
-      return Array.from(dots).findIndex(d => d.classList.contains("active"));
-    });
-
-    // Grab a settled block and drag it vertically (the gesture keen-slider
-    // would interpret as a slide swipe if propagation weren't stopped)
-    const settledBlock = page.locator("[data-testid='tower-stage'] .tower-block.settled").last();
-    const box = await settledBlock.boundingBox();
-    expect(box).not.toBeNull();
-
-    const cx = box!.x + box!.width / 2;
-    const cy = box!.y + box!.height / 2;
+    const block = page.locator(`${STAGE} .tower-block[data-job="kits"]`);
+    const box = (await block.boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
     await page.mouse.move(cx, cy);
     await page.mouse.down();
     await page.waitForTimeout(100);
-
-    // Drag vertically — 150px is enough to trigger a keen-slider slide change
     await page.mouse.move(cx, cy - 150, { steps: 10 });
     await page.waitForTimeout(100);
     await page.mouse.up();
-
-    // Wait for any potential slide transition (500ms keen-slider duration + buffer)
     await page.waitForTimeout(800);
 
-    // Slide should not have changed
-    const slideAfter = await page.evaluate(() => {
-      const dots = document.querySelectorAll(".slide-dot");
-      return Array.from(dots).findIndex(d => d.classList.contains("active"));
-    });
-    expect(slideAfter).toBe(slideBefore);
+    expect(await activeSlide(page)).toBe(3);
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBeGreaterThan(0);
+  });
 
-    // Blocks should still be freed (not reset)
-    const freedCount = await page.evaluate(() => {
-      const blocks = document.querySelectorAll("[data-testid='tower-stage'] .tower-block.freed");
-      return blocks.length;
-    });
-    expect(freedCount).toBeGreaterThan(0);
+  test("leaving the slide resets the tower", async ({ page }) => {
+    await goToTimeline(page);
+    await knockDown(page);
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent("slider-goto", { detail: { index: 4 } })));
+    await expect.poll(() => activeSlide(page)).toBe(4);
+    await page.waitForTimeout(1200); // slide animation ends, reveal class drops, reset runs
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent("slider-goto", { detail: { index: 3 } })));
+    await page.waitForFunction(
+      (sel) => Array.from(document.querySelectorAll(`${sel} .tower-block`)).every((b) => b.classList.contains("settled")),
+      STAGE,
+      { timeout: 15_000 },
+    );
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(0);
+  });
+});
+
+test.describe("timeline: English", () => {
+  test("renders the English story for HP", async ({ page }) => {
+    await goToTimeline(page, "/en/");
+    await page.locator(`${STAGE} .tower-block[data-job="hp"]`).click();
+    await expect(page.locator("#tl-card-hp .tl-card-headline")).toHaveText("Built a tool 5,000 colleagues chose to use.");
   });
 });

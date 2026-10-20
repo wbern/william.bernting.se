@@ -2,37 +2,191 @@
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
 import { getJobs } from "../i18n/jobs";
+import { getArcSteps, getTimeline } from "../i18n/timeline";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 const jobs = getJobs(lang);
-// Reverse: index 0 = bottom (HPE), 7 = top (Akka)
-const blocks = [...jobs].reverse();
+const timeline = getTimeline(lang);
+// Reverse: index 0 = bottom (oldest, HP), last = top (own agency).
+// DOM order is chronological, which is also the screen-reader order.
+const blocks = [...timeline].reverse();
+const N = blocks.length;
+const colorOf = Object.fromEntries(blocks.map((b) => [b.id, b.color]));
+const arc = getArcSteps(lang);
+// Lowest freelance block: where the KenDev rail starts
+const firstFreelance = blocks.findIndex((b) => b.freelance);
+
+function splitDate(date: string): [string, string] {
+    const m = date.match(/^(\d{4})(.*)$/);
+    return m ? [m[1], m[2]] : [date, ""];
+}
 ---
 
-<div class="section-inner tower-section">
-    <div class="section-label reveal">{t("timeline.label")}</div>
-    <h2 class="section-heading reveal reveal-delay-1">
-        {t("timeline.heading.before")}<span class="highlight">{t("timeline.heading.highlight")}</span>{t("timeline.heading.after")}
-    </h2>
+<div class="section-inner tower-section" data-timeline>
+    <header class="tl-head">
+        <div class="section-label reveal">{t("timeline.label")}</div>
+        <h2 class="section-heading tl-heading reveal reveal-delay-1">
+            {t("timeline.heading.before")}<span class="highlight">{t("timeline.heading.highlight")}</span>{t("timeline.heading.after")}
+        </h2>
+        <p class="tl-sub reveal reveal-delay-1">{t("timeline.sub")}</p>
+    </header>
 
-    <div class="tower-stage reveal reveal-delay-2" data-testid="tower-stage">
-        <div class="tower-container">
-            {blocks.map((block, i) => (
-                <div
-                    class="tower-block"
-                    data-block-index={i}
-                    style={`--block-color: ${block.color}; --block-w: ${block.w};`}
+    <div class="tl-body reveal reveal-delay-2" data-tl-body>
+        <div class="tl-tower-col">
+            <div class="tower-stage" data-testid="tower-stage">
+                <ol class="tower-container" aria-label={t("timeline.listAria")}>
+                    {blocks.map((block, i) => {
+                        const [start, rest] = splitDate(block.date);
+                        return (
+                            <li
+                                class:list={[
+                                    "tower-row",
+                                    block.freelance && "is-freelance",
+                                    i === firstFreelance && "is-freelance-start",
+                                ]}
+                            >
+                                <span class="row-date" aria-hidden="true"><span>{start}</span><span class="row-date-rest">{rest}</span></span>
+                                <span class="row-rail" aria-hidden="true"></span>
+                                <span class="row-lane">
+                                    <button
+                                        type="button"
+                                        class:list={["tower-block", block.ongoing && "is-ongoing"]}
+                                        data-block-index={i}
+                                        data-job={block.id}
+                                        aria-pressed="false"
+                                        aria-controls={`tl-card-${block.id}`}
+                                        tabindex={i === N - 1 ? 0 : -1}
+                                        style={`--block-color: ${block.color}; --block-w: ${block.w};`}
+                                    >
+                                        <span class="tower-label">
+                                            <span class="label-role">{block.role}</span>
+                                            <span class="label-company">
+                                                {block.company}
+                                                <span class="tl-sr">, {block.period}</span>
+                                                {block.chip && <span class="label-chip">{block.chip}</span>}
+                                            </span>
+                                        </span>
+                                    </button>
+                                </span>
+                            </li>
+                        );
+                    })}
+                </ol>
+                <div class="tower-floor"></div>
+            </div>
+
+            <div class="tl-foot">
+                <span class="tl-legend tl-legend-width"><i aria-hidden="true"></i>{t("timeline.legend.width")}</span>
+                <span class="tl-legend tl-legend-rail"><i aria-hidden="true"></i>{t("timeline.legend.freelance")}</span>
+                <button
+                    type="button"
+                    class="tl-knock"
+                    data-knock
                 >
-                    <span class="block-date">{block.date}</span>
-                    <div class="tower-label">
-                        <span class="label-role">{block.role}</span>
-                        <span class="label-company">{block.company}</span>
-                    </div>
-                </div>
-            ))}
+                    <svg class="tl-knock-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 20h16M7 16l3-9 4 4 3-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span class="tl-knock-labels">
+                        <span class="tl-knock-l-knock">{t("timeline.knock")}</span>
+                        <span class="tl-knock-l-rebuild" aria-hidden="true">{t("timeline.rebuild")}</span>
+                    </span>
+                </button>
+            </div>
         </div>
-        <div class="tower-floor"></div>
+
+        <aside class="tl-panel" data-tl-panel>
+            <section class="tl-arc" data-arc>
+                <p class="tl-panel-label">{t("timeline.arc.label")}</p>
+                <ol class="tl-arc-steps">
+                    {arc.map((step) => (
+                        <li>
+                            <button type="button" class="tl-arc-step" data-arc-step={step.id} style={`--c: ${colorOf[step.id]};`}>
+                                <span class="tl-arc-dot" aria-hidden="true"></span>
+                                <span>{step.text}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ol>
+                <blockquote class="tl-arc-quote">
+                    &ldquo;{t("timeline.arc.quote")}&rdquo;
+                </blockquote>
+                <div class="tl-actions">
+                    <button type="button" class="tl-cta" data-goto-contact>
+                        {t("timeline.cta")}
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <span class="tl-hint">
+                        <span class="tl-hint-pointer">{t("timeline.hint.pointer")}</span>
+                        <span class="tl-hint-touch">{t("timeline.hint.touch")}</span>
+                    </span>
+                </div>
+            </section>
+
+            <section class="tl-freed-msg" data-freed-msg hidden>
+                <p>{t("timeline.freed")}</p>
+            </section>
+
+            {blocks.map((block, i) => (
+                <article
+                    class="tl-card"
+                    id={`tl-card-${block.id}`}
+                    data-card={block.id}
+                    aria-labelledby={`tl-card-h-${block.id}`}
+                    style={`--c: ${block.color};`}
+                    hidden
+                >
+                    <div class="tl-card-top">
+                        <span class="tl-card-swatch" aria-hidden="true"></span>
+                        <span class="tl-card-period">{block.period}</span>
+                        <span class="tl-card-nav">
+                            <button type="button" class="tl-icon-btn" data-step="-1" aria-label={t("timeline.prev")} disabled={i === 0}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <button type="button" class="tl-icon-btn" data-step="1" aria-label={t("timeline.next")} disabled={i === N - 1}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <button type="button" class="tl-icon-btn" data-close aria-label={t("timeline.close")}>
+                                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+                            </button>
+                        </span>
+                    </div>
+                    <p class="tl-card-who"><strong>{block.company}</strong> · {block.role}</p>
+                    <div class="tl-card-main">
+                        {block.stat && (
+                            <div class="tl-stat">
+                                <span class="tl-stat-value">{block.stat.value}</span>
+                                <span class="tl-stat-unit">{block.stat.unit}</span>
+                            </div>
+                        )}
+                        <h3 class="tl-card-headline" id={`tl-card-h-${block.id}`}>{block.headline}</h3>
+                    </div>
+                    <p class="tl-card-context">{block.context}</p>
+                    <ul class="tl-card-bullets">
+                        {block.bullets.map((b) => <li set:html={b} />)}
+                    </ul>
+                    {block.quote && (
+                        <figure class="tl-card-quote">
+                            <blockquote lang={block.quote.lang}>&ldquo;{block.quote.text}&rdquo;</blockquote>
+                            <figcaption>&mdash; {block.quote.name}, {block.quote.relation[lang]}</figcaption>
+                        </figure>
+                    )}
+                    {(block.cta || block.project) && (
+                        <div class="tl-actions">
+                            {block.cta && (
+                                <button type="button" class="tl-cta" data-goto-contact>
+                                    {t("timeline.cta")}
+                                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                            )}
+                            {block.project && (
+                                <a class="tl-link" href={`#${block.project}`} data-project={block.project}>
+                                    {t("timeline.project")} &rarr;
+                                </a>
+                            )}
+                        </div>
+                    )}
+                </article>
+            ))}
+        </aside>
     </div>
 </div>
 
@@ -53,46 +207,148 @@ const blocks = [...jobs].reverse();
 
 <style>
     .tower-section {
+        --tl-gap: clamp(4px, 0.8vh, 8px);
+        --tl-scale: 0.5%;
+        --tl-gutter: 66px;
+        position: relative;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        align-items: flex-start;
+        align-items: stretch;
         width: 100%;
+        max-width: 1160px;
         height: 100%;
+    }
+
+    .tl-sr {
+        position: absolute;
+        width: 1px; height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    /* ===== HEAD ===== */
+    .tl-heading { margin-bottom: 10px; }
+    .tl-sub {
+        color: var(--text-dim);
+        font-size: clamp(14px, 1.9vh, 17px);
+        line-height: 1.5;
+        max-width: 56ch;
+        margin-bottom: clamp(14px, 3vh, 30px);
+    }
+
+    /* ===== BODY: tower left, story panel right ===== */
+    .tl-body {
+        flex: 1 1 0;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+        gap: clamp(20px, 3vw, 48px);
+        max-height: 640px;
+    }
+
+    .tl-tower-col {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        min-width: 0;
     }
 
     .tower-stage {
         position: relative;
-        width: 100%;
         flex: 1 1 0;
-        max-height: 70vh;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
 
     .tower-container {
+        list-style: none;
         flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column-reverse;
-        align-items: flex-start;
         justify-content: center;
-        gap: clamp(4px, 0.8vh, 8px);
+        gap: var(--tl-gap);
         padding-bottom: 4px;
+    }
+
+    .tower-row {
+        flex: 1 1 0;
+        min-height: 24px;
+        max-height: 64px;
+        display: flex;
+        align-items: stretch;
+    }
+
+    /* Start year on the left: static, stays put when the tower is knocked down */
+    .row-date {
+        flex: 0 0 var(--tl-gutter);
+        align-self: center;
+        font-family: var(--mono);
+        font-size: clamp(10px, 1.25vh, 12px);
+        color: var(--text-muted);
+        white-space: nowrap;
+        transition: color 0.2s ease;
+    }
+
+    /* KenDev freelance rail between the dates and the blocks */
+    .row-rail {
+        flex: 0 0 14px;
+        position: relative;
+    }
+    .is-freelance .row-rail::before {
+        content: '';
+        position: absolute;
+        left: 5px;
+        width: 2px;
+        top: 0;
+        bottom: calc(-1 * var(--tl-gap));
+        background: rgba(236, 236, 244, 0.55);
+        border-radius: 2px;
+    }
+    .is-freelance-start .row-rail::before { bottom: 50%; }
+    .is-freelance-start .row-rail::after {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: calc(50% - 4px);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ececf4;
+    }
+
+    .row-lane {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: stretch;
     }
 
     /* ===== BLOCK ===== */
     .tower-block {
-        flex: 1;
-        min-height: 28px;
-        max-height: 80px;
-        width: calc(var(--block-w) * 0.55%);
+        appearance: none;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+        display: block;
+        flex: none;
+        height: 100%;
+        width: calc(var(--block-w) * var(--tl-scale));
         border-radius: 4px;
         position: relative;
         opacity: 0;
         transform: translateY(-300px);
         will-change: transform;
         transform-origin: center bottom;
+        translate: 0 0;
+        transition: translate 0.25s cubic-bezier(.2,.8,.2,1), filter 0.25s ease, box-shadow 0.25s ease;
         background:
             linear-gradient(135deg,
                 rgba(255,255,255,0.2) 0%,
@@ -103,6 +359,7 @@ const blocks = [...jobs].reverse();
             inset 0 1px 0 rgba(255,255,255,0.3),
             inset 0 -2px 0 rgba(0,0,0,0.2),
             0 2px 6px rgba(0,0,0,0.4);
+        -webkit-tap-highlight-color: transparent;
     }
 
     /* Grid texture */
@@ -118,35 +375,62 @@ const blocks = [...jobs].reverse();
         pointer-events: none;
     }
 
-    /* ===== DATE (inside block) ===== */
-    .block-date {
+    /* Ongoing: the block keeps going as a dashed, fading tail */
+    .tower-block.is-ongoing { --tail: 22px; }
+    .tower-block.is-ongoing::after {
+        content: '';
         position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-family: var(--mono);
-        font-size: clamp(9px, 1.2vh, 13px);
-        font-weight: 600;
-        color: rgba(0, 0, 0, 0.5);
+        top: 18%;
+        bottom: 18%;
+        left: calc(100% + 3px);
+        width: var(--tail);
+        background: repeating-linear-gradient(90deg, var(--block-color) 0 5px, transparent 5px 9px);
+        -webkit-mask-image: linear-gradient(90deg, #000, transparent);
+        mask-image: linear-gradient(90deg, #000, transparent);
+        opacity: 0.7;
+        border-radius: 2px;
         pointer-events: none;
-        z-index: 1;
-        opacity: 0;
-        transition: opacity 0.3s ease;
     }
 
-    .tower-block.settled {
-        cursor: grab;
+    .tower-block:focus-visible {
+        outline: 2px solid var(--text);
+        outline-offset: 3px;
     }
 
-    .tower-block.settled .block-date,
-    .tower-block.freed .block-date {
-        opacity: 1;
+    /* Selected block nudges right; the rest dim */
+    .tower-block.is-active {
+        translate: 10px 0;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.35),
+            inset 0 -2px 0 rgba(0,0,0,0.2),
+            0 0 0 2px var(--bg),
+            0 0 0 4px var(--block-color),
+            0 6px 24px color-mix(in srgb, var(--block-color) 45%, transparent);
+    }
+    .has-selection .tower-block:not(.is-active) {
+        filter: saturate(0.55) brightness(0.6);
+    }
+    .has-selection .tower-block:not(.is-active) .tower-label { opacity: 0.5; }
+    .has-selection .tower-row:has(.is-active) .row-date { color: var(--text); }
+
+    @media (hover: hover) and (pointer: fine) {
+        .tower-block.settled:hover:not(.is-active) { translate: 4px 0; }
+    }
+
+    .tower-block.freed { cursor: grab; transition: none; translate: none; filter: none; }
+    .tower-block.freed:active { cursor: grabbing; }
+
+    /* One-time nudge on the top block so the tower reads as clickable */
+    .tower-block.nudge { animation: tl-nudge 1.6s ease-in-out 2; }
+    @keyframes tl-nudge {
+        0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 0 0 0 color-mix(in srgb, var(--block-color) 60%, transparent); }
+        50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 0 0 8px color-mix(in srgb, var(--block-color) 0%, transparent); }
     }
 
     /* ===== LABEL (right of block) ===== */
     .tower-label {
         position: absolute;
-        left: calc(100% + 14px);
+        left: calc(100% + 14px + var(--tail, 0px));
         top: 50%;
         transform: translateY(-50%);
         display: flex;
@@ -163,39 +447,488 @@ const blocks = [...jobs].reverse();
     }
 
     .label-role {
-        font-size: clamp(13px, 1.8vh, 20px);
+        font-size: clamp(13px, 1.9vh, 18px);
         font-weight: 700;
         color: var(--text);
         line-height: 1.2;
     }
 
     .label-company {
-        font-size: clamp(10px, 1.3vh, 15px);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: clamp(10px, 1.3vh, 13px);
         color: var(--text-dim);
         line-height: 1.3;
         font-family: var(--mono);
     }
 
-    /* ===== FLOOR ===== */
+    .label-chip {
+        font-family: var(--sans);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--bg);
+        background: var(--block-color);
+        padding: 1px 7px;
+        border-radius: 999px;
+        line-height: 1.5;
+    }
+
+    /* ===== FLOOR + FOOT ===== */
     .tower-floor {
-        width: 55%;
+        margin-left: calc(var(--tl-gutter) + 14px);
         height: 3px;
         background: var(--border);
         border-radius: 2px;
         flex-shrink: 0;
     }
 
-    /* ===== MOBILE ===== */
-    @media (max-width: 600px) {
-        .tower-label {
-            left: calc(100% + 10px);
+    .tl-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 16px;
+        padding: 10px 0 0 calc(var(--tl-gutter) + 14px);
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+    .tl-legend { display: inline-flex; align-items: center; gap: 7px; }
+    .tl-legend i { display: inline-block; flex: none; }
+    .tl-legend-width i {
+        width: 22px; height: 8px;
+        border: 1px solid var(--text-muted);
+        border-radius: 2px;
+        position: relative;
+    }
+    .tl-legend-width i::after {
+        content: '';
+        position: absolute;
+        left: 2px; right: 2px; top: 50%;
+        height: 1px;
+        background: var(--text-muted);
+    }
+    .tl-legend-rail i {
+        width: 2px; height: 14px;
+        background: rgba(236, 236, 244, 0.55);
+        border-radius: 2px;
+    }
+
+    .tl-knock {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        appearance: none;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font: inherit;
+        font-size: 11px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    .tl-knock:hover { color: var(--text); border-color: var(--text-muted); }
+    .tl-knock:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+    /* Both labels share one grid cell so the button never changes width */
+    .tl-knock-labels { display: inline-grid; }
+    .tl-knock-labels > span { grid-area: 1 / 1; text-align: left; }
+    .tl-knock-l-rebuild { visibility: hidden; }
+    .tl-knock[data-state="freed"] .tl-knock-l-knock { visibility: hidden; }
+    .tl-knock[data-state="freed"] .tl-knock-l-rebuild { visibility: visible; }
+    .tl-knock[data-state="freed"] {
+        color: var(--bg);
+        background: var(--text);
+        border-color: var(--text);
+    }
+
+    /* ===== STORY PANEL ===== */
+    .tl-panel {
+        position: relative;
+        min-height: 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .tl-arc, .tl-card, .tl-freed-msg {
+        animation: tl-in 0.28s cubic-bezier(.2,.8,.2,1);
+    }
+    @keyframes tl-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: none; }
+    }
+
+    .tl-panel-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+    }
+
+    .tl-arc-steps {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        margin-bottom: clamp(16px, 3vh, 28px);
+    }
+    .tl-arc-steps::before {
+        content: '';
+        position: absolute;
+        left: 6px;
+        top: 18px;
+        bottom: 18px;
+        width: 2px;
+        background: linear-gradient(var(--border), var(--text-muted));
+    }
+    .tl-arc-step {
+        appearance: none;
+        background: transparent;
+        border: 0;
+        color: var(--text);
+        font: inherit;
+        font-size: clamp(15px, 2.1vh, 19px);
+        font-weight: 600;
+        line-height: 1.35;
+        text-align: left;
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        padding: 9px 10px 9px 0;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .tl-arc-step:hover, .tl-arc-step:focus-visible { transform: translateX(4px); }
+    .tl-arc-step:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+    .tl-arc-dot {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--c);
+        position: relative;
+        top: 1px;
+        box-shadow: 0 0 0 3px var(--bg);
+    }
+
+    .tl-arc-quote {
+        font-size: clamp(14px, 1.8vh, 16px);
+        font-style: italic;
+        color: var(--text-dim);
+        border-left: 2px solid var(--purple);
+        padding-left: 14px;
+        margin-bottom: clamp(16px, 3vh, 28px);
+    }
+
+    .tl-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 18px;
+    }
+
+    .tl-cta {
+        appearance: none;
+        border: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--purple);
+        color: #fff;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: 0 6px 24px var(--purple-glow-strong);
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .tl-cta:hover { background: #ab5dda; transform: translateY(-1px); }
+    .tl-cta:hover svg { transform: translateX(2px); }
+    .tl-cta svg { transition: transform 0.2s ease; }
+    .tl-cta:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+    .tl-hint {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    .tl-hint-touch { display: none; }
+    @media (hover: none), (pointer: coarse) {
+        .tl-hint-pointer { display: none; }
+        .tl-hint-touch { display: inline; }
+    }
+
+    .tl-freed-msg p {
+        font-size: 16px;
+        color: var(--text-dim);
+        max-width: 34ch;
+    }
+
+    /* ===== CARD ===== */
+    .tl-card {
+        position: relative;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: clamp(16px, 2.6vh, 26px) clamp(18px, 2vw, 28px);
+        max-height: 100%;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    }
+    .tl-card::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 4px;
+        background: var(--c);
+        border-radius: 14px 0 0 14px;
+    }
+    .tl-card[hidden], .tl-arc[hidden], .tl-freed-msg[hidden] { display: none; }
+
+    .tl-card-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+    .tl-card-swatch {
+        width: 10px; height: 10px;
+        border-radius: 2px;
+        background: var(--c);
+    }
+    .tl-card-period {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-dim);
+    }
+    .tl-card-nav { margin-left: auto; display: flex; gap: 4px; }
+    .tl-icon-btn {
+        appearance: none;
+        width: 30px; height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: color 0.15s ease, background 0.15s ease;
+    }
+    .tl-icon-btn:hover:not(:disabled) { color: var(--text); background: var(--bg-card-hover); }
+    .tl-icon-btn:disabled { opacity: 0.3; cursor: default; }
+    .tl-icon-btn:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
+
+    .tl-card-who {
+        font-size: 14px;
+        color: var(--text-dim);
+        margin-bottom: clamp(8px, 1.6vh, 14px);
+    }
+    .tl-card-who strong { color: var(--text); }
+
+    .tl-card-main {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 10px;
+    }
+    .tl-stat {
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding-right: 18px;
+        border-right: 1px solid var(--border);
+    }
+    .tl-stat-value {
+        font-size: clamp(34px, 5.4vh, 52px);
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        line-height: 1;
+        color: var(--c);
+    }
+    .tl-stat-unit {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-top: 4px;
+        max-width: 12ch;
+        line-height: 1.3;
+    }
+    .tl-card-headline {
+        font-size: clamp(18px, 2.7vh, 25px);
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.3px;
+        text-wrap: balance;
+    }
+    .tl-card-context {
+        font-size: 13px;
+        color: var(--text-dim);
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+    .tl-card-bullets {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .tl-card-bullets li {
+        position: relative;
+        padding-left: 16px;
+        font-size: clamp(13px, 1.75vh, 15px);
+        line-height: 1.5;
+        color: var(--text);
+    }
+    .tl-card-bullets li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.62em;
+        width: 6px; height: 6px;
+        border-radius: 1px;
+        background: var(--c);
+    }
+    .tl-card-bullets :global(strong) { color: var(--c); font-weight: 700; }
+
+    .tl-card-quote {
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--border);
+    }
+    .tl-card-quote blockquote {
+        font-size: 13.5px;
+        font-style: italic;
+        line-height: 1.5;
+        color: var(--text);
+    }
+    .tl-card-quote figcaption {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--text-dim);
+    }
+    .tl-card .tl-actions { margin-top: 16px; }
+
+    .tl-link {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--c);
+        text-decoration: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+    }
+    .tl-link:hover { border-bottom-color: var(--c); }
+    .tl-link:focus-visible { outline: 2px solid var(--c); outline-offset: 3px; border-radius: 2px; }
+
+    /* ===== NARROW: tower full width, card becomes a bottom sheet ===== */
+    @media (max-width: 899px) {
+        .tower-section { --tl-scale: 0.46%; }
+        .tl-body {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr) auto;
+            gap: 14px;
+            max-height: none;
         }
+        .tl-arc .tl-panel-label,
+        .tl-arc-steps,
+        .tl-arc-quote { display: none; }
+        .tl-panel { position: static; display: grid; align-content: start; }
+        /* Arc row and knocked-down note share a cell so the tower never resizes */
+        .tl-arc, .tl-freed-msg { grid-area: 1 / 1; }
+        .tl-arc[hidden], .tl-freed-msg[hidden] { display: block; visibility: hidden; }
+        .tl-arc .tl-actions { padding-left: calc(var(--tl-gutter) + 14px); }
+        .tl-cta { font-size: 14px; padding: 8px 16px; }
+        .tl-freed-msg { padding-left: calc(var(--tl-gutter) + 14px); }
+        .tl-freed-msg p { font-size: 14px; }
+
+        .tl-card {
+            position: absolute;
+            left: -4px;
+            right: -4px;
+            bottom: 0;
+            max-height: min(68%, 520px);
+            z-index: 5;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            animation-name: tl-sheet;
+        }
+        @keyframes tl-sheet {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: none; }
+        }
+    }
+
+    @media (max-width: 600px) {
+        .tower-section { --tl-scale: 0.38%; }
+        .tl-card { padding: 14px 16px 16px 18px; max-height: 74%; }
+        .tl-card-who { font-size: 13px; margin-bottom: 6px; }
+        .tl-card-main { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
+        .tl-stat { flex-direction: row; align-items: baseline; gap: 8px; padding-right: 0; border-right: 0; }
+        .tl-stat-value { font-size: 30px; letter-spacing: -1px; }
+        .tl-stat-unit { margin-top: 0; max-width: none; }
+        .tl-card-headline { font-size: 19px; }
+        .tl-card-context { font-size: 12px; margin-bottom: 8px; }
+        .tl-card-bullets { gap: 6px; }
+        .tl-card-bullets li { font-size: 13px; line-height: 1.45; }
+        .tl-card-quote { margin-top: 10px; padding: 8px 12px; }
+        .tl-card-quote blockquote { font-size: 12.5px; }
+        .tl-card .tl-actions { margin-top: 12px; }
+        .tl-sub { font-size: 14px; margin-bottom: 14px; }
+        .tower-row { min-height: 26px; max-height: 46px; }
+        .tower-label { left: calc(100% + 9px + var(--tail, 0px)); }
+        .tower-block.is-ongoing { --tail: 14px; }
+        .label-chip { display: none; }
+        .tl-foot { font-size: 10px; gap: 6px 12px; }
+        .tl-knock { padding: 4px 9px; font-size: 10px; }
+    }
+
+    /* Only the start year on phones — "2020 – 21" does not fit next to a 6-month block */
+    @media (max-width: 420px) {
+        .tower-section { --tl-gutter: 32px; }
+        .row-date-rest { display: none; }
+        .tl-legend-rail { order: 1; }
+        .tl-knock { margin-left: 0; }
+    }
+
+    /* Short laptop screens: tighten the card so it rarely needs to scroll */
+    @media (min-width: 900px) and (max-height: 780px) {
+        .tl-sub { margin-bottom: 12px; }
+        .tl-card { padding: 14px 20px 16px 22px; }
+        .tl-card-who { margin-bottom: 6px; }
+        .tl-card-context { margin-bottom: 8px; }
+        .tl-card-bullets { gap: 5px; }
+        .tl-card-quote { margin-top: 10px; padding: 8px 12px; }
+        .tl-card .tl-actions { margin-top: 10px; }
+    }
+
+    /* Short phones (iPhone SE and friends): drop the extras, keep the tower whole */
+    @media (max-width: 899px) and (max-height: 700px) {
+        .tl-sub { display: none; }
+        .tl-heading { margin-bottom: 14px; }
+        .tower-row { min-height: 20px; }
+        .tl-arc .tl-cta { display: none; }
+        .tl-foot { padding-top: 6px; }
     }
 
     /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
-        .tower-block { opacity: 1; transform: none; }
+        .tower-block { opacity: 1; transform: none; transition: none; }
         .tower-label { opacity: 1; transition: none; }
+        .tl-arc, .tl-card, .tl-freed-msg { animation: none; }
+        .tower-block.nudge { animation: none; }
     }
 
     /* Print */
@@ -233,11 +966,11 @@ const blocks = [...jobs].reverse();
          * Y=0 is "at rest in stack". Y<0 is "above rest".
          */
 
-        const { Engine, Composite, Bodies, Mouse, MouseConstraint, Events } = Matter;
+        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events } = Matter;
 
         const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
         const DT_CAP     = 0.05;
-        const STAGGER_MS = 130;    // gap between block drops
+        const STAGGER_MS = 110;    // gap between block drops
         const START_Y    = -300;   // initial offset above rest
 
         // Y spring (bounce on landing)
@@ -254,10 +987,18 @@ const blocks = [...jobs].reverse();
 
         const WALL_THICKNESS = 60;
 
-        const stage = document.querySelector<HTMLElement>('.tower-stage');
-        if (!stage) return;
+        const root = document.querySelector<HTMLElement>('[data-timeline]');
+        const stage = root?.querySelector<HTMLElement>('.tower-stage');
+        if (!root || !stage) return;
         const els = Array.from(stage.querySelectorAll<HTMLElement>('.tower-block'));
         if (!els.length) return;
+        const panel = root.querySelector<HTMLElement>('[data-tl-panel]')!;
+        const arcEl = root.querySelector<HTMLElement>('[data-arc]')!;
+        const freedMsg = root.querySelector<HTMLElement>('[data-freed-msg]')!;
+        const knockBtn = root.querySelector<HTMLButtonElement>('[data-knock]')!;
+        const cards = new Map<string, HTMLElement>();
+        root.querySelectorAll<HTMLElement>('[data-card]').forEach((c) => cards.set(c.dataset.card!, c));
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         // Per-block personality derived from count — scales with any number of jobs
         const N = els.length;
@@ -273,6 +1014,7 @@ const blocks = [...jobs].reverse();
 
         let animId: number | null = null;
         let running = false;
+        let nudged = false;
 
         // Matter.js state
         let engine: Matter.Engine | null = null;
@@ -292,6 +1034,147 @@ const blocks = [...jobs].reverse();
             w: number; h: number;
         }
         const st: S[] = [];
+
+        // ─── Story selection ───
+
+        let selected = -1;
+
+        function showPanel(which: 'arc' | 'freed' | number) {
+            arcEl.hidden = which !== 'arc';
+            freedMsg.hidden = which !== 'freed';
+            cards.forEach((card) => { card.hidden = true; });
+            if (typeof which === 'number') {
+                const card = cards.get(els[which].dataset.job!);
+                if (card) card.hidden = false;
+            }
+        }
+
+        function setRoving(i: number) {
+            els.forEach((el, j) => { el.tabIndex = j === i ? 0 : -1; });
+        }
+
+        function select(i: number, opts: { focus?: boolean } = {}) {
+            if (freed || i < 0 || i >= N) return;
+            if (i === selected) { if (opts.focus) els[i].focus(); return; }
+            selected = i;
+            els.forEach((el, j) => {
+                const on = j === i;
+                el.classList.toggle('is-active', on);
+                el.setAttribute('aria-pressed', String(on));
+            });
+            root.classList.add('has-selection');
+            setRoving(i);
+            showPanel(i);
+            stopNudge();
+            if (opts.focus) els[i].focus({ preventScroll: true });
+        }
+
+        function deselect(opts: { focusBlock?: boolean } = {}) {
+            const prev = selected;
+            selected = -1;
+            els.forEach((el) => {
+                el.classList.remove('is-active');
+                el.setAttribute('aria-pressed', 'false');
+            });
+            root.classList.remove('has-selection');
+            showPanel(freed ? 'freed' : 'arc');
+            if (opts.focusBlock && prev >= 0) els[prev].focus({ preventScroll: true });
+        }
+
+        function stopNudge() {
+            els.forEach((el) => el.classList.remove('nudge'));
+        }
+
+        const indexOfJob = (id: string) => els.findIndex((el) => el.dataset.job === id);
+
+        stage.addEventListener('click', (e) => {
+            const block = (e.target as HTMLElement).closest<HTMLElement>('.tower-block');
+            if (!block || freed) return;
+            select(Number(block.dataset.blockIndex));
+        });
+
+        // Hover explores on mouse — no click needed
+        let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+        els.forEach((el, i) => {
+            el.addEventListener('pointerenter', (e) => {
+                if (e.pointerType !== 'mouse' || freed) return;
+                if (hoverTimer) clearTimeout(hoverTimer);
+                hoverTimer = setTimeout(() => select(i), 90);
+            });
+            el.addEventListener('pointerleave', () => {
+                if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+            });
+            el.addEventListener('focus', () => {
+                if (!freed && selected !== i && el.matches(':focus-visible')) select(i);
+            });
+        });
+
+        // Arrow keys walk the tower; at either end the slider gets the key
+        stage.addEventListener('keydown', (e) => {
+            const block = (e.target as HTMLElement).closest<HTMLElement>('.tower-block');
+            if (!block || freed) return;
+            const i = Number(block.dataset.blockIndex);
+            let next: number | null = null;
+            if (e.key === 'ArrowUp' || e.key === 'ArrowRight') next = i + 1;
+            else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') next = i - 1;
+            else if (e.key === 'Home') next = 0;
+            else if (e.key === 'End') next = N - 1;
+            else if (e.key === 'Escape' && selected >= 0) {
+                e.stopPropagation();
+                deselect({ focusBlock: true });
+                return;
+            }
+            if (next === null || next < 0 || next >= N) return;
+            e.preventDefault();
+            e.stopPropagation();
+            select(next, { focus: true });
+        });
+
+        panel.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const step = target.closest<HTMLElement>('[data-step]');
+            if (step && selected >= 0) {
+                select(selected + Number(step.dataset.step));
+                return;
+            }
+            if (target.closest('[data-close]')) {
+                deselect({ focusBlock: true });
+                return;
+            }
+            const arcStep = target.closest<HTMLElement>('[data-arc-step]');
+            if (arcStep) {
+                select(indexOfJob(arcStep.dataset.arcStep!), { focus: true });
+                return;
+            }
+            if (target.closest('[data-goto-contact]')) {
+                const last = document.querySelectorAll('#slider > .keen-slider__slide').length - 1;
+                document.dispatchEvent(new CustomEvent('slider-goto', { detail: { index: last } }));
+                return;
+            }
+            const project = target.closest<HTMLAnchorElement>('[data-project]');
+            if (project) {
+                // Projects.astro opens the detail view for a matching hash
+                // when its slide becomes active.
+                e.preventDefault();
+                history.replaceState(null, '', `#${project.dataset.project}`);
+                document.dispatchEvent(new CustomEvent('slider-goto', { detail: { index: 1 } }));
+            }
+        });
+
+        panel.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && selected >= 0) {
+                e.stopPropagation();
+                deselect({ focusBlock: true });
+            }
+        });
+
+        // The mobile sheet sits over the slide: keep its touches away from keen-slider
+        const stopProp = (e: Event) => { if (selected >= 0) e.stopPropagation(); };
+        panel.addEventListener('touchstart', stopProp, { passive: true });
+        panel.addEventListener('touchmove', stopProp, { passive: true });
+        panel.addEventListener('mousedown', stopProp);
+
+        // ─── Drop-in animation ───
 
         function init() {
             st.length = 0;
@@ -315,6 +1198,13 @@ const blocks = [...jobs].reverse();
         function tx(s: S) {
             s.el.style.transform =
                 `translateY(${s.y}px) translateX(${s.x}px) rotate(${s.r}deg)`;
+        }
+
+        function onAllSettled() {
+            if (nudged || selected >= 0) return;
+            nudged = true;
+            els[N - 1].classList.add('nudge');
+            els[N - 1].addEventListener('animationend', stopNudge, { once: true });
         }
 
         function run() {
@@ -381,35 +1271,36 @@ const blocks = [...jobs].reverse();
                             s.phase = 'done';
                             s.y = 0; s.x = xr; s.r = rr;
                             s.el.classList.add('settled');
-                            blocksInteractive = true;
                         }
                         tx(s);
                     }
                 }
 
-                if (allDone) { animId = null; running = false; return; }
+                if (allDone) { animId = null; running = false; onAllSettled(); return; }
                 animId = requestAnimationFrame(tick);
             }
             animId = requestAnimationFrame(tick);
         }
 
         function showFinal() {
+            st.length = 0;
             els.forEach((el, i) => {
                 el.style.opacity = '1';
                 el.style.transform =
                     `translateY(0) translateX(${REST_X[i]}px) rotate(${REST_R[i]}deg)`;
                 el.classList.add('settled');
+                st.push({
+                    el, i, y: 0, vy: 0, x: REST_X[i], vx: 0, r: REST_R[i], vr: 0,
+                    phase: 'done', t0: 0, body: null, w: 0, h: 0,
+                });
             });
-            blocksInteractive = true;
         }
 
-        function reset() {
+        function teardownPhysics() {
             if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
             running = false;
             freed = false;
-            blocksInteractive = false;
 
-            // Tear down Matter.js world
             if (mConstraint && engine) {
                 Composite.remove(engine.world, mConstraint);
             }
@@ -427,18 +1318,63 @@ const blocks = [...jobs].reverse();
             stage.removeEventListener('touchmove', preventDefaultOnDrag);
 
             els.forEach(el => {
-                el.style.opacity = '0';
-                el.style.transform = `translateY(${START_Y}px)`;
                 el.style.position = '';
                 el.style.left = '';
                 el.style.top = '';
                 el.style.flex = '';
                 el.style.width = '';
                 el.style.height = '';
-                el.classList.remove('settled', 'freed');
+                el.classList.remove('freed');
             });
             for (const s of st) s.body = null;
+            setKnockState(false);
         }
+
+        function reset() {
+            teardownPhysics();
+            deselect();
+            setRoving(N - 1);
+            els.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = `translateY(${START_Y}px)`;
+                el.classList.remove('settled', 'nudge');
+            });
+        }
+
+        // ─── Knock it down / rebuild ───
+
+        function setKnockState(isFreed: boolean) {
+            knockBtn.dataset.state = isFreed ? 'freed' : '';
+            knockBtn.querySelector('.tl-knock-l-knock')!.toggleAttribute('aria-hidden', isFreed);
+            knockBtn.querySelector('.tl-knock-l-rebuild')!.toggleAttribute('aria-hidden', !isFreed);
+        }
+
+        knockBtn.addEventListener('click', () => {
+            if (freed) {
+                teardownPhysics();
+                showPanel('arc');
+                if (reducedMotion) { showFinal(); return; }
+                els.forEach(el => el.classList.remove('settled'));
+                run();
+                return;
+            }
+            // Finish an in-flight drop first so every block has a rest rect
+            if (running) {
+                if (animId !== null) cancelAnimationFrame(animId);
+                animId = null; running = false;
+                showFinal();
+            }
+            deselect();
+            freeAllBlocks();
+            // Give the tower a shove so it actually falls
+            for (const s of st) {
+                if (!s.body) continue;
+                const dir = s.i % 2 ? 1 : -1;
+                Body.setVelocity(s.body, { x: dir * (2 + Math.random() * 5), y: -2 - Math.random() * 4 * W[s.i] });
+                Body.setAngularVelocity(s.body, dir * (0.04 + Math.random() * 0.08));
+            }
+            showPanel('freed');
+        });
 
         // ─── Matter.js freed-block physics ───
 
@@ -446,6 +1382,8 @@ const blocks = [...jobs].reverse();
         function freeAllBlocks() {
             if (freed) return;
             freed = true;
+            setKnockState(true);
+            stopNudge();
 
             const stageRect = stage.getBoundingClientRect();
             const stageW = stage.offsetWidth;
@@ -526,13 +1464,10 @@ const blocks = [...jobs].reverse();
             startSyncLoop();
         }
 
-        // Cached flag — avoids iterating st[] on every mousemove/touchmove
-        let blocksInteractive = false;
-
         function stopSliderPropagation(e: Event) {
-            if (!blocksInteractive) return;
-            // Stop propagation only when interacting with a block or
-            // actively dragging a Matter.js body (pointer may leave the block)
+            // Only in knocked-down mode: the standing tower lets swipes through
+            // so the slider still works when a phone screen is mostly tower.
+            if (!freed) return;
             const onBlock = (e.target as HTMLElement)?.closest?.('.tower-block');
             const draggingBody = mConstraint && mConstraint.body;
             if (!onBlock && !draggingBody) return;
@@ -597,22 +1532,8 @@ const blocks = [...jobs].reverse();
             startSyncLoop();
         }
 
-        // Interaction: click/tap any settled block to free all and enter Matter.js mode.
-        // Use pointerdown (fires BEFORE mousedown) so that freeAllBlocks() creates
-        // the Matter.js Mouse + MouseConstraint in time to catch the subsequent
-        // mousedown event and start dragging the block under the cursor.
-        stage.addEventListener('pointerdown', (e) => {
-            const target = (e.target as HTMLElement)?.closest?.('.tower-block') as HTMLElement | null;
-            if (!target) return;
-            if (!target.classList.contains('settled') && !target.classList.contains('freed')) return;
-            freeAllBlocks();
-        });
-
-        // Prevent mouse/touch events from bubbling to keen-slider when blocks
-        // are interactive. keen-slider listens for mousedown/mousemove/mouseup
-        // and touch events — if they bubble up, it interprets block drags as
-        // slide swipes. These listeners are permanent; stopSliderPropagation
-        // only actually stops propagation when blocks are settled or freed.
+        // Prevent mouse/touch events from bubbling to keen-slider while the
+        // tower is knocked down — otherwise block drags read as slide swipes.
         stage.addEventListener('mousedown', stopSliderPropagation);
         stage.addEventListener('mousemove', stopSliderPropagation);
         stage.addEventListener('mouseup', stopSliderPropagation);
@@ -620,20 +1541,20 @@ const blocks = [...jobs].reverse();
         stage.addEventListener('touchmove', stopSliderPropagation);
         stage.addEventListener('touchend', stopSliderPropagation);
 
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (reducedMotion) {
             showFinal(); return;
         }
 
-        const rev = stage.closest('.reveal') || stage;
+        const rev = root.querySelector('[data-tl-body]') || stage;
         let resetTimer: ReturnType<typeof setTimeout> | null = null;
 
         const obs = new MutationObserver(() => {
             if (rev.classList.contains('visible')) {
                 if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
-                if (!running) run();
+                if (!running && !st.some((s) => s.phase === 'done' || s.phase === 'freed')) run();
             } else {
                 // Delay reset so transient class flickers (e.g. click) don't restart
-                resetTimer = setTimeout(() => { reset(); resetTimer = null; }, 200);
+                resetTimer = setTimeout(() => { reset(); st.length = 0; resetTimer = null; }, 200);
             }
         });
         obs.observe(rev, { attributes: true, attributeFilter: ['class'] });

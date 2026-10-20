@@ -131,7 +131,7 @@ const cv: Record<Lang, CvData> = {
       {
         title: "Frontendutvecklare",
         company: "Akka",
-        dateRange: "08/2025 – Pågående",
+        dateRange: "08/2025 – 04/2026",
         location: "Göteborg, Sverige",
         techStack: ["React", "TanStack"],
         bullets: [],
@@ -266,7 +266,7 @@ const cv: Record<Lang, CvData> = {
       {
         title: "Frontend Developer",
         company: "Akka",
-        dateRange: "08/2025 – Present",
+        dateRange: "08/2025 – 04/2026",
         location: "Gothenburg, Sweden",
         techStack: ["React", "TanStack"],
         bullets: [],
@@ -384,22 +384,42 @@ const cv: Record<Lang, CvData> = {
 };
 
 // Timeline-specific metadata per job (shared between languages)
-// months = actual role duration, w = block width derived from months
-const jobMetaRaw: { color: string; months: number; timelineDate: string; timelineRole: { sv: string; en: string }; timelineCompany: string }[] = [
-  { color: "#00d4aa", months: 7,  timelineDate: "2025 \u2014",   timelineRole: { sv: "Frontendutvecklare", en: "Frontend Developer" }, timelineCompany: "Akka" },
-  { color: "#f0a030", months: 5,  timelineDate: "2025",          timelineRole: { sv: "Backendutvecklare",  en: "Backend Developer" },  timelineCompany: "Hedin IT" },
-  { color: "#9b4dca", months: 22, timelineDate: "2023 \u2013 25", timelineRole: { sv: "Tech Lead",          en: "Tech Lead" },          timelineCompany: "Sembo" },
-  { color: "#e84060", months: 12, timelineDate: "2022 \u2013 23", timelineRole: { sv: "Utvecklingschef",    en: "Head of Dev" },        timelineCompany: "NetConsult" },
-  { color: "#40a0e8", months: 14, timelineDate: "2021 \u2013 22", timelineRole: { sv: "Lead-utvecklare",    en: "Lead Developer" },     timelineCompany: "Telia" },
-  { color: "#3080c0", months: 6,  timelineDate: "2020 \u2013 21", timelineRole: { sv: "Senior-utvecklare",  en: "Senior Engineer" },    timelineCompany: "Telia" },
-  { color: "#50c040", months: 42, timelineDate: "2017 \u2013 20", timelineRole: { sv: "Systemutvecklare",   en: "Systems Developer" },  timelineCompany: "KITS AB" },
-  { color: "#e8e040", months: 13, timelineDate: "2015 \u2013 16", timelineRole: { sv: "Teamledare",         en: "Team Lead" },          timelineCompany: "HPE" },
+// months = actual time in the role, w = block width derived from months.
+// The timeline spans the whole HP employment (Oct 2011 – Dec 2016, LinkedIn
+// Positions export) even though the CV entry above only lists the team-lead
+// part — that is where the "15 years" in the heading starts.
+export interface JobMetaRaw {
+  id: string;
+  color: string;
+  months: number;
+  timelineDate: string;
+  timelineRole: { sv: string; en: string };
+  timelineCompany: string;
+  /** Client work done through KenDev AB (freelance since May 2023) */
+  freelance?: boolean;
+}
+
+const jobMetaRaw: JobMetaRaw[] = [
+  { id: "akka",         color: "#00d4aa", months: 8,  timelineDate: "2025 \u2013 26", timelineRole: { sv: "Frontend",              en: "Frontend" },            timelineCompany: "Akka",       freelance: true },
+  { id: "hedin",        color: "#f0a030", months: 5,  timelineDate: "2025",          timelineRole: { sv: "Backend (C#)",          en: "Backend (C#)" },        timelineCompany: "Hedin IT",   freelance: true },
+  { id: "sembo",        color: "#9b4dca", months: 22, timelineDate: "2023 \u2013 25", timelineRole: { sv: "Tech lead",             en: "Tech lead" },           timelineCompany: "Sembo",      freelance: true },
+  { id: "netconsult",   color: "#e84060", months: 12, timelineDate: "2022 \u2013 23", timelineRole: { sv: "Utv.chef \u2192 CTO",    en: "Head of Dev \u2192 CTO" }, timelineCompany: "NetConsult" },
+  { id: "telia-lead",   color: "#40a0e8", months: 14, timelineDate: "2021 \u2013 22", timelineRole: { sv: "Lead f\u00f6r 14 team",   en: "Lead for 14 teams" },   timelineCompany: "Telia" },
+  { id: "telia-senior", color: "#3080c0", months: 6,  timelineDate: "2020 \u2013 21", timelineRole: { sv: "Senior utvecklare",     en: "Senior engineer" },     timelineCompany: "Telia" },
+  { id: "kits",         color: "#50c040", months: 42, timelineDate: "2017 \u2013 20", timelineRole: { sv: "Utvecklarkonsult",      en: "Dev consultant" },      timelineCompany: "KITS AB" },
+  { id: "hp",           color: "#e8e040", months: 62, timelineDate: "2011 \u2013 16", timelineRole: { sv: "Teamledare & verktyg",  en: "Team lead & tools" },   timelineCompany: "HP \u00b7 HPE" },
 ];
 
 const maxMonths = Math.max(...jobMetaRaw.map((j) => j.months));
+
+/** Tower block width (20–100) for a duration, on the same scale as every job. */
+export function blockWidth(months: number): number {
+  return Math.round(20 + (Math.min(months, maxMonths) / maxMonths) * 80);
+}
+
 const jobMeta = jobMetaRaw.map((j) => ({
   ...j,
-  w: Math.round(20 + (j.months / maxMonths) * 80),
+  w: blockWidth(j.months),
 }));
 
 // ===== Public API =====

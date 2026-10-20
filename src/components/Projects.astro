@@ -588,17 +588,27 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
     detailViewEl?.addEventListener("mousedown", stopIfDetail);
     detailViewEl?.addEventListener("touchstart", stopIfDetail, { passive: true });
 
+    /** Roll to a project and open it. Snaps to the target before opening so a
+     *  slow frame (e.g. while the slider is still moving) can't open the wrong card. */
+    function openDetailAt(idx: number) {
+        targetIdx = idx;
+        animateTo(idx, 300);
+        setTimeout(() => {
+            if (navAnimId) { cancelAnimationFrame(navAnimId); navAnimId = null; }
+            scrollPos = idx;
+            currentIdx = idx;
+            render();
+            transitionToDetail();
+        }, 350);
+    }
+
     // Browser back/forward: close detail if hash no longer matches
     window.addEventListener("popstate", () => {
         const hash = location.hash.replace(/^#/, "");
         if (isDetailView && !(hash in slugToIndex)) {
             transitionToRoller();
         } else if (!isDetailView && hash in slugToIndex) {
-            const idx = slugToIndex[hash];
-            targetIdx = idx;
-            animateTo(idx, 300);
-            // Open detail after animation
-            setTimeout(() => transitionToDetail(), 350);
+            openDetailAt(slugToIndex[hash]);
         }
     });
 
@@ -654,10 +664,7 @@ for (const illustration of Object.values(PROJECT_ILLUSTRATIONS)) {
                 const hash = location.hash.replace(/^#/, "");
                 if (hash && hash in slugToIndex) {
                     hasAutoSpun = true; // skip auto-spin
-                    const target = slugToIndex[hash];
-                    targetIdx = target;
-                    animateTo(target, 300);
-                    setTimeout(() => transitionToDetail(), 350);
+                    openDetailAt(slugToIndex[hash]);
                 } else if (!hasAutoSpun) {
                     hasAutoSpun = true;
                     autoSpin();
