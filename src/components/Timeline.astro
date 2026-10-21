@@ -24,6 +24,7 @@ function splitDate(date: string): [string, string] {
 ---
 
 <div class="section-inner tower-section" data-timeline>
+    <canvas class="tl-fx" data-tl-fx aria-hidden="true" hidden></canvas>
     <header class="tl-head">
         <div class="section-label reveal">{t("timeline.label")}</div>
         <h2 class="section-heading tl-heading reveal reveal-delay-1">
@@ -74,6 +75,8 @@ function splitDate(date: string): [string, string] {
                     })}
                 </ol>
                 <div class="tower-floor"></div>
+                <span class="tl-blast-flash" data-blast-flash aria-hidden="true"></span>
+                <span class="tl-blast-ring" data-blast-ring aria-hidden="true"></span>
             </div>
 
             <div class="tl-foot">
@@ -417,7 +420,7 @@ function splitDate(date: string): [string, string] {
         .tower-block.settled:hover:not(.is-active) { translate: 4px 0; }
     }
 
-    .tower-block.freed { cursor: grab; transition: none; translate: none; filter: none; }
+    .tower-block.freed { cursor: grab; transition: none; translate: none; filter: none; transform-origin: 50% 50%; }
     .tower-block.freed:active { cursor: grabbing; }
 
     /* One-time nudge on the top block so the tower reads as clickable */
@@ -425,6 +428,55 @@ function splitDate(date: string): [string, string] {
     @keyframes tl-nudge {
         0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 0 0 0 color-mix(in srgb, var(--block-color) 60%, transparent); }
         50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 0 0 8px color-mix(in srgb, var(--block-color) 0%, transparent); }
+    }
+
+    /* ===== KNOCK-DOWN BLAST =====
+       While blocks fly the stage stops clipping. The section grows into the
+       slide's vertical padding (without moving its content) and clips there,
+       so nothing flying past the camera can make the slide scroll; sideways
+       the slide's own overflow-x clips at the screen edge. */
+    .tower-section.is-blasting {
+        height: calc(100% + var(--tl-pad-t, 0px) + var(--tl-pad-b, 0px));
+        margin: calc(-1 * var(--tl-pad-t, 0px)) 0 calc(-1 * var(--tl-pad-b, 0px));
+        padding: var(--tl-pad-t, 0px) 0 var(--tl-pad-b, 0px);
+        overflow-x: visible;
+        overflow-y: clip;
+        isolation: isolate;
+    }
+    .is-blasting .tower-stage { overflow: visible; }
+    .tower-stage .tower-block.is-flying .tower-label { opacity: 0; transition: none; }
+
+    /* Afterimage trails and debris, drawn under the blocks */
+    .tl-fx {
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+    .tl-fx[hidden] { display: none; }
+
+    .tl-blast-flash,
+    .tl-blast-ring {
+        position: absolute;
+        left: 0;
+        top: 0;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0;
+        z-index: 40;
+    }
+    .tl-blast-flash {
+        width: 220px;
+        height: 220px;
+        margin: -110px 0 0 -110px;
+        background: radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(255,244,214,0.55) 35%, transparent);
+    }
+    .tl-blast-ring {
+        width: 60px;
+        height: 60px;
+        margin: -30px 0 0 -30px;
+        border: 3px solid rgba(255,255,255,0.85);
     }
 
     /* ===== LABEL (right of block) ===== */
@@ -950,7 +1002,7 @@ function splitDate(date: string): [string, string] {
          * Y=0 is "at rest in stack". Y<0 is "above rest".
          */
 
-        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events } = Matter;
+        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events, Sleeping } = Matter;
 
         const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
         const DT_CAP     = 0.05;
@@ -970,6 +1022,29 @@ function splitDate(date: string): [string, string] {
         const SETTLE_POS = 0.5;
 
         const WALL_THICKNESS = 60;
+
+        // Knocked-down physics: light and floaty (Matter units, one step per frame)
+        const GRAVITY_Y = 0.6;     // × Matter's default gravity
+        const AIR_DRAG  = 0.016;
+        const BOUNCE    = 0.45;
+
+        // Collision categories: blocks still in flight only touch the floor
+        const CAT_BLOCK = 0x1;
+        const CAT_FLOOR = 0x2;
+        const CAT_WALL  = 0x4;
+        const CAT_AIR   = 0x8;
+
+        // Blast (2.5D). Depth z > 0 is toward the viewer; scale = FOCAL / (FOCAL - z).
+        const ANTICIPATE_MS = 150;
+        const FOCAL     = 600;
+        const Z_FADE    = FOCAL * 0.45;  // flying past the camera starts fading here…
+        const Z_PASS    = FOCAL * 0.76;  // …and has left the screen here
+        const Z_K = 0.004;  const Z_B = 0.11;   // depth spring back to the screen plane
+        const RAIN_K = 0.012; const RAIN_B = 0.2;
+        const TRAIL_LEN   = 5;     // afterimages per block
+        const TRAIL_EVERY = 2;     // steps between afterimages
+        const DEBRIS      = 40;
+        const BLAST_MAX_STEPS = 480;   // ~8 s safety net: anything still flying lands
 
         const root = document.querySelector<HTMLElement>('[data-timeline]');
         const stage = root?.querySelector<HTMLElement>('.tower-stage');
@@ -1018,6 +1093,38 @@ function splitDate(date: string): [string, string] {
             w: number; h: number;
         }
         const st: S[] = [];
+
+        // Per-block flight state while the blast runs (indexed like st)
+        interface Fly {
+            s: S;
+            z: number; vz: number;
+            zk: number; zb: number;   // depth spring; 0 = free flight (past the camera)
+            air: boolean;             // in flight: collides with the floor only
+            airT: number;             // steps since launch or respawn
+            fade: number;             // 0..1 fade-in after a respawn
+            k: number; px: number; py: number;   // projected scale + centre
+            trail: number[];          // [x, y, angle, scale, alpha] × TRAIL_LEN
+            zi: number; op: number;
+            color: string;
+        }
+        interface Bit {
+            x: number; y: number; vx: number; vy: number;
+            a: number; va: number; size: number; life: number; max: number; color: string;
+        }
+        let fly: Fly[] = [];
+        let bits: Bit[] = [];
+        let blastStep = -1;   // -1 = no blast running
+        let knockTimer: ReturnType<typeof setTimeout> | null = null;
+        let squash: Animation[] = [];
+        // Blast geometry in stage coordinates, measured once when it starts
+        let stageW = 0, stageH = 0;
+        let vpX = 0, vpY = 0;                          // vanishing point
+        let clipL = 0, clipT = 0, clipR = 0, clipB = 0; // visible area
+        let fxX = 0, fxY = 0, fxDpr = 1;
+        const fxCanvas = root.querySelector<HTMLCanvasElement>('[data-tl-fx]')!;
+        const fxCtx = fxCanvas.getContext('2d');
+        const flashEl = stage.querySelector<HTMLElement>('[data-blast-flash]')!;
+        const ringEl = stage.querySelector<HTMLElement>('[data-blast-ring]')!;
 
         // ─── Story selection ───
 
@@ -1282,6 +1389,10 @@ function splitDate(date: string): [string, string] {
 
         function teardownPhysics() {
             if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+            if (knockTimer) { clearTimeout(knockTimer); knockTimer = null; }
+            squash.forEach((a) => a.cancel());
+            squash = [];
+            endBlast();
             running = false;
             freed = false;
 
@@ -1310,7 +1421,9 @@ function splitDate(date: string): [string, string] {
                 el.style.flex = '';
                 el.style.width = '';
                 el.style.height = '';
-                el.classList.remove('freed');
+                el.style.zIndex = '';
+                el.style.opacity = '1';
+                el.classList.remove('freed', 'is-flying');
             });
             for (const s of st) s.body = null;
             setKnockState(false);
@@ -1344,45 +1457,86 @@ function splitDate(date: string): [string, string] {
                 run();
                 return;
             }
+            if (knockTimer) return;   // already winding up
             // Finish an in-flight drop first so every block has a rest rect
             if (running) {
                 if (animId !== null) cancelAnimationFrame(animId);
                 animId = null; running = false;
                 showFinal();
             }
+            // Read layout before any writes so it is measured once, clean
+            const snap = snapshot();
+            const geo = reducedMotion ? null : measureBlast();
             deselect();
-            freeAllBlocks();
-            // Give the tower a shove so it actually falls
-            for (const s of st) {
-                if (!s.body) continue;
-                const dir = s.i % 2 ? 1 : -1;
-                Body.setVelocity(s.body, { x: dir * (2 + Math.random() * 5), y: -2 - Math.random() * 4 * W[s.i] });
-                Body.setAngularVelocity(s.body, dir * (0.04 + Math.random() * 0.08));
-            }
+            freed = true;
+            setKnockState(true);
+            stopNudge();
             showPanel('freed');
+
+            if (reducedMotion) {
+                // No blast: the tower just tips over
+                freeAllBlocks(snap);
+                for (const s of st) {
+                    if (!s.body) continue;
+                    const dir = s.i % 2 ? 1 : -1;
+                    Body.setVelocity(s.body, { x: dir * (2 + Math.random() * 5), y: -2 - Math.random() * 4 * W[s.i] });
+                    Body.setAngularVelocity(s.body, dir * (0.04 + Math.random() * 0.08));
+                }
+                return;
+            }
+
+            // Wind-up: the tower squashes and shivers, then blows.
+            // The clip/canvas set-up waits a frame so the click frame stays light.
+            requestAnimationFrame(() => requestAnimationFrame(() => { if (knockTimer) prepareBlast(geo!); }));
+            els.forEach((el) => el.classList.add('is-flying'));
+            squash = st.map((s) => {
+                const base = s.el.style.transform;
+                const j = () => ((Math.random() - 0.5) * 3).toFixed(1);
+                return s.el.animate([
+                    { transform: base },
+                    { transform: `${base} translateX(${j()}px) scale(1.03, 0.94)`, offset: 0.4 },
+                    { transform: `${base} translateX(${j()}px) scale(1.05, 0.9)`, offset: 0.75 },
+                    { transform: `${base} scale(1.07, 0.86)` },
+                ], { duration: ANTICIPATE_MS, easing: 'ease-in', fill: 'forwards' });
+            });
+            knockTimer = setTimeout(() => {
+                knockTimer = null;
+                squash.forEach((a) => a.cancel());
+                squash = [];
+                freeAllBlocks(snap);
+                startBlast();
+            }, ANTICIPATE_MS);
         });
 
         // ─── Matter.js freed-block physics ───
 
         /** Free ALL blocks — snapshot positions, switch to absolute, create Matter.js world */
-        function freeAllBlocks() {
-            if (freed) return;
+        interface Snap { stage: DOMRect; blocks: (DOMRect | null)[] }
+
+        /** Every block's current visual rect, while flex is intact */
+        function snapshot(): Snap {
+            return {
+                stage: stage.getBoundingClientRect(),
+                blocks: st.map((s) => (s.phase === 'done' ? s.el.getBoundingClientRect() : null)),
+            };
+        }
+
+        function freeAllBlocks(snap: Snap = snapshot()) {
+            if (engine) return;
             freed = true;
             setKnockState(true);
             stopNudge();
 
-            const stageRect = stage.getBoundingClientRect();
-            const stageW = stage.offsetWidth;
-            const stageH = stage.offsetHeight;
+            const stageRect = snap.stage;
+            stageW = stageRect.width;
+            stageH = stageRect.height;
             const snapshots: { s: S; rect: DOMRect }[] = [];
+            st.forEach((s, n) => {
+                const rect = snap.blocks[n];
+                if (rect) snapshots.push({ s, rect });
+            });
 
-            // 1) Snapshot every block's current visual rect while flex is intact
-            for (const s of st) {
-                if (s.phase !== 'done') continue;
-                snapshots.push({ s, rect: s.el.getBoundingClientRect() });
-            }
-
-            // 2) Apply absolute positioning using the snapshotted rects
+            // 1) Apply absolute positioning using the snapshotted rects
             for (const { s, rect } of snapshots) {
                 s.phase = 'freed';
                 s.el.classList.remove('settled');
@@ -1404,24 +1558,24 @@ function splitDate(date: string): [string, string] {
                 tx(s);
             }
 
-            // 3) Create Matter.js engine and world
-            engine = Engine.create({ enableSleeping: true });
+            // 2) Create Matter.js engine and world
+            engine = Engine.create({ enableSleeping: true, gravity: { x: 0, y: GRAVITY_Y } });
 
-            // 4) Create static walls (floor, left, right, ceiling)
+            // 3) Create static walls (floor, left, right, ceiling)
             walls = createWalls(stageW, stageH);
             Composite.add(engine.world, walls);
             window.addEventListener('resize', updateWalls);
 
-            // 5) Create a Matter body for each freed block
+            // 4) Create a Matter body for each freed block
             for (const { s } of snapshots) {
                 const cx = s.x + s.w / 2;
                 const cy = s.y + s.h / 2;
 
                 const body = Bodies.rectangle(cx, cy, s.w, s.h, {
-                    restitution: 0.2,
-                    friction: 0.6,
-                    frictionStatic: 1.0,
-                    frictionAir: 0.01,
+                    restitution: BOUNCE,
+                    friction: 0.5,
+                    frictionStatic: 0.9,
+                    frictionAir: AIR_DRAG,
                     density: 0.002,
                     sleepThreshold: 30,
                 });
@@ -1429,7 +1583,7 @@ function splitDate(date: string): [string, string] {
                 Composite.add(engine.world, body);
             }
 
-            // 6) Set up MouseConstraint for drag-and-throw
+            // 5) Set up MouseConstraint for drag-and-throw
             mMouse = Mouse.create(stage);
             mConstraint = MouseConstraint.create(engine, {
                 mouse: mMouse,
@@ -1450,8 +1604,339 @@ function splitDate(date: string): [string, string] {
             // Prevent default scroll/zoom on stage during drag
             stage.addEventListener('touchmove', preventDefaultOnDrag, { passive: false });
 
-            // 7) Start the sync loop
+            // 6) Start the sync loop
             startSyncLoop();
+        }
+
+        // ─── Blast: 2.5D explosion on knock-down ───
+        //
+        // Matter.js owns x/y/angle; the blast adds a depth axis on top. Blocks in
+        // flight only collide with the floor, so they pass through each other
+        // and fly past the stage edges. Once a block is back on the screen plane
+        // and inside the stage it "lands" and becomes a normal pile block.
+
+        const rand = (a: number, b: number) => a + Math.random() * (b - a);
+        const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+
+        interface BlastGeo { slide: DOMRect; sec: DOMRect; stage: DOMRect; padT: number; padB: number }
+
+        /** One-off layout reads for the blast; nothing per frame reads layout */
+        function measureBlast(): BlastGeo {
+            const slide = root.parentElement!;
+            const cs = getComputedStyle(slide);
+            return {
+                slide: slide.getBoundingClientRect(),
+                sec: root.getBoundingClientRect(),
+                stage: stage.getBoundingClientRect(),
+                padT: parseFloat(cs.paddingTop) || 0,
+                padB: parseFloat(cs.paddingBottom) || 0,
+            };
+        }
+
+        /** During the wind-up: open up the clip and size the FX canvas */
+        function prepareBlast(g: BlastGeo) {
+            const { slide: slideR, sec: secR, stage: stR, padT, padB } = g;
+            // Visible area in stage coordinates: slide edges sideways,
+            // the section grown into the slide padding vertically
+            clipL = slideR.left - stR.left;
+            clipR = slideR.right - stR.left;
+            clipT = secR.top - padT - stR.top;
+            clipB = secR.bottom + padB - stR.top;
+            root.style.setProperty('--tl-pad-t', padT + 'px');
+            root.style.setProperty('--tl-pad-b', padB + 'px');
+
+            // FX canvas covers that area; it sits in the section's padding box
+            fxDpr = 1;   // trails and debris are soft and fast; 1x keeps fill cost low
+            const cw = clipR - clipL;
+            const ch = clipB - clipT;
+            fxCanvas.width = Math.round(cw * fxDpr);
+            fxCanvas.height = Math.round(ch * fxDpr);
+            fxCanvas.style.width = cw + 'px';
+            fxCanvas.style.height = ch + 'px';
+            fxCanvas.style.transform = `translateX(${slideR.left - secR.left}px)`;
+            fxCanvas.hidden = false;
+            fxX = -clipL;
+            fxY = -clipT;
+            root.classList.add('is-blasting');
+        }
+
+        function startBlast() {
+            if (!engine) return;
+
+            // Burst from low in the tower, a little under its middle
+            const blocks = st.filter((s) => s.body);
+            let top = Infinity, bot = -Infinity, sumX = 0;
+            for (const s of blocks) {
+                top = Math.min(top, s.y);
+                bot = Math.max(bot, s.y + s.h);
+                sumX += s.x + s.w / 2;
+            }
+            const ox = sumX / blocks.length;
+            const oy = bot - (bot - top) * 0.28;
+            vpX = ox;
+            vpY = stageH * 0.45;
+            const u = clamp(stageH / 560, 0.7, 1.15);   // smaller stage, smaller blast
+
+            // Depth roles: a couple fly past the viewer, some toward, the rest away
+            const order = blocks.map((s) => s.i).sort(() => Math.random() - 0.5);
+            const role = new Map<number, 'pass' | 'near' | 'far'>();
+            order.forEach((i, n) => role.set(i, n < 2 ? 'pass' : n < 5 ? 'near' : 'far'));
+
+            // Launch angles, evenly spread from left-ish to right-ish, shuffled
+            const fan: number[] = [];
+            const spread = blocks.map((_, n) => -Math.PI * (0.06 + 0.88 * n / Math.max(1, blocks.length - 1)))
+                .sort(() => Math.random() - 0.5);
+            blocks.forEach((s, n) => { fan[s.i] = spread[n]; });
+
+            fly = [];
+            for (const s of blocks) {
+                const b = s.body!;
+                const r = role.get(s.i)!;
+                const f: Fly = {
+                    s, z: 0, vz: 0, zk: Z_K, zb: Z_B,
+                    air: true, airT: 0, fade: 1,
+                    k: 1, px: 0, py: 0, trail: [], zi: -1, op: 1,
+                    color: s.el.style.getPropertyValue('--block-color').trim() || '#fff',
+                };
+                if (r === 'pass') { f.vz = rand(15, 19); f.zk = 0; f.zb = 0; }
+                else if (r === 'near') f.vz = rand(34, 52);
+                else f.vz = -rand(70, 105);
+                fly[s.i] = f;
+
+                b.collisionFilter.category = CAT_AIR;
+                b.collisionFilter.mask = CAT_FLOOR;
+                // Fan out over the upper half-circle; blocks above the blast get pushed up harder
+                const ang = fan[s.i] + rand(-0.12, 0.12);
+                const lift = clamp((oy - (s.y + s.h / 2)) / stageH, 0, 0.6);
+                const speed = (r === 'pass' ? rand(3, 6) : rand(8, 14) * (1 + lift * 0.5)) * u;
+                Body.setVelocity(b, { x: Math.cos(ang) * speed, y: Math.sin(ang) * speed });
+                Body.setAngularVelocity(b, (Math.random() < 0.5 ? -1 : 1) * rand(0.06, 0.22));
+            }
+
+            // Debris in the block colours
+            const colors = fly.filter(Boolean).map((f) => f.color);
+            bits = [];
+            for (let n = 0; n < DEBRIS; n++) {
+                const ang = rand(-Math.PI * 0.95, -Math.PI * 0.05) + (Math.random() < 0.2 ? Math.PI * 0.5 : 0);
+                const sp = rand(3, 13) * u;
+                const max = Math.round(rand(40, 80));
+                bits.push({
+                    x: ox + rand(-12, 12), y: oy + rand(-8, 8),
+                    vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+                    a: rand(0, Math.PI), va: rand(-0.3, 0.3),
+                    size: Math.random() < 0.15 ? rand(7, 11) : rand(2.5, 6),
+                    life: max, max,
+                    color: colors[n % colors.length],
+                });
+            }
+
+            // Flash + shockwave ring: compositor-only animations
+            for (const el of [flashEl, ringEl]) {
+                el.style.left = ox + 'px';
+                el.style.top = oy + 'px';
+            }
+            flashEl.animate([
+                { opacity: 1, transform: 'scale(0.3)' },
+                { opacity: 0, transform: `scale(${(1.7 * u).toFixed(2)})` },
+            ], { duration: 280, easing: 'cubic-bezier(.1,.7,.3,1)' });
+            ringEl.animate([
+                { opacity: 0.9, transform: 'scale(0.2)', borderWidth: '3px' },
+                { opacity: 0, transform: `scale(${(9 * u).toFixed(1)})`, borderWidth: '1px' },
+            ], { duration: 600, easing: 'cubic-bezier(.15,.75,.3,1)' });
+
+            root.dataset.blast = 'on';
+            blastStep = 0;
+        }
+
+        /** Respawn above the stage and drift down, coming back in from slightly behind the screen */
+        function rain(f: Fly) {
+            const s = f.s, b = s.body!;
+            const x = s.w / 2 + 4 + Math.random() * Math.max(0, stageW - s.w - 8);
+            Body.setPosition(b, { x, y: Math.min(-s.h, clipT) - rand(10, 60) });
+            Body.setVelocity(b, { x: (stageW / 2 - x) * 0.006, y: rand(1.5, 3) });
+            Body.setAngle(b, rand(-0.5, 0.5));
+            Body.setAngularVelocity(b, rand(-0.05, 0.05));
+            f.z = -rand(60, 130); f.vz = 0;
+            f.zk = RAIN_K; f.zb = RAIN_B;
+            f.fade = 0; f.airT = 0; f.trail.length = 0;
+        }
+
+        /** Respawn just outside the side it left and drift back in on an arc */
+        function reenter(f: Fly, fromLeft: boolean) {
+            const s = f.s, b = s.body!;
+            const rad = Math.hypot(s.w, s.h) / 2;
+            const x = fromLeft ? Math.max(clipL, -300) - rad : Math.min(clipR, stageW + 300) + rad;
+            const target = s.w / 2 + 6 + Math.random() * Math.max(0, stageW - s.w - 12);
+            // Air drag shrinks reach: v0 ≈ d·drag / (1 − (1 − drag)^steps)
+            const vx = (target - x) * AIR_DRAG / (1 - Math.pow(1 - AIR_DRAG, 70));
+            Body.setPosition(b, { x, y: stageH * rand(0.05, 0.3) });
+            Body.setVelocity(b, { x: vx, y: -rand(1, 3) });
+            Body.setAngularVelocity(b, rand(-0.08, 0.08));
+            f.z = -rand(40, 100); f.vz = 0;
+            f.zk = RAIN_K; f.zb = RAIN_B;
+            f.fade = 0; f.airT = 0; f.trail.length = 0;
+        }
+
+        function land(f: Fly) {
+            const b = f.s.body!;
+            f.air = false;
+            f.s.el.classList.remove('is-flying');
+            f.z = 0; f.vz = 0;
+            b.collisionFilter.category = CAT_BLOCK;
+            b.collisionFilter.mask = 0xFFFFFFFF;
+        }
+
+        /** Depth, respawns and landing — runs before each engine step */
+        function blastStepPhysics() {
+            blastStep++;
+            const late = blastStep > BLAST_MAX_STEPS;
+            for (const f of fly) {
+                if (!f || !f.air) continue;
+                const s = f.s, b = s.body!;
+                f.airT++;
+                if (b.isSleeping) Sleeping.set(b, false);
+
+                if (f.zk) f.vz += -f.zk * f.z - f.zb * f.vz;
+                else f.vz *= 0.995;
+                f.z = Math.min(f.z + f.vz, Z_PASS);
+                if (f.fade < 1) f.fade = Math.min(1, f.fade + 0.08);
+
+                const k = FOCAL / (FOCAL - f.z);
+                const px = vpX + (b.position.x - vpX) * k;
+                const py = vpY + (b.position.y - vpY) * k;
+                const rad = 0.5 * Math.hypot(s.w, s.h) * k;
+
+                if (f.z >= Z_PASS || py - rad > clipB || f.airT > 360) { rain(f); continue; }
+                if (px + rad < clipL) { reenter(f, true); continue; }
+                if (px - rad > clipR) { reenter(f, false); continue; }
+
+                // Back on the screen plane: land once fully inside the stage
+                if (late || (f.zk && Math.abs(f.z) < 6 && Math.abs(f.vz) < 1.5)) {
+                    const { min, max } = b.bounds;
+                    if (min.x >= 0 && max.x <= stageW && min.y >= 0 && max.y <= stageH + 1) {
+                        land(f);
+                    } else if (late) {
+                        Body.setPosition(b, { x: stageW / 2, y: s.h });
+                        Body.setAngle(b, 0);
+                        land(f);
+                    } else if (min.y >= 0 && b.speed < 1.5) {
+                        // Resting on the floor overhang: shuffle inward
+                        Body.setVelocity(b, { x: b.velocity.x + (b.position.x < stageW / 2 ? 0.5 : -0.5), y: b.velocity.y });
+                    }
+                }
+            }
+
+            for (let n = bits.length - 1; n >= 0; n--) {
+                const p = bits[n];
+                p.vy += 0.16;
+                p.vx *= 0.975; p.vy *= 0.975;
+                p.x += p.vx; p.y += p.vy;
+                p.a += p.va;
+                if (--p.life <= 0) bits.splice(n, 1);
+            }
+        }
+
+        /** Project a flying block through the depth camera and write its transform */
+        function place(f: Fly) {
+            const s = f.s;
+            const k = FOCAL / (FOCAL - f.z);
+            const hw = s.w / 2, hh = s.h / 2;
+            f.k = k;
+            f.px = vpX + (s.x + hw - vpX) * k;
+            f.py = vpY + (s.y + hh - vpY) * k;
+            s.el.style.transform =
+                `translate(${(f.px - hw).toFixed(1)}px, ${(f.py - hh).toFixed(1)}px) rotate(${s.r.toFixed(1)}deg) scale(${k.toFixed(3)})`;
+        }
+
+        /** Opacity, stacking, trails and the FX canvas — runs after each engine step */
+        function blastFrame() {
+            let busy = bits.length > 0;
+            const record = blastStep % TRAIL_EVERY === 0;
+            for (const f of fly) {
+                if (!f) continue;
+                const el = f.s.el;
+                if (f.air) busy = true;
+
+                // Far = dimmer (dark page, so lower opacity reads as dimmer);
+                // flying past the camera fades out
+                let op = f.k < 1 ? 0.45 + 0.55 * clamp((f.k - 0.5) * 2, 0, 1) : 1;
+                if (f.z > Z_FADE) op *= 1 - (f.z - Z_FADE) / (Z_PASS - Z_FADE);
+                op = f.air ? op * f.fade : 1;
+                if (Math.abs(op - f.op) > 0.02 || (op === 1 && f.op !== 1)) {
+                    f.op = op;
+                    el.style.opacity = op.toFixed(2);
+                }
+                const zi = f.air ? 2 + clamp(Math.round((f.z + FOCAL) / 40), 0, 30) : 17;
+                if (zi !== f.zi) { f.zi = zi; el.style.zIndex = String(zi); }
+
+                if (record) {
+                    const t = f.trail;
+                    if (f.air && f.fade >= 1) {
+                        t.push(f.px, f.py, f.s.r * Math.PI / 180, f.k, op);
+                        if (t.length > TRAIL_LEN * 5) t.splice(0, 5);
+                    } else if (t.length) {
+                        t.splice(0, 5);
+                    }
+                }
+                if (f.trail.length) busy = true;
+            }
+            drawFx();
+            if (!busy) endBlast();
+        }
+
+        function drawFx() {
+            if (!fxCtx) return;
+            const ctx = fxCtx;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            const ox = fxX * fxDpr, oy = fxY * fxDpr;
+
+            // Afterimages: oldest faintest, like the Solitaire win screen
+            for (const f of fly) {
+                if (!f || !f.trail.length) continue;
+                const t = f.trail;
+                const n = t.length / 5;
+                const hw = f.s.w / 2, hh = f.s.h / 2;
+                ctx.fillStyle = f.color;
+                for (let j = 0; j < n - 1; j++) {
+                    const o = j * 5;
+                    const k = t[o + 3] * fxDpr;
+                    const c = Math.cos(t[o + 2]) * k, sn = Math.sin(t[o + 2]) * k;
+                    ctx.globalAlpha = t[o + 4] * 0.32 * (j + 1) / n;
+                    ctx.setTransform(c, sn, -sn, c, ox + t[o] * fxDpr, oy + t[o + 1] * fxDpr);
+                    ctx.fillRect(-hw, -hh, hw * 2, hh * 2);
+                }
+            }
+
+            for (const p of bits) {
+                const c = Math.cos(p.a) * fxDpr, sn = Math.sin(p.a) * fxDpr;
+                ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.6);
+                ctx.fillStyle = p.color;
+                ctx.setTransform(c, sn, -sn, c, ox + p.x * fxDpr, oy + p.y * fxDpr);
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function endBlast() {
+            blastStep = -1;
+            for (const f of fly) {
+                if (!f) continue;
+                if (f.air && f.s.body) land(f);
+                f.s.el.style.zIndex = '';
+                f.s.el.style.opacity = '1';
+            }
+            fly = [];
+            bits = [];
+            fxCanvas.width = fxCanvas.height = 0;   // also frees the backing store
+            fxCanvas.hidden = true;
+            root.classList.remove('is-blasting');
+            root.style.removeProperty('--tl-pad-t');
+            root.style.removeProperty('--tl-pad-b');
+            delete root.dataset.blast;
+            // Sideways overflow is clipped, never scrollable — but make sure
+            const slide = root.parentElement;
+            if (slide && slide.scrollLeft) slide.scrollLeft = 0;
         }
 
         function stopSliderPropagation(e: Event) {
@@ -1465,11 +1950,13 @@ function splitDate(date: string): [string, string] {
         }
 
         function createWalls(w: number, h: number): Matter.Body[] {
+            const floor = { isStatic: true, collisionFilter: { group: 0, category: CAT_FLOOR, mask: 0xFFFFFFFF } };
+            const wall = { isStatic: true, collisionFilter: { group: 0, category: CAT_WALL, mask: 0xFFFFFFFF } };
             return [
-                Bodies.rectangle(w / 2, h + WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true }),       // floor
-                Bodies.rectangle(w / 2, -WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, { isStatic: true }),            // ceiling
-                Bodies.rectangle(-WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, { isStatic: true }),            // left
-                Bodies.rectangle(w + WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, { isStatic: true }),         // right
+                Bodies.rectangle(w / 2, h + WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, floor),       // floor
+                Bodies.rectangle(w / 2, -WALL_THICKNESS / 2, w + WALL_THICKNESS * 2, WALL_THICKNESS, wall),            // ceiling
+                Bodies.rectangle(-WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, wall),            // left
+                Bodies.rectangle(w + WALL_THICKNESS / 2, h / 2, WALL_THICKNESS, h + WALL_THICKNESS * 2, wall),         // right
             ];
         }
 
@@ -1494,9 +1981,11 @@ function splitDate(date: string): [string, string] {
 
             function syncDOM() {
                 if (!engine) return;
+                const blasting = blastStep >= 0;
+                if (blasting) blastStepPhysics();
                 Engine.update(engine, 1000 / 60);
 
-                let allSleeping = true;
+                let allSleeping = !blasting;
                 for (const s of st) {
                     if (s.phase !== 'freed' || !s.body) continue;
                     if (s.body.isSleeping) continue; // skip DOM write for sleeping bodies
@@ -1504,8 +1993,10 @@ function splitDate(date: string): [string, string] {
                     s.x = s.body.position.x - s.w / 2;
                     s.y = s.body.position.y - s.h / 2;
                     s.r = s.body.angle * (180 / Math.PI);
-                    tx(s);
+                    if (blasting && fly[s.i]) place(fly[s.i]);
+                    else tx(s);
                 }
+                if (blasting) blastFrame();
 
                 if (allSleeping && !mConstraint?.body) {
                     animId = null;

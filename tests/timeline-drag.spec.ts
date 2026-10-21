@@ -38,6 +38,22 @@ async function knockDown(page: Page) {
   );
 }
 
+/** Wait for the blast to finish and the pile to stop moving (physics asleep). */
+async function waitForPileAtRest(page: Page) {
+  await page.waitForFunction(() => !document.querySelector("[data-timeline]")?.hasAttribute("data-blast"), null, {
+    timeout: 15_000,
+  });
+  const snapshot = () =>
+    page.locator(`${STAGE} .tower-block`).evaluateAll((els) => els.map((el) => (el as HTMLElement).style.transform).join("|"));
+  let prev = await snapshot();
+  for (let i = 0; i < 40; i++) {
+    await page.waitForTimeout(250);
+    const next = await snapshot();
+    if (next === prev) return;
+    prev = next;
+  }
+}
+
 test.describe("timeline: explore the tower", () => {
   test("blocks are buttons in chronological order, oldest first", async ({ page }) => {
     await goToTimeline(page);
@@ -155,6 +171,59 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
     expect(await visibleCard(page)).toBeNull();
   });
 
+  test("the blast lands every block back on the floor, full size and inside the stage", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator("[data-knock]").click();
+    await page.waitForFunction(() => document.querySelector("[data-timeline]")?.getAttribute("data-blast") === "on");
+
+    // Mid-blast: blocks fly past the stage edges, but the slide must never scroll
+    const slideOverflow = () =>
+      page.evaluate(() => {
+        const slide = document.querySelector("[data-timeline]")!.parentElement!;
+        return slide.scrollHeight - slide.clientHeight + slide.scrollTop + slide.scrollLeft;
+      });
+    for (let i = 0; i < 5; i++) {
+      expect(await slideOverflow()).toBe(0);
+      await page.waitForTimeout(120);
+    }
+
+    await waitForPileAtRest(page);
+    const out = await page.evaluate((sel) => {
+      const stage = document.querySelector(sel)!.getBoundingClientRect();
+      const problems: string[] = [];
+      document.querySelectorAll<HTMLElement>(`${sel} .tower-block`).forEach((b) => {
+        const r = b.getBoundingClientRect();
+        if (r.left < stage.left - 3 || r.right > stage.right + 3 || r.top < stage.top - 3 || r.bottom > stage.bottom + 3) {
+          problems.push(`${b.dataset.job} outside the stage`);
+        }
+        if (/scale\((?!1(\.0+)?\))/.test(b.style.transform)) problems.push(`${b.dataset.job} still scaled`);
+        if (b.style.opacity !== "1") problems.push(`${b.dataset.job} opacity ${b.style.opacity}`);
+        if (b.classList.contains("is-flying")) problems.push(`${b.dataset.job} still flying`);
+      });
+      return problems;
+    }, STAGE);
+    expect(out).toEqual([]);
+    expect(await page.locator("[data-tl-fx]").isHidden()).toBe(true);
+    expect(await slideOverflow()).toBe(0);
+  });
+
+  test("rebuilding mid-blast stacks the tower and clears the effects", async ({ page }) => {
+    await goToTimeline(page);
+    await page.locator("[data-knock]").click();
+    await page.waitForFunction(() => document.querySelector("[data-timeline]")?.getAttribute("data-blast") === "on");
+    await page.waitForTimeout(250);
+    await page.locator("[data-knock]").click();
+    await page.waitForFunction(
+      (sel) => Array.from(document.querySelectorAll(`${sel} .tower-block`)).every((b) => b.classList.contains("settled")),
+      STAGE,
+      { timeout: 15_000 },
+    );
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(0);
+    expect(await page.locator("[data-timeline]").getAttribute("data-blast")).toBeNull();
+    await expect(page.locator("[data-timeline]")).not.toHaveClass(/is-blasting/);
+    expect(await page.locator("[data-tl-fx]").isHidden()).toBe(true);
+  });
+
   test("rebuild stacks the tower again", async ({ page }) => {
     await goToTimeline(page);
     await knockDown(page);
@@ -172,7 +241,9 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
     test.skip(isMobile, "mouse drag");
     await goToTimeline(page);
     await knockDown(page);
-    await page.waitForTimeout(2500); // let the shove settle
+    // Let the blast land and the pile fall asleep: pressing a sleeping block
+    // must wake the physics loop, or the block cannot be grabbed.
+    await waitForPileAtRest(page);
 
     // Grab the highest block in the pile that is clear at its own centre
     // (physics piles are random). The widest block usually lands at the bottom
@@ -212,7 +283,7 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
     test.skip(isMobile, "mouse drag");
     await goToTimeline(page);
     await knockDown(page);
-    await page.waitForTimeout(2500);
+    await waitForPileAtRest(page);
 
     const block = page.locator(`${STAGE} .tower-block[data-job="kits"]`);
     const box = (await block.boundingBox())!;
@@ -243,6 +314,27 @@ test.describe("timeline: knock it down (opt-in physics)", () => {
       { timeout: 15_000 },
     );
     expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(0);
+  });
+});
+
+test.describe("timeline: knock-down with reduced motion", () => {
+  test("the tower just tips over: no blast, no effects", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await goToTimeline(page);
+    await page.evaluate(() => {
+      const root = document.querySelector("[data-timeline]")!;
+      (window as any).__blasted = false;
+      new MutationObserver(() => {
+        if (root.hasAttribute("data-blast")) (window as any).__blasted = true;
+      }).observe(root, { attributes: true });
+    });
+    await knockDown(page);
+    await page.waitForTimeout(600);
+    expect(await page.evaluate(() => (window as any).__blasted)).toBe(false);
+    expect(await page.locator("[data-tl-fx]").isHidden()).toBe(true);
+    expect(await page.locator(`${STAGE} .tower-block.freed`).count()).toBe(
+      await page.locator(`${STAGE} .tower-block`).count(),
+    );
   });
 });
 
