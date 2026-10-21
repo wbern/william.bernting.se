@@ -119,8 +119,8 @@ const traitRowEntries: TraitRowEntry[] = [
       },
       {
         id: "automate",
-        sv: { label: "Automatiserar det tråkiga", caption: "Ett internt verktyg jag byggde fick 5 000 användare." },
-        en: { label: "Automates the boring stuff", caption: "An internal tool I built grew to 5,000 users." },
+        sv: { label: "Automatiserar det tråkiga", caption: "Ett internt verktyg jag byggde på HPE fick 5 000 användare." },
+        en: { label: "Automates the boring stuff", caption: "An internal tool I built at HPE grew to 5,000 users." },
       },
     ],
   },

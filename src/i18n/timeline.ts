@@ -41,12 +41,13 @@ const stories: Record<string, StoryEntry> = {
   kendev: {
     sv: {
       period: "apr 2026 – nu",
-      context: "Min egen enmansbyrå, med ett nätverk av frilansare i ryggen. Frilansat via KenDev AB sedan 2023.",
+      context: "Min egen byrå, med ett nätverk av frilansare i ryggen. Frilansat via KenDev AB sedan 2023.",
       headline: "Nu: lär ut AI, dyker in i legacy, bygger det du vill ha.",
       bullets: [
-        "<strong>Legacy:</strong> lagade ett program utan källkod som tvingade en kund att starta om servern var 15:e minut.",
+        "<strong>Legacy:</strong> lagade ett program utan källkod som tvingade Locksafe att starta om servern var 15:e minut.",
         "<strong>Bygga:</strong> flyttade ett gammalt lottningsprogram för schack till webben — det körde en regionfinal i Schack4an med ~500 barn.",
         "<strong>AI:</strong> lät skolbarn vibe-coda sina egna spel. Alla går att spela på vibecoding.bernting.se.",
+        "<strong>Produkt:</strong> grundare och CTO för Slay CRM, ett lättanvänt CRM för team i farten. Väntelista på slaycrm.eu.",
       ],
       chip: "Nu",
     },
@@ -55,9 +56,10 @@ const stories: Record<string, StoryEntry> = {
       context: "My own one-person agency, backed by a network of freelancers. Freelancing through KenDev AB since 2023.",
       headline: "Now: teaching AI, diving into legacy, building what you want.",
       bullets: [
-        "<strong>Legacy:</strong> fixed software with no source code that forced a client to restart their server every 15 minutes.",
+        "<strong>Legacy:</strong> fixed software with no source code that forced Locksafe to restart their server every 15 minutes.",
         "<strong>Build:</strong> moved an old chess pairing program to the web — it ran a Schack4an regional final with ~500 kids.",
         "<strong>AI:</strong> had school kids vibe-code their own games. Every one of them is playable at vibecoding.bernting.se.",
+        "<strong>Product:</strong> founder and CTO of Slay CRM, an easy-to-use CRM for teams on the go. Waitlist at slaycrm.eu.",
       ],
       chip: "Now",
     },
@@ -225,7 +227,7 @@ const stories: Record<string, StoryEntry> = {
   hp: {
     sv: {
       period: "okt 2011 – dec 2016",
-      context: "Fortune 500-bolag inom IT-drift. Jag började i supporten.",
+      context: "HP, senare HPE (Hewlett Packard Enterprise), Fortune 500-bolag inom IT-drift. Jag började i supporten.",
       headline: "Byggde ett verktyg som 5 000 kollegor valde att använda.",
       stat: { value: "5 000", unit: "användare" },
       bullets: [
@@ -236,7 +238,7 @@ const stories: Record<string, StoryEntry> = {
     },
     en: {
       period: "Oct 2011 – Dec 2016",
-      context: "Fortune 500 IT services company. I started in support.",
+      context: "HP, later HPE (Hewlett Packard Enterprise), a Fortune 500 IT services company. I started in support.",
       headline: "Built a tool 5,000 colleagues chose to use.",
       stat: { value: "5,000", unit: "users" },
       bullets: [

@@ -30,15 +30,16 @@ interface JobEntry {
 /**
  * The own agency sits on top of the tower. It is timeline-only (not a CV
  * job): freelancing through KenDev AB since May 2023, running his own
- * one-person agency with his own clients since April 2026 (LinkedIn post
+ * one-person agency, En Mans Byrå (part of KenDev AB), with his own clients
+ * since April 2026 (LinkedIn post
  * 2026-03-30: "Mitt nuvarande uppdrag slutar den 17 april").
  * Months is the age of the agency at time of writing; the block is drawn
  * as "ongoing" so the exact width matters less than the open edge.
  */
 const AGENCY: JobEntry = {
   id: "kendev",
-  sv: { role: "Egen byrå", company: "KenDev" },
-  en: { role: "Own agency", company: "KenDev" },
+  sv: { role: "Egen byrå", company: "En Mans Byrå" },
+  en: { role: "Own agency", company: "En Mans Byrå" },
   date: "2026 —",
   color: "#ececf4",
   w: blockWidth(6),

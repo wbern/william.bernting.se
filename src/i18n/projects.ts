@@ -65,7 +65,7 @@ const gh = (repo: string): ProjectLink => ({
 /**
  * Display order is a pitch arc: rescue → AI for a real business → a product
  * people used → big-company work → leadership → open source with traction →
- * experiments → back to a client-value card (ADRian, born in a client team),
+ * experiments → back to a client-value card (ADRian, born in a team at Akka),
  * so "next project" never ends on a personal side quest.
  */
 const projectEntries = [
@@ -75,9 +75,9 @@ const projectEntries = [
     flagship: true,
     sv: {
       title: "Systemet utan källkod",
-      context: "Kunduppdrag · 2026",
+      context: "Kunduppdrag åt Locksafe · 2026",
       hook: "Servern fick startas om var 15:e minut. Leverantören var borta, källkoden likaså. Nu står den stadigt.",
-      problem: "Ett bokningssystem där boende i bostadsrättsföreningar bokar tvättstuga och gästlägenhet kraschade hela tiden. Felet satt i runt 20 år gamla leverantörsfiler som ingen längre hade källkoden till.",
+      problem: "Ett bokningssystem där boende i bostadsrättsföreningar bokar tvättstuga och gästlägenhet låste sig hela tiden. En del av systemet tog ett lås och släppte det aldrig, så ingen annan användare kom in förrän servern startades om. Felet satt i runt 20 år gamla leverantörsfiler som ingen längre hade källkoden till.",
       did: "Under en helg lät jag en AI-agent översätta filerna tillbaka till läsbar kod. Först skrev jag 19 automatiska kontroller mot de skarpa sajterna, och originalet klarade 8. Sedan lagade jag grundfelet, flera webbplatser som trampade varandra på tårna mot samma gamla komponent, och rullade ut med tre olika sätt att backa.",
       outcome: "<em>19 av 19 kontroller gröna, på 5 sajter.</em> Inga fler omstarter var 15:e minut. \"Ingen källkod\" visade sig bara vara en startpunkt.",
       facts: [
@@ -85,14 +85,14 @@ const projectEntries = [
         { value: "8 → 19", label: "av 19 tester gröna" },
         { value: "1", label: "helg" },
       ],
-      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Named mutex", "Playwright", "Tailscale"],
+      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Race condition", "Named mutex", "Playwright", "Tailscale"],
       links: [],
     },
     en: {
       title: "The system nobody had code for",
-      context: "Client work · 2026",
+      context: "Client work for Locksafe · 2026",
       hook: "The server had to be restarted every 15 minutes. The vendor was gone, and so was the source code. Now it just runs.",
-      problem: "A booking system where residents of housing associations book laundry rooms and guest flats kept crashing. The fault sat in vendor files around 20 years old that nobody had the source code for any more.",
+      problem: "A booking system where residents of housing associations book laundry rooms and guest flats kept locking up. One part of the system grabbed a lock and never let go, so no other user could get in until the server was restarted. The fault sat in vendor files around 20 years old that nobody had the source code for any more.",
       did: "Over one weekend I had an AI agent turn the files back into readable code. First I wrote 19 automated checks against the live sites, and the original passed 8. Then I fixed the root cause, several websites stepping on each other's toes against the same old component, and rolled out with three different ways to roll back.",
       outcome: "<em>19 of 19 checks green, across 5 sites.</em> No more restarts every 15 minutes. \"No source code\" turned out to be just a starting point.",
       facts: [
@@ -100,7 +100,7 @@ const projectEntries = [
         { value: "8 → 19", label: "of 19 tests passing" },
         { value: "1", label: "weekend" },
       ],
-      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Named mutex", "Playwright", "Tailscale"],
+      nerdy: [".NET Framework 2.0", "VB.NET → C# (ILSpy)", "COM interop", "Race condition", "Named mutex", "Playwright", "Tailscale"],
       links: [],
     },
   },
@@ -110,9 +110,9 @@ const projectEntries = [
     flagship: true,
     sv: {
       title: "Företagets mejlminne",
-      context: "Kundpilot · 2026",
+      context: "Kundpilot åt Locksafe · 2026",
       hook: "38 000 gamla mejl blev en kollega som minns hur vi löste det förra gången.",
-      problem: "Ett litet säkerhetsföretag i Göteborg (passersystem, porttelefoner) får hundratals mejl i månaden. Samma frågor kommer tillbaka, men svaren ligger begravda i enskildas inkorgar. Och kundmejl får inte skickas till någon molntjänst.",
+      problem: "Locksafe, ett litet säkerhetsföretag i Göteborg (passersystem, porttelefoner), får hundratals mejl i månaden. Samma frågor kommer tillbaka, men svaren ligger begravda i enskildas inkorgar. Och kundmejl får inte skickas till någon molntjänst.",
       did: "Jag byggde en AI-rådgivare som körs helt på företagets egen server. Den läser varje nytt mejl, letar fram liknande ärenden bland 38 000 gamla och föreslår hur teamet brukar lösa det, med originalmejlen som kvitto. Personalen kan också fråga den direkt i gruppchatten.",
       outcome: "<em>Inga mejl lämnade huset.</em> Träffsäkerheten på testfrågorna gick från 2 av 5 till <em>5 av 5</em> när jag kombinerade vanlig ordsökning med AI-sökning. Allt på en server utan grafikkort och utan licenskostnader.",
       facts: [
@@ -125,9 +125,9 @@ const projectEntries = [
     },
     en: {
       title: "The company's email memory",
-      context: "Client pilot · 2026",
+      context: "Client pilot for Locksafe · 2026",
       hook: "38,000 old emails became a colleague who remembers how we solved it last time.",
-      problem: "A small Gothenburg security company (access control, intercoms) gets hundreds of emails a month. The same questions keep coming back, but the answers are buried in individual inboxes. And customer emails can't be sent to a cloud service.",
+      problem: "Locksafe, a small Gothenburg security company (access control, intercoms), gets hundreds of emails a month. The same questions keep coming back, but the answers are buried in individual inboxes. And customer emails can't be sent to a cloud service.",
       did: "I built an AI advisor that runs entirely on the company's own server. It reads each new email, finds similar cases among 38,000 old ones and suggests how the team usually handles it, with the original emails as receipts. Staff can also ask it directly in their group chat.",
       outcome: "<em>No email left the building.</em> Accuracy on the test questions went from 2 of 5 to <em>5 of 5</em> once I combined plain keyword search with AI search. All on a server with no graphics card and no licence costs.",
       facts: [
@@ -439,7 +439,7 @@ const projectEntries = [
       context: "Open source · 2026",
       hook: "Skriv ner teamets regler en gång. En AI-granskare kollar sedan varje ändring mot dem.",
       problem: "Alla team har regler av typen \"så gör vi inte här\". Oftast sitter de i någons huvud och följs bara om just den personen råkar granska koden.",
-      did: "ADRian gör varje nedskriven regel till en egen AI-granskare. Varje ändring kontrolleras mot alla regler som berör den, innan den ens sparas, med rad och förslag på fix. Det började i ett kundteam, och nu har jag byggt om det som open source.",
+      did: "ADRian gör varje nedskriven regel till en egen AI-granskare. Varje ändring kontrolleras mot alla regler som berör den, innan den ens sparas, med rad och förslag på fix. Det började i ett team på Akka, och nu har jag byggt om det som open source.",
       outcome: "<em>Mindre tjat i kodgranskningen</em>, och regler som lever i stället för att samla damm. Samma knep styrde en artikel jag skrev: 15 regler, 22 utkast, varje utkast granskat mot varje regel.",
       facts: [
         { value: "1 regel", label: "= 1 egen AI-granskare" },
@@ -454,7 +454,7 @@ const projectEntries = [
       context: "Open source · 2026",
       hook: "Write your team's rules down once. An AI reviewer then checks every change against them.",
       problem: "Every team has rules like \"we don't do it that way here\". Usually they live in someone's head and are only enforced if that person happens to review your code.",
-      did: "ADRian turns each written rule into its own AI reviewer. Every change is checked against every rule that applies, before it is even committed, with the line and a suggested fix. It started in a client's team, and I've since rebuilt it as open source.",
+      did: "ADRian turns each written rule into its own AI reviewer. Every change is checked against every rule that applies, before it is even committed, with the line and a suggested fix. It started in a team at Akka, and I've since rebuilt it as open source.",
       outcome: "<em>Less nagging in code review</em>, and rules that stay alive instead of gathering dust. The same trick steered an article I wrote: 15 rules, 22 drafts, every draft checked against every rule.",
       facts: [
         { value: "1 rule", label: "= 1 dedicated AI reviewer" },
