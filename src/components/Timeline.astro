@@ -1002,7 +1002,7 @@ function splitDate(date: string): [string, string] {
          * Y=0 is "at rest in stack". Y<0 is "above rest".
          */
 
-        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events, Sleeping } = Matter;
+        const { Engine, Composite, Bodies, Body, Mouse, MouseConstraint, Events, Sleeping, Query } = Matter;
 
         const GRAVITY    = 1800;   // px/s² — slower, dramatic fall
         const DT_CAP     = 0.05;
@@ -1786,6 +1786,15 @@ function splitDate(date: string): [string, string] {
             b.collisionFilter.mask = 0xFFFFFFFF;
         }
 
+        /** Does this body sit inside a block that is already part of the pile? */
+        function overlapsPile(b: Matter.Body): boolean {
+            const pile: Matter.Body[] = [];
+            for (const o of st) {
+                if (o.body && o.body !== b && !fly[o.i]?.air) pile.push(o.body);
+            }
+            return Query.collides(b, pile).some((c) => c.depth > 1);
+        }
+
         /** Depth, respawns and landing — runs before each engine step */
         function blastStepPhysics() {
             blastStep++;
@@ -1814,7 +1823,13 @@ function splitDate(date: string): [string, string] {
                 if (late || (f.zk && Math.abs(f.z) < 6 && Math.abs(f.vz) < 1.5)) {
                     const { min, max } = b.bounds;
                     if (min.x >= 0 && max.x <= stageW && min.y >= 0 && max.y <= stageH + 1) {
-                        land(f);
+                        // Landing inside a pile block would let the solver crush
+                        // one of them into the floor or a wall for good: hop over
+                        // the pile instead and land once clear of it.
+                        if (late || !overlapsPile(b)) land(f);
+                        else if (b.speed < 1.5) {
+                            Body.setVelocity(b, { x: (stageW / 2 - b.position.x) * 0.02, y: -rand(7, 10) });
+                        }
                     } else if (late) {
                         Body.setPosition(b, { x: stageW / 2, y: s.h });
                         Body.setAngle(b, 0);

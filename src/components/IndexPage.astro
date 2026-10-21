@@ -234,6 +234,20 @@ const t = useTranslations(lang);
             [WheelControls]
         );
 
+        // keen-slider measures its container once at creation and then only on
+        // window resize. WebKit (iOS Safari) can run this module before the
+        // stylesheet has applied, so the container is measured at its unstyled
+        // content height and every slide ends up thousands of px tall. Re-measure
+        // whenever the container's real size changes. update() stops a running
+        // slide animation (e.g. the deep-link move below), so resume it.
+        new ResizeObserver(() => {
+            const h = sliderEl.getBoundingClientRect().height;
+            if (h <= 0 || Math.abs(h - slider.size) <= 1) return;
+            const target = slider.animator.targetIdx;
+            slider.update();
+            if (target !== null) slider.moveToIdx(target);
+        }).observe(sliderEl);
+
         // Deep link: if URL has a hash, navigate to projects slide
         if (location.hash) {
             requestAnimationFrame(() => {
