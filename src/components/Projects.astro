@@ -213,8 +213,8 @@ const labels = {
     const track = document.getElementById("roller-track") as HTMLElement;
     const viewport = document.querySelector("[data-testid='roller']") as HTMLElement;
 
-    // Match the CSS media query for --slide-h: 76px on desktop, 60px on mobile
-    const SLIDE_HEIGHT = window.matchMedia("(min-width: 901px)").matches ? 76 : 60;
+    // Read --slide-h from CSS so the JS slot maths can't drift from the stylesheet
+    const SLIDE_HEIGHT = parseFloat(getComputedStyle(section).getPropertyValue("--slide-h")) || 68;
     const CENTER_OFFSET = window.matchMedia("(min-height: 600px)").matches ? 1.5 : 1;
 
     // Build slide elements
@@ -801,7 +801,7 @@ const labels = {
     /* Grid stacking: both views overlap in the same cell.
        No position toggling → no layout shift during transition. */
     .roller-section {
-        --slide-h: 60px;
+        --slide-h: 68px;
         --visible-slots: 3;
         --center-offset: 1;
         display: grid;
@@ -1766,7 +1766,7 @@ const labels = {
 
     /* ===== Desktop ===== */
     @media (min-width: 901px) {
-        .roller-section { --slide-h: 76px; }
+        .roller-section { --slide-h: 88px; }
         .roller-viewport { width: 520px; }
         .roller-slide__tag { font-size: 11px; letter-spacing: 2px; padding: 3px 11px; }
         .roller-slide__title { font-size: 17px; }
