@@ -60,8 +60,8 @@ const defs: SkillDef[] = [
             en: "AI writes the code fast. I teach your team to check it.",
         },
         proof: {
-            sv: "Lottningen till en schackturnering för ~500 barn: AI-kodad, inte en rad skriven för hand.",
-            en: "The pairing tool for a chess event with ~500 kids: AI-coded, not one line typed by hand.",
+            sv: "Lottningen till en schackturnering för ~500 barn. AI skrev all kod.",
+            en: "The pairing tool for a chess event with ~500 kids. AI wrote all of the code.",
         },
         proofSlug: "legacy-chess-tool-rewrite",
     },
@@ -114,8 +114,8 @@ const defs: SkillDef[] = [
         id: "vue", pillar: false, aliases: ["Vue"],
         label: { sv: "Vue", en: "Vue" },
         value: {
-            sv: "Ännu ett ramverk. Jag väljer inte sida, jag väljer det ni har.",
-            en: "Another framework. I don't pick sides, I pick what you have.",
+            sv: "Ett ramverk till. Jag kör det ni redan har.",
+            en: "One more framework. I use what you already have.",
         },
     },
     {

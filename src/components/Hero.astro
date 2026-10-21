@@ -364,7 +364,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         min-height: 44px;
         color: var(--text-dim);
         text-decoration: none;
-        transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease, transform 0.2s ease;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
     }
     .hero-contact a:hover,
     .hero-contact a:focus-visible { color: var(--text); }
@@ -386,7 +386,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
     .hero-contact .hero-email:hover,
     .hero-contact .hero-email:focus-visible {
         border-color: var(--purple);
-        box-shadow: 0 0 30px var(--purple-glow-strong);
+        background: color-mix(in srgb, var(--purple) 22%, var(--bg-card));
         transform: translateY(-2px);
     }
     .hero-contact .hero-email svg { color: #b57edc; }
@@ -444,10 +444,9 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         padding: 12px 16px;
         text-align: left;
         background: var(--bg-card);
-        border: 1px solid color-mix(in srgb, var(--tip-color) 45%, var(--border));
-        border-left: 3px solid var(--tip-color);
+        border: 1px solid var(--border);
         border-radius: 10px;
-        box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.8), 0 0 30px -12px var(--tip-color);
+        box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.8);
         pointer-events: none;
         opacity: 0;
         visibility: hidden;

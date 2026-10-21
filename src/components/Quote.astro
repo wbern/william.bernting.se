@@ -154,12 +154,6 @@ const defaultHref = buildMailto(CONTACT.email);
                 const isOn = btn.getAttribute("aria-pressed") === "true";
                 selectTrack(isOn ? null : btn);
             });
-            // Spotlight that follows the pointer
-            btn.addEventListener("pointermove", (e) => {
-                const r = btn.getBoundingClientRect();
-                btn.style.setProperty("--mx", `${e.clientX - r.left}px`);
-                btn.style.setProperty("--my", `${e.clientY - r.top}px`);
-            });
         }
 
         // Hero tagline verbs deep-link here with a track pre-picked
@@ -267,8 +261,6 @@ const defaultHref = buildMailto(CONTACT.email);
     }
 
     .track {
-        --mx: 50%;
-        --my: 0%;
         position: relative;
         display: flex;
         flex-direction: column;
@@ -277,9 +269,7 @@ const defaultHref = buildMailto(CONTACT.email);
         text-align: left;
         font: inherit;
         color: var(--text);
-        background:
-            radial-gradient(240px circle at var(--mx) var(--my), color-mix(in srgb, var(--track) 14%, transparent), transparent 70%),
-            var(--bg-card);
+        background: var(--bg-card);
         border: 1px solid var(--border, #22222e);
         border-radius: 14px;
         cursor: pointer;
@@ -287,36 +277,15 @@ const defaultHref = buildMailto(CONTACT.email);
         transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     }
 
-    .track::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: var(--track);
-        opacity: 0.55;
-        transition: opacity 0.25s ease, width 0.25s ease;
-    }
-
     .track:hover {
         transform: translateY(-3px);
         border-color: color-mix(in srgb, var(--track) 55%, transparent);
     }
 
-    .track:hover::before {
-        opacity: 1;
-    }
-
     .track[aria-pressed="true"] {
         border-color: var(--track);
-        box-shadow: 0 0 0 1px var(--track), 0 10px 40px -12px color-mix(in srgb, var(--track) 60%, transparent);
+        box-shadow: 0 0 0 1px var(--track);
         transform: translateY(-3px);
-    }
-
-    .track[aria-pressed="true"]::before {
-        opacity: 1;
-        width: 5px;
     }
 
     .finale[data-track]:not([data-track=""]) .track[aria-pressed="false"] {
@@ -420,13 +389,12 @@ const defaultHref = buildMailto(CONTACT.email);
         font-weight: 700;
         font-size: 16px;
         text-decoration: none;
-        box-shadow: 0 8px 30px -8px color-mix(in srgb, var(--cta) 70%, transparent);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+        transition: transform 0.2s ease, background 0.3s ease;
     }
 
     .cta-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 40px -8px color-mix(in srgb, var(--cta) 85%, transparent);
+        background: color-mix(in srgb, var(--cta) 82%, #000);
     }
 
     .cta-primary:hover .cta-arrow {
@@ -493,7 +461,6 @@ const defaultHref = buildMailto(CONTACT.email);
         object-fit: cover;
         flex-shrink: 0;
         border: 2px solid var(--purple);
-        box-shadow: 0 0 20px var(--purple-glow-strong);
     }
 
     .proof-own-text {
@@ -637,14 +604,13 @@ const defaultHref = buildMailto(CONTACT.email);
         font-size: 13px;
         text-decoration: none;
         cursor: pointer;
-        transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        transition: color 0.2s, border-color 0.2s, transform 0.2s;
     }
 
     a.dock-chip:hover,
     button.dock-chip:hover {
         color: var(--purple);
         border-color: var(--purple);
-        box-shadow: 0 0 24px var(--purple-glow);
     }
 
     .dock-email {
@@ -686,7 +652,7 @@ const defaultHref = buildMailto(CONTACT.email);
     }
 
     .dock-copy .icon-check { display: none; }
-    .dock-email.copied { border-color: var(--purple); box-shadow: 0 0 24px var(--purple-glow-strong); }
+    .dock-email.copied { border-color: var(--purple); }
     .dock-email.copied .dock-copy { color: var(--purple); }
     .dock-email.copied .icon-copy { display: none; }
     .dock-email.copied .icon-check { display: block; }
@@ -745,7 +711,6 @@ const defaultHref = buildMailto(CONTACT.email);
     :global(.end-bump) .dock-top {
         color: var(--purple);
         border-color: var(--purple);
-        box-shadow: 0 0 28px var(--purple-glow-strong);
     }
 
     :global(.end-bump) .end-nudge {

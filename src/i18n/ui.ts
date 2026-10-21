@@ -86,7 +86,7 @@ export const ui = {
     "stats.projects.suffix": "projekt på ett år",
     "stats.projects.kicker": "Testa på riktigt",
     "stats.projects.story":
-        "77 nya projekt på tolv månader. Schackappar, ett CRM, workshoppar för barn och en hel del rena experiment. Jag testar idéer på riktigt i stället för att prata om dem.",
+        "77 nya projekt på tolv månader. Schackappar, ett CRM, workshoppar för barn och en hel del rena experiment. Jag testar idéer på riktigt.",
 
     "stats.kids.value": "~500",
     "stats.kids": "barn i en schacktävling som körde på min app",
@@ -180,9 +180,9 @@ export const ui = {
     "timeline.heading.before": "15 år av ",
     "timeline.heading.highlight": "byggande",
     "timeline.heading.after": ".",
-    "timeline.sub": "Från supporten till En Mans Byrå. Varje block är ett jobb — och en sak jag är stolt över.",
+    "timeline.sub": "Från supporten till En Mans Byrå. Varje block är ett jobb. Klicka så ser du vad jag är stoltast över där.",
     "timeline.hint.touch": "Tryck på ett block",
-    "timeline.hint.pointer": "Peka på ett block — eller använd piltangenterna",
+    "timeline.hint.pointer": "Peka på ett block, eller använd piltangenterna",
     "timeline.legend.width": "Bredd = tid i rollen",
     "timeline.legend.freelance": "Frilans via KenDev",
     "timeline.listAria": "Karriärtorn, äldst längst ner",
@@ -323,7 +323,7 @@ export const ui = {
     "stats.projects.suffix": "projects in a year",
     "stats.projects.kicker": "Trying it for real",
     "stats.projects.story":
-        "77 new projects in twelve months. Chess apps, a CRM, workshops for kids and plenty of pure experiments. I test ideas for real instead of talking about them.",
+        "77 new projects in twelve months. Chess apps, a CRM, workshops for kids and plenty of pure experiments. I test ideas for real.",
 
     "stats.kids.value": "~500",
     "stats.kids": "kids in a chess tournament that ran on my app",
@@ -417,9 +417,9 @@ export const ui = {
     "timeline.heading.before": "15 years of ",
     "timeline.heading.highlight": "building",
     "timeline.heading.after": ".",
-    "timeline.sub": "From the support desk to my own agency, En Mans Byrå. Every block is a job — and one thing I'm proud of.",
+    "timeline.sub": "From the support desk to my own agency, En Mans Byrå. Every block is a job. Click one to see what I'm proudest of there.",
     "timeline.hint.touch": "Tap a block",
-    "timeline.hint.pointer": "Point at a block — or use the arrow keys",
+    "timeline.hint.pointer": "Point at a block, or use the arrow keys",
     "timeline.legend.width": "Width = time in role",
     "timeline.legend.freelance": "Freelance via KenDev",
     "timeline.listAria": "Career tower, oldest at the bottom",

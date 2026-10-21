@@ -908,17 +908,6 @@ const labels = {
         transition: opacity 0.2s ease, filter 0.2s ease;
     }
 
-    .roller-hook::before {
-        content: "";
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--chip, var(--purple));
-        margin-right: 8px;
-        vertical-align: 0.1em;
-    }
-
     .roller-hook--in {
         animation: hook-in 0.35s ease both;
     }
@@ -1023,7 +1012,6 @@ const labels = {
     .back-button:hover {
         border-color: var(--purple);
         color: var(--purple);
-        box-shadow: 0 0 20px var(--purple-glow);
     }
 
     .back-arrow {
@@ -1081,12 +1069,11 @@ const labels = {
         padding: 8px 18px;
         border-radius: 100px;
         cursor: pointer;
-        transition: background 0.2s ease, box-shadow 0.2s ease;
+        transition: background 0.2s ease;
     }
 
     .next-button:hover {
         background: var(--purple);
-        box-shadow: 0 0 24px var(--purple-glow-strong);
     }
 
     .next-arrow { transition: transform 0.2s ease; }
@@ -1098,7 +1085,6 @@ const labels = {
         border-radius: 16px;
         padding: 32px 36px 28px;
         width: 100%;
-        box-shadow: 0 0 18px var(--purple-glow);
     }
 
     .detail-card.card-swap .detail-card__inner {
@@ -1224,23 +1210,15 @@ const labels = {
         background: linear-gradient(transparent 62%, color-mix(in srgb, var(--chip) 30%, transparent) 62%);
     }
 
-    .detail-section--outcome {
-        border-left: 2px solid var(--chip);
-        padding-left: 14px;
-    }
-
     .detail-section--outcome h4 { color: var(--chip); }
     .detail-section--outcome p { color: var(--text); }
 
     .detail-quote {
         margin-top: 22px;
-        padding: 14px 18px;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 12px;
     }
 
     .detail-quote p {
+        text-indent: -0.42em;
         font-style: italic;
         font-size: 15px !important;
         color: var(--text) !important;
@@ -1330,12 +1308,12 @@ const labels = {
         border-radius: 100px;
         padding: 9px 18px;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease, background 0.2s ease;
     }
 
     .detail-cta__button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 0 24px color-mix(in srgb, var(--chip) 45%, transparent);
+        background: color-mix(in srgb, var(--chip) 82%, #000);
     }
 
     /* ===== Roller Wrapper ===== */
@@ -1365,7 +1343,6 @@ const labels = {
 
     .roller-viewport.roller-spinning {
         border-color: var(--purple-dim);
-        box-shadow: 0 0 24px var(--purple-glow);
     }
 
     .just-landed .roller-highlight {
@@ -1451,12 +1428,10 @@ const labels = {
     .roller-slide--selected .roller-slide__title {
         color: var(--text);
         font-size: 17px;
-        text-shadow: 0 0 20px var(--purple-glow-strong);
     }
 
     .roller-slide--selected .roller-slide__tag {
         opacity: 1;
-        box-shadow: 0 0 12px color-mix(in srgb, var(--chip, var(--purple)) 35%, transparent);
     }
 
     .roller-slide--near .roller-slide__tag {
@@ -1497,7 +1472,6 @@ const labels = {
     .roller-arrow:hover {
         border-color: var(--purple);
         color: var(--purple);
-        box-shadow: 0 0 16px var(--purple-glow);
     }
 
     .roller-arrow:active {
@@ -1541,18 +1515,16 @@ const labels = {
         flex: 0 0 auto;
     }
 
-    /* Hover = glow only. The button's transform belongs to the spin rotation;
+    /* Hover = fill only. The button's transform belongs to the spin rotation;
        a hover lift here used to fight it and nudge the layout. */
     .action-button--spin:hover {
         background: var(--purple-dim);
         color: var(--text);
-        box-shadow: 0 0 30px var(--purple-glow-strong);
     }
 
     .action-button--spin.spinning {
         transition: none;
         border-color: var(--purple);
-        box-shadow: 0 0 24px var(--purple-glow-strong);
     }
 
     .spin-icon {
@@ -1574,7 +1546,6 @@ const labels = {
 
     .action-button--open:hover {
         background: var(--purple);
-        box-shadow: 0 0 30px var(--purple-glow-strong);
     }
 
     .open-arrow { transition: transform 0.2s ease; }

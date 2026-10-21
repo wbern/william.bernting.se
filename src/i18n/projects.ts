@@ -79,7 +79,7 @@ const projectEntries = [
       hook: "Servern fick startas om var 15:e minut. Leverantören var borta, källkoden likaså. Nu står den stadigt.",
       problem: "Ett bokningssystem där boende i bostadsrättsföreningar bokar tvättstuga och gästlägenhet låste sig hela tiden. En del av systemet tog ett lås och släppte det aldrig, så ingen annan användare kom in förrän servern startades om. Felet satt i runt 20 år gamla leverantörsfiler som ingen längre hade källkoden till.",
       did: "Under en helg lät jag en AI-agent översätta filerna tillbaka till läsbar kod. Först skrev jag 19 automatiska kontroller mot de skarpa sajterna, och originalet klarade 8. Sedan lagade jag grundfelet, flera webbplatser som trampade varandra på tårna mot samma gamla komponent, och rullade ut med tre olika sätt att backa.",
-      outcome: "<em>19 av 19 kontroller gröna, på 5 sajter.</em> Inga fler omstarter var 15:e minut. \"Ingen källkod\" visade sig bara vara en startpunkt.",
+      outcome: "<em>19 av 19 kontroller gröna, på 5 sajter.</em> Inga fler omstarter var 15:e minut.",
       facts: [
         { value: "5", label: "sajter lagade" },
         { value: "8 → 19", label: "av 19 tester gröna" },
@@ -94,7 +94,7 @@ const projectEntries = [
       hook: "The server had to be restarted every 15 minutes. The vendor was gone, and so was the source code. Now it just runs.",
       problem: "A booking system where residents of housing associations book laundry rooms and guest flats kept locking up. One part of the system grabbed a lock and never let go, so no other user could get in until the server was restarted. The fault sat in vendor files around 20 years old that nobody had the source code for any more.",
       did: "Over one weekend I had an AI agent turn the files back into readable code. First I wrote 19 automated checks against the live sites, and the original passed 8. Then I fixed the root cause, several websites stepping on each other's toes against the same old component, and rolled out with three different ways to roll back.",
-      outcome: "<em>19 of 19 checks green, across 5 sites.</em> No more restarts every 15 minutes. \"No source code\" turned out to be just a starting point.",
+      outcome: "<em>19 of 19 checks green, across 5 sites.</em> No more restarts every 15 minutes.",
       facts: [
         { value: "5", label: "sites fixed" },
         { value: "8 → 19", label: "of 19 tests passing" },
@@ -149,7 +149,7 @@ const projectEntries = [
       hook: "Ett nedlagt lottningsprogram för schack, flyttat till webben. Första skarpa testet: en regionsfinal med ca 500 barn.",
       problem: "Jag skulle lotta en schackturnering, men programmet gick inte längre att ladda ner. Det hade stått still sedan 2018 och krävde Java på rätt dator, men klubbarna gillar det för att det är enkelt. Det verkliga värdet sitter i lottningsreglerna, och de är förvånansvärt kluriga.",
       did: "Innan jag rörde något spelade jag in över 200 facit från det gamla programmet: hur turneringar ska lottas och räknas. Med det skyddsnätet på plats flyttade jag hela programmet in i webbläsaren och lät facit avgöra när det var klart.",
-      outcome: "Gratis på <em>lotta.bernting.se</em>: ingen installation, ingen inloggning, funkar offline. Domare och publik följer lottningen live i mobilen. Det körde en regionsfinal i Schack4an med <em>ca 500 barn</em>. Och vet ni vad? Det funkade.",
+      outcome: "Gratis på <em>lotta.bernting.se</em>: ingen installation, ingen inloggning, funkar offline. Domare och publik följer lottningen live i mobilen. Det körde en regionsfinal i Schack4an med <em>ca 500 barn</em>. Det funkade.",
       facts: [
         { value: "~500", label: "barn i en regionsfinal" },
         { value: "200+", label: "facit-tester" },
@@ -167,7 +167,7 @@ const projectEntries = [
       hook: "A discontinued chess pairing program, moved to the web. Its first real test: a regional final with about 500 kids.",
       problem: "I needed to pair a chess tournament, but the program could no longer be downloaded. It had been frozen since 2018 and needed Java on the right PC, yet clubs like it because it's simple. Its real value is the pairing rules, and those are surprisingly tricky.",
       did: "Before touching anything I recorded over 200 answer keys from the old program: how tournaments should be paired and scored. With that safety net in place I moved the whole program into the browser and let the answer keys decide when it was done.",
-      outcome: "Free at <em>lotta.bernting.se</em>: no install, no signup, works offline. Referees and spectators follow the pairings live on their phones. It ran a Schack4an regional final with <em>about 500 kids</em>. And you know what? It worked.",
+      outcome: "Free at <em>lotta.bernting.se</em>: no install, no signup, works offline. Referees and spectators follow the pairings live on their phones. It ran a Schack4an regional final with <em>about 500 kids</em>. It worked.",
       facts: [
         { value: "~500", label: "kids at a regional final" },
         { value: "200+", label: "answer-key tests" },
@@ -191,7 +191,7 @@ const projectEntries = [
       hook: "Byggde om framsidan på Telia.se medan butiken var öppen.",
       problem: "Telia.se kunde inte stänga för renovering. Den gamla mallmotorn hade utseende och affärslogik hopflätade, och att skriva om allt på en gång hade stoppat 14 utvecklingsteam.",
       did: "Jag ledde frontend-omställningen för företagsdelen med sex team och designade en arkitektur där gammalt och nytt kunde leva sida vid sida, så att varje team kunde leverera sin del själv. Som lead developer höll jag sedan ihop den gemensamma kodbasen för 14 team och coachade dem varje vecka.",
-      outcome: "<em>Sajten bytte motor bit för bit</em>, utan big bang. Största lärdomen: tekniken var den lätta delen. Att få 14 team att dra åt samma håll var det riktiga jobbet.",
+      outcome: "<em>Sajten bytte motor bit för bit</em>, utan big bang. 14 team i samma kodbas. Det krävde mer coachning än kod.",
       facts: [
         { value: "14", label: "utvecklingsteam" },
         { value: "6", label: "team i B2B-omställningen" },
@@ -206,7 +206,7 @@ const projectEntries = [
       hook: "Rebuilt the front of Telia.se while the shop stayed open.",
       problem: "Telia.se couldn't close for renovation. The old templating engine had look and business logic tangled together, and rewriting everything at once would have stopped 14 development teams.",
       did: "I led the frontend transformation of the business (B2B) side across six teams and designed an architecture where old and new could live side by side, so each team could ship its own part. As lead developer I then kept the shared codebase for 14 teams healthy and coached them every week.",
-      outcome: "<em>The site swapped engines piece by piece</em>, no big bang. The biggest lesson: the tech was the easy part. Getting 14 teams to pull in the same direction was the real job.",
+      outcome: "<em>The site swapped engines piece by piece</em>, no big bang. 14 teams in one codebase. That took more coaching than code.",
       facts: [
         { value: "14", label: "development teams" },
         { value: "6", label: "teams in the B2B move" },
@@ -300,7 +300,7 @@ const projectEntries = [
       hook: "Ett gäng AI-utvecklare i fickan, på en dator stor som en kortlek.",
       problem: "Jag bar runt på laptopen överallt, bara för att kunna sätta igång enkla AI-uppgifter.",
       did: "Jag gjorde en gammal Raspberry Pi till en verkstad som alltid är igång. Jag ger uppdraget från mobilen, med rösten eller i text, och går därifrån. En agent är arbetsledare och startar fler när det finns jobb, var och en inlåst i sin egen sandlåda. Hela uppsättningen byggs upp med ett skript.",
-      outcome: "Första provkörningen: jag bad den leta fram <em>1 000 memes och inte sluta förrän den var klar</em>. 35 minuter senare, medan jag gjorde annat, kom, en notis i mobilen. Steg-för-steg-guiden ligger på kendev.se.",
+      outcome: "Första provkörningen: jag bad den leta fram <em>1 000 memes och inte sluta förrän den var klar</em>. 35 minuter senare, medan jag gjorde annat, kom en notis i mobilen. Steg-för-steg-guiden ligger på kendev.se.",
       facts: [
         { value: "1\u00A0000", label: "memes letade fram i första testet" },
         { value: "35\u00A0min", label: "medan jag gjorde annat" },
@@ -372,7 +372,7 @@ const projectEntries = [
       title: "Vem svarar på LinkedIn?",
       context: "Egen dataanalys · 2025",
       hook: "Säg \"hej\" och hälften tystnar. Dela något användbart och nästan ingen gör det.",
-      problem: "Som enmansbyrå ville jag veta vilka av mina LinkedIn-samtal som faktiskt leder någonstans.",
+      problem: "Som enmansbyrå ville jag veta vilka av mina LinkedIn-samtal som leder någonstans.",
       did: "Jag exporterade mina egna meddelanden och lät AI sortera två månaders samtal, 107 stycken, i 13 typer, från jobberbjudanden till födelsedagshälsningar. Resultatet blev en dashboard med 7 vyer.",
       outcome: "Lärdomen var rak. När jag bara skrev \"hej!\" dog <em>13 av 26</em> samtal direkt. När jag delade något användbart, som mina AI-kommandon, blev <em>1 av 25</em> obesvarat.",
       facts: [
@@ -384,10 +384,10 @@ const projectEntries = [
       links: [],
     },
     en: {
-      title: "Who actually replies?",
+      title: "Who replies on LinkedIn?",
       context: "Own data analysis · 2025",
       hook: "Say \"hi\" and half go quiet. Share something useful and almost nobody does.",
-      problem: "As a one-man consultancy I wanted to know which of my LinkedIn conversations actually lead somewhere.",
+      problem: "As a one-man consultancy I wanted to know which of my LinkedIn conversations lead somewhere.",
       did: "I exported my own messages and had AI sort two months of conversations, 107 of them, into 13 types, from job offers to birthday wishes. The result was a dashboard with 7 views.",
       outcome: "The lesson was blunt. When I just wrote \"hi!\", <em>13 of 26</em> conversations died right there. When I shared something useful, like my AI commands, <em>1 of 25</em> went unanswered.",
       facts: [
@@ -405,7 +405,7 @@ const projectEntries = [
     sv: {
       title: "Från ritning till 3D",
       context: "Eget experiment · 2026",
-      hook: "Stängt filformat: återvändsgränd. Öppet filformat: jag klev in i vårt framtida badrum.",
+      hook: "AutoCAD-filen tog stopp. Med IFC-filen kunde jag kliva in i vårt framtida badrum.",
       problem: "Vi renoverar badrummet, och jag ville stå i det innan någon lyft en hammare. Första försöket var arkitektens AutoCAD-ritning, ett stängt format där mina AI-agenter inte kom någonstans.",
       did: "Sedan skickade arkitekten även en IFC-fil, en öppen standard. Agenterna skrev en konverterare från grunden, och ritningen blev ett 3D-rum där vi byter färger, växlar mellan dag- och kvällsljus och kan kliva in med VR-headset.",
       outcome: "Lärdomen tar jag med mig till kunder: <em>AI är bara så kapabel som formaten du låter den läsa.</em>",
@@ -419,7 +419,7 @@ const projectEntries = [
     en: {
       title: "From blueprint to 3D",
       context: "Own experiment · 2026",
-      hook: "Closed file format: dead end. Open file format: I walked into our future bathroom.",
+      hook: "The AutoCAD file was a dead end. With the IFC file I could walk into our future bathroom.",
       problem: "We're renovating our bathroom, and I wanted to stand in it before anyone picked up a hammer. The first attempt was the architect's AutoCAD drawing, a closed format where my AI agents got nowhere.",
       did: "Then the architect also sent an IFC file, an open standard. The agents wrote a converter from scratch, and the drawing became a 3D room where we swap colours, switch between day and evening light and can walk in with a VR headset.",
       outcome: "The lesson I bring to clients: <em>AI is only as capable as the formats you let it read.</em>",
@@ -440,7 +440,7 @@ const projectEntries = [
       hook: "Skriv ner teamets regler en gång. En AI-granskare kollar sedan varje ändring mot dem.",
       problem: "Alla team har regler av typen \"så gör vi inte här\". Oftast sitter de i någons huvud och följs bara om just den personen råkar granska koden.",
       did: "ADRian gör varje nedskriven regel till en egen AI-granskare. Varje ändring kontrolleras mot alla regler som berör den, innan den ens sparas, med rad och förslag på fix. Det började i ett team på Akka, och nu har jag byggt om det som open source.",
-      outcome: "<em>Mindre tjat i kodgranskningen</em>, och regler som lever i stället för att samla damm. Samma knep styrde en artikel jag skrev: 15 regler, 22 utkast, varje utkast granskat mot varje regel.",
+      outcome: "<em>Mindre tjat i kodgranskningen</em>, och regler som faktiskt följs. Samma knep styrde en artikel jag skrev: 15 regler, 22 utkast, varje utkast granskat mot varje regel.",
       facts: [
         { value: "1 regel", label: "= 1 egen AI-granskare" },
         { value: "Varje", label: "ändring kollad innan den sparas" },
@@ -455,7 +455,7 @@ const projectEntries = [
       hook: "Write your team's rules down once. An AI reviewer then checks every change against them.",
       problem: "Every team has rules like \"we don't do it that way here\". Usually they live in someone's head and are only enforced if that person happens to review your code.",
       did: "ADRian turns each written rule into its own AI reviewer. Every change is checked against every rule that applies, before it is even committed, with the line and a suggested fix. It started in a team at Akka, and I've since rebuilt it as open source.",
-      outcome: "<em>Less nagging in code review</em>, and rules that stay alive instead of gathering dust. The same trick steered an article I wrote: 15 rules, 22 drafts, every draft checked against every rule.",
+      outcome: "<em>Less nagging in code review</em>, and rules that actually get followed. The same trick steered an article I wrote: 15 rules, 22 drafts, every draft checked against every rule.",
       facts: [
         { value: "1 rule", label: "= 1 dedicated AI reviewer" },
         { value: "Every", label: "change checked before it's saved" },

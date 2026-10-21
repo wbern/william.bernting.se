@@ -53,7 +53,7 @@ export const trackEntries: TrackEntry[] = [
     sv: {
       title: "Lära ut AI",
       body: "Kom igång med AI, oavsett ålder, grupp eller yrke.",
-      why: "Halv- eller heldag, anpassat efter var ni faktiskt är. Agentic is for everyone.",
+      why: "Halv- eller heldag, anpassat efter var ni är. Agentic is for everyone.",
       tag: "Workshop · halv/heldag",
       subject: "Spår: AI-workshop",
       cta: "Mejla om en workshop",
@@ -61,7 +61,7 @@ export const trackEntries: TrackEntry[] = [
     en: {
       title: "Teach AI",
       body: "Get started with AI, regardless of age, group or profession.",
-      why: "Half or full day, tailored to where your team actually is. Agentic is for everyone.",
+      why: "Half or full day, tailored to where your team is. Agentic is for everyone.",
       tag: "Workshop · half/full day",
       subject: "Track: AI workshop",
       cta: "Email me about a workshop",

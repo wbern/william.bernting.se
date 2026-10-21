@@ -123,8 +123,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "Jag jobbar i tre spår: jag <strong>lär ut</strong> hur man kommer igång med AI — oavsett ålder, grupp eller yrke. Jag <strong>dyker in</strong> i legacysystem som krånglar eller tyst genererar pengar varje år. Och jag <strong>bygger</strong> det du faktiskt vill ha — till ett fast pris, tillsammans med mitt nätverk.",
-        "Ett internt verktyg jag byggde på HPE växte organiskt till <strong>5 000 aktiva användare</strong> — jag levererar mjukvara som folk faktiskt använder. Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong>. Hör av dig så pratar vi om vilket spår som passar.",
+        "Jag jobbar i tre spår: jag <strong>lär ut</strong> hur man kommer igång med AI, oavsett ålder, grupp eller yrke. Jag <strong>dyker in</strong> i legacysystem som krånglar eller tyst genererar pengar varje år. Och jag <strong>bygger</strong> det du faktiskt vill ha, till ett fast pris och tillsammans med mitt nätverk.",
+        "Ett internt verktyg jag byggde på HPE växte organiskt till <strong>5 000 aktiva användare</strong>. Jag bygger mjukvara som folk använder. Starkast inom <strong>Engineering</strong>, med praktisk erfarenhet inom <strong>Produkt</strong> och <strong>UX</strong>. Hör av dig så pratar vi om vilket spår som passar.",
       ],
     },
     jobs: [
@@ -160,7 +160,7 @@ const cv: Record<Lang, CvData> = {
           "Gav <strong>personlig coachning</strong> till teamets utvecklare, vilket ledde till att de tog mer ägarskap och ställde rätt frågor.",
           "Deltog i <strong>rekrytering och onboarding av 4 nya teammedlemmar</strong>.",
           "Introducerade en <strong>headless CMS-arkitektur</strong> med en <strong>content-first-strategi</strong> som accelererade utvecklingen på ett hållbart sätt.",
-          "Högsta individuella output i ett <strong>11-personersteam</strong> — levererade headless CMS, sökfunktioner och kampanjsidor i hög takt.",
+          "Högsta individuella output i ett <strong>11-personersteam</strong>. Levererade headless CMS, sökfunktioner och kampanjsidor i hög takt.",
         ],
       },
       {
@@ -172,7 +172,7 @@ const cv: Record<Lang, CvData> = {
         techStack: ["Angular", "Next.js", "TypeScript", "WordPress", "AWS", "PHP", "DevOps"],
         bullets: [
           "Byggde upp utvecklingsavdelningen: <strong>rekryterade 6 utvecklare/UX-proffs inom 6 månader</strong>, från jobbannons till signerat kontrakt.",
-          "Drev <strong>teknisk strategi över 7 klientprodukter</strong> parallellt — från underhåll till MVP-lanseringar.",
+          "Drev <strong>teknisk strategi över 7 klientprodukter</strong> parallellt, från underhåll till MVP-lanseringar.",
           "Levererade resultat genom <strong>10 fullstack-utvecklare</strong> i 2 team med högt samarbete mellan produkt, utveckling och UX.",
         ],
       },
@@ -221,7 +221,7 @@ const cv: Record<Lang, CvData> = {
         location: "Göteborg, Sverige",
         techStack: ["C#", "TypeScript", "AutoIt", "PHP"],
         bullets: [
-          "Byggde <strong>8 interna verktyg</strong> som ökade produktiviteten — ett av dem växte till <strong>5 000 aktiva användare</strong> och nominerades till ett internt företagspris.",
+          "Byggde <strong>8 interna verktyg</strong> som ökade produktiviteten. Ett av dem växte till <strong>5 000 aktiva användare</strong> och nominerades till ett internt företagspris.",
           "Ledde <strong>10 kundtjänstagenter</strong> på den nordiska marknaden.",
         ],
       },
@@ -258,8 +258,8 @@ const cv: Record<Lang, CvData> = {
         { icon: "web", text: "kendev.se", href: "https://kendev.se" },
       ],
       intro: [
-        "I work in three tracks: I <strong>teach</strong> people how to get started with AI — regardless of age, group, or profession. I <strong>dive into</strong> legacy systems that misbehave or quietly drive revenue every year. And I <strong>build</strong> what you actually want — at a fixed price, together with my network.",
-        "An internal tool I built at HPE grew organically to <strong>5,000 active users</strong> — I ship software people actually use. Strongest in <strong>Engineering</strong>, with hands-on experience in <strong>Product</strong> and <strong>UX</strong>. Reach out and let\u2019s talk about which track fits.",
+        "I work in three tracks: I <strong>teach</strong> people how to get started with AI, regardless of age, group, or profession. I <strong>dive into</strong> legacy systems that misbehave or quietly drive revenue every year. And I <strong>build</strong> what you actually want, at a fixed price and together with my network.",
+        "An internal tool I built at HPE grew organically to <strong>5,000 active users</strong>. I build software people use. Strongest in <strong>Engineering</strong>, with hands-on experience in <strong>Product</strong> and <strong>UX</strong>. Reach out and let\u2019s talk about which track fits.",
       ],
     },
     jobs: [
@@ -295,7 +295,7 @@ const cv: Record<Lang, CvData> = {
           "Provided <strong>personal coaching</strong> to the team\u2019s developers, which led them to take more ownership and ask the right questions.",
           "Participated in <strong>recruitment and onboarding of 4 new team members</strong>.",
           "Introduced a <strong>headless CMS architecture</strong> with a <strong>content-first strategy</strong> that accelerated development in a sustainable way.",
-          "Highest individual output in an <strong>11-person team</strong> — shipped headless CMS, search features, and campaign pages at a rapid pace.",
+          "Highest individual output in an <strong>11-person team</strong>. Shipped headless CMS, search features, and campaign pages at a rapid pace.",
         ],
       },
       {
@@ -307,7 +307,7 @@ const cv: Record<Lang, CvData> = {
         techStack: ["Angular", "Next.js", "TypeScript", "WordPress", "AWS", "PHP", "DevOps"],
         bullets: [
           "Built the dev department: <strong>recruited 6 developers/UX professionals within 6 months</strong>, from job posting to signed contract.",
-          "Drove <strong>technical strategy across 7 client products</strong> in parallel — from maintenance to MVP launches.",
+          "Drove <strong>technical strategy across 7 client products</strong> in parallel, from maintenance to MVP launches.",
           "Delivered results through <strong>10 full-stack developers</strong> across 2 teams with tight collaboration between product, engineering, and UX.",
         ],
       },
@@ -356,7 +356,7 @@ const cv: Record<Lang, CvData> = {
         location: "Gothenburg, Sweden",
         techStack: ["C#", "TypeScript", "AutoIt", "PHP"],
         bullets: [
-          "Built <strong>8 internal tools</strong> that boosted productivity — one grew to <strong>5,000 active users</strong> and earned a company-wide presidential nomination.",
+          "Built <strong>8 internal tools</strong> that boosted productivity. One grew to <strong>5,000 active users</strong> and earned a company-wide presidential nomination.",
           "Led <strong>10 customer support agents</strong> serving the Nordic markets.",
         ],
       },

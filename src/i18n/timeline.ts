@@ -45,7 +45,7 @@ const stories: Record<string, StoryEntry> = {
       headline: "Nu: lär ut AI, dyker in i legacy, bygger det du vill ha.",
       bullets: [
         "<strong>Legacy:</strong> lagade ett program utan källkod som tvingade Locksafe att starta om servern var 15:e minut.",
-        "<strong>Bygga:</strong> flyttade ett gammalt lottningsprogram för schack till webben — det körde en regionfinal i Schack4an med ~500 barn.",
+        "<strong>Bygga:</strong> flyttade ett gammalt lottningsprogram för schack till webben. Det körde en regionfinal i Schack4an med ~500 barn.",
         "<strong>AI:</strong> lät skolbarn vibe-coda sina egna spel. Alla går att spela på vibecoding.bernting.se.",
         "<strong>Produkt:</strong> grundare och CTO för Slay CRM, ett lättanvänt CRM för team i farten. Väntelista på slaycrm.eu.",
       ],
@@ -57,7 +57,7 @@ const stories: Record<string, StoryEntry> = {
       headline: "Now: teaching AI, diving into legacy, building what you want.",
       bullets: [
         "<strong>Legacy:</strong> fixed software with no source code that forced Locksafe to restart their server every 15 minutes.",
-        "<strong>Build:</strong> moved an old chess pairing program to the web — it ran a Schack4an regional final with ~500 kids.",
+        "<strong>Build:</strong> moved an old chess pairing program to the web. It ran a Schack4an regional final with ~500 kids.",
         "<strong>AI:</strong> had school kids vibe-code their own games. Every one of them is playable at vibecoding.bernting.se.",
         "<strong>Product:</strong> founder and CTO of Slay CRM, an easy-to-use CRM for teams on the go. Waitlist at slaycrm.eu.",
       ],
@@ -89,8 +89,8 @@ const stories: Record<string, StoryEntry> = {
   hedin: {
     sv: {
       period: "mar – aug 2025",
-      context: "Hedin IT, en del av Hedin Automotive — internationell bilhandlare och importör.",
-      headline: "Leveranser utan buggar — och ett team som började jobba som ett.",
+      context: "Hedin IT, en del av Hedin Automotive, en internationell bilhandlare och importör.",
+      headline: "Buggfria leveranser. Teamet började jobba ihop på riktigt.",
       stat: { value: "90 %", unit: "testdrivet" },
       bullets: [
         "Testdriven utveckling i 90 % av arbetet: testerna skrivs först, så felen hittas innan någon annan gör det.",
@@ -99,8 +99,8 @@ const stories: Record<string, StoryEntry> = {
     },
     en: {
       period: "Mar – Aug 2025",
-      context: "Hedin IT, part of Hedin Automotive — an international car dealer and importer.",
-      headline: "Bug-free deliveries — and a team that started working as one.",
+      context: "Hedin IT, part of Hedin Automotive, an international car dealer and importer.",
+      headline: "Bug-free deliveries. The team started really working together.",
       stat: { value: "90%", unit: "test-driven" },
       bullets: [
         "Test-driven development in 90% of the work: the tests come first, so bugs are caught before anyone else finds them.",
@@ -111,23 +111,23 @@ const stories: Record<string, StoryEntry> = {
   sembo: {
     sv: {
       period: "maj 2023 – mar 2025",
-      context: "Resebyrå på nätet. Min första kund som frilansare — började som utvecklare, blev tech lead.",
-      headline: "Högst individuell output i ett team på 11 — och coachade resten.",
+      context: "Resebyrå på nätet. Min första kund som frilansare. Började som utvecklare, blev tech lead.",
+      headline: "Levererade mest i ett team på 11, och coachade de andra.",
       stat: { value: "11", unit: "i teamet" },
       bullets: [
         "Personlig coachning som fick utvecklarna att ta mer ägarskap. Var med och rekryterade och introducerade 4 nya.",
-        "Införde ett nytt sätt att hantera sajtens innehåll som gjorde att utvecklingen gick snabbare — på ett hållbart sätt.",
+        "Införde ett nytt sätt att hantera sajtens innehåll som gjorde att utvecklingen gick snabbare.",
       ],
       chip: "Blev frilans",
     },
     en: {
       period: "May 2023 – Mar 2025",
-      context: "Online travel agency. My first client as a freelancer — started as a developer, became tech lead.",
-      headline: "Highest individual output in a team of 11 — while coaching the rest.",
+      context: "Online travel agency. My first client as a freelancer. Started as a developer, became tech lead.",
+      headline: "Shipped the most in a team of 11, and coached the others.",
       stat: { value: "11", unit: "in the team" },
       bullets: [
         "Personal coaching that got the developers taking more ownership. Helped recruit and onboard 4 new people.",
-        "Introduced a new way to manage the site's content that sped up development — sustainably.",
+        "Introduced a new way to manage the site's content that sped up development.",
       ],
       chip: "Went freelance",
     },
@@ -141,7 +141,7 @@ const stories: Record<string, StoryEntry> = {
       headline: "Byggde upp en utvecklingsavdelning.",
       stat: { value: "6", unit: "anställda på 6 mån" },
       bullets: [
-        "Rekryterade 6 utvecklare och UX-proffs på 6 månader — från jobbannons till påskrivet kontrakt.",
+        "Rekryterade 6 utvecklare och UX-proffs på 6 månader, från jobbannons till påskrivet kontrakt.",
         "Ansvarade för tekniken i 7 kundprodukter samtidigt, med 10 utvecklare i 2 team.",
       ],
       chip: "Byggde en avdelning",
@@ -152,7 +152,7 @@ const stories: Record<string, StoryEntry> = {
       headline: "Built up a dev department.",
       stat: { value: "6", unit: "hires in 6 months" },
       bullets: [
-        "Hired 6 developers and UX people in 6 months — from job ad to signed contract.",
+        "Hired 6 developers and UX people in 6 months, from job ad to signed contract.",
         "Ran the tech for 7 client products at once, with 10 developers across 2 teams.",
       ],
       chip: "Built a department",
@@ -161,7 +161,7 @@ const stories: Record<string, StoryEntry> = {
   "telia-lead": {
     sv: {
       period: "feb 2021 – apr 2022",
-      context: "Telia Sverige — alla team bakom telia.se.",
+      context: "Telia Sverige, alla team bakom telia.se.",
       headline: "Den 14 team vände sig till.",
       stat: { value: "14", unit: "team" },
       bullets: [
@@ -171,7 +171,7 @@ const stories: Record<string, StoryEntry> = {
     },
     en: {
       period: "Feb 2021 – Apr 2022",
-      context: "Telia Sweden — every team behind telia.se.",
+      context: "Telia Sweden, every team behind telia.se.",
       headline: "The engineer 14 teams leaned on.",
       stat: { value: "14", unit: "teams" },
       bullets: [
@@ -184,7 +184,7 @@ const stories: Record<string, StoryEntry> = {
   "telia-senior": {
     sv: {
       period: "aug 2020 – feb 2021",
-      context: "Telia Sverige — företagsdelen av telia.se.",
+      context: "Telia Sverige, företagsdelen av telia.se.",
       headline: "Ny grund för Telias företagssidor, byggd för 6 team samtidigt.",
       stat: { value: "6", unit: "team" },
       bullets: [
@@ -194,7 +194,7 @@ const stories: Record<string, StoryEntry> = {
     },
     en: {
       period: "Aug 2020 – Feb 2021",
-      context: "Telia Sweden — the business side of telia.se.",
+      context: "Telia Sweden, the business side of telia.se.",
       headline: "A new foundation for Telia's business pages, built for 6 teams at once.",
       stat: { value: "6", unit: "teams" },
       bullets: [
@@ -208,7 +208,7 @@ const stories: Record<string, StoryEntry> = {
     sv: {
       period: "feb 2017 – aug 2020",
       context: "IT-konsultbolag. Mitt första jobb som utvecklare på heltid.",
-      headline: "Skrev om ett helt system — ensam.",
+      headline: "Skrev om ett helt system själv.",
       bullets: [
         "En kund satt fast i ett egenbyggt ramverk som inte orkade växa. Jag byggde om alltihop i modern teknik (React).",
         "Hoppade mellan kunder och lärde mig webbens tre stora ramverk på riktigt: React, Angular och Vue.",
@@ -217,7 +217,7 @@ const stories: Record<string, StoryEntry> = {
     en: {
       period: "Feb 2017 – Aug 2020",
       context: "IT consultancy. My first full-time developer job.",
-      headline: "Rewrote an entire system — single-handedly.",
+      headline: "Rewrote an entire system on my own.",
       bullets: [
         "A client was stuck on a home-built framework that couldn't grow. I rebuilt the whole thing on modern tech (React).",
         "Moved between clients and properly learned the web's three big frameworks: React, Angular and Vue.",
@@ -232,7 +232,7 @@ const stories: Record<string, StoryEntry> = {
       stat: { value: "5 000", unit: "användare" },
       bullets: [
         "Började som dispatcher och blev den kollegorna gick till med tekniken. Till slut ledde jag 10 supportagenter i Norden.",
-        "Efter ett jobbigt CRM-byte byggde jag ett tillägg som gjorde vardagen lättare. Ingen tvingades — det spred sig av sig självt, fick ett eget utvecklarteam och nominerades till ett företagspris.",
+        "Efter ett jobbigt CRM-byte byggde jag ett tillägg som gjorde vardagen lättare. Ingen tvingades. Det spred sig ändå, fick ett eget utvecklarteam och nominerades till ett företagspris.",
       ],
       chip: "5 000 användare",
     },
@@ -243,7 +243,7 @@ const stories: Record<string, StoryEntry> = {
       stat: { value: "5,000", unit: "users" },
       bullets: [
         "Started as a dispatcher and became the person colleagues went to with tech problems. Ended up leading 10 support agents across the Nordics.",
-        "After a painful CRM switch I built an add-on that made the day easier. Nobody was told to install it — it spread on its own, got its own dev team and a company-wide award nomination.",
+        "After a painful CRM switch I built an add-on that made the day easier. Nobody was told to install it. It spread anyway, got its own dev team and a company-wide award nomination.",
       ],
       chip: "5,000 users",
     },

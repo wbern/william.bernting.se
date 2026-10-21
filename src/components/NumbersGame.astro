@@ -797,11 +797,10 @@ const stats = STAT_LADDER.map(({ tile, key }) => ({
         position: relative;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-left: 3px solid var(--c);
         border-radius: 14px;
-        padding: 18px 20px 18px 22px;
+        padding: 18px 20px;
         min-height: 168px;
-        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        transition: border-color 0.3s ease;
     }
 
     .numbers-reveal[data-tier="1"] { --c: var(--tier-1); }
@@ -872,9 +871,9 @@ const stats = STAT_LADDER.map(({ tile, key }) => ({
     }
 
     @keyframes reveal-in {
-        0%   { transform: translateY(8px) scale(0.98); box-shadow: 0 0 0 0 transparent; }
-        40%  { transform: translateY(0) scale(1.01); box-shadow: 0 0 40px -6px color-mix(in srgb, var(--c) 55%, transparent); }
-        100% { transform: none; box-shadow: 0 0 0 0 transparent; }
+        0%   { transform: translateY(8px) scale(0.98); }
+        40%  { transform: translateY(0) scale(1.01); }
+        100% { transform: none; }
     }
 
     /* ---- Progress + chips ---- */
