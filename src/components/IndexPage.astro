@@ -260,6 +260,14 @@ const t = useTranslations(lang);
             if (target !== null) slider.moveToIdx(target);
         }).observe(sliderEl);
 
+        // Slides only ever scroll vertically. overflow-x: hidden still lets
+        // focus()/scrollIntoView shove a slide sideways and clip its left edge;
+        // undo any such shift immediately.
+        sliderEl.addEventListener("scroll", (e) => {
+            const el = e.target;
+            if (el instanceof HTMLElement && el.scrollLeft !== 0) el.scrollLeft = 0;
+        }, { capture: true, passive: true });
+
         // Deep link: if URL has a hash, navigate to projects slide
         if (location.hash) {
             requestAnimationFrame(() => {

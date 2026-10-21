@@ -1,6 +1,6 @@
 ---
 /**
- * Overlays for the mask themes (see MaskTray.astro + styles/masks.css).
+ * Overlays for the mask themes (see Masks.astro + styles/masks.css).
  * Both shells are display:none until html[data-mask] matches, and the
  * script only wakes up when a mask is actually worn.
  */
@@ -34,7 +34,9 @@ const rain = RAIN.map((e, i) => ({
     <div class="vhs-noise"></div>
     <div class="vhs-tint"></div>
     <div class="vhs-edge"></div>
-    <div class="vhs-band"></div>
+    <!-- tracking bands: stacked stripes with independent sideways tearing; no brightness strobing -->
+    <div class="vhs-band vhs-band--a"><i style="--f:3;--amp:14px;--t:0.7s"></i><i style="--f:1;--amp:-26px;--t:0.45s"></i><i style="--f:2;--amp:9px;--t:0.9s"></i><i style="--f:1.5;--amp:-18px;--t:0.55s"></i><i style="--f:2.5;--amp:22px;--t:0.8s"></i></div>
+    <div class="vhs-band vhs-band--b"><i style="--f:1;--amp:-20px;--t:0.5s"></i><i style="--f:2;--amp:12px;--t:0.65s"></i></div>
     <div class="vhs-osd vhs-play">▶ {t("vhs.play")}</div>
     <div class="vhs-osd vhs-rec"><b>●</b> {t("vhs.rec")} <span data-vhs-counter>SP 0:00:00</span></div>
     <div class="vhs-osd vhs-stamp">{t("vhs.date")}<small>PM 4:32</small></div>

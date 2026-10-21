@@ -17,7 +17,8 @@
     --kendev: 'Roboto', 'Inter', system-ui, sans-serif;
 }
 
-html { scroll-behavior: smooth; background: var(--bg); }
+/* overflow-x: clip — the viewport must never scroll sideways, not even programmatically */
+html { scroll-behavior: smooth; background: var(--bg); overflow-x: clip; }
 
 body {
     font-family: var(--sans);

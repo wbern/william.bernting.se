@@ -4,9 +4,11 @@ import type { TraitRow } from "../i18n/traits";
 interface Props {
     rows: TraitRow[];
     class?: string;
+    /** Optional mask id per row: the mask rides along in that row like a word (see Masks.astro). */
+    masks?: (string | undefined)[];
 }
 
-const { rows, class: className } = Astro.props;
+const { rows, class: className, masks = [] } = Astro.props;
 
 /**
  * Each half of the track repeats the row this many times, so a half is
@@ -21,7 +23,7 @@ const REPEAT = 3;
     traits and captions are rendered as an sr-only list in Hero.astro.
 -->
 <div class:list={["marquee-field", className]} aria-hidden="true">
-    {rows.map((row) => (
+    {rows.map((row, rowIndex) => (
         <div
             class:list={["marquee-row", `marquee-row--${row.speed}`, { "marquee-row--reverse": row.reverse }]}
             data-track={row.track}
@@ -30,14 +32,23 @@ const REPEAT = 3;
             <div class={`marquee-track marquee-track--${row.size}`}>
                 {[0, 1].map(() => (
                     <div class="marquee-set">
-                        {Array.from({ length: REPEAT }).flatMap(() =>
-                            row.items.map((item) => (
+                        {Array.from({ length: REPEAT }).flatMap(() => [
+                            ...row.items.map((item) => (
                                 <>
                                     <span class="marquee-item" data-trait={item.id} data-caption={item.caption}>{item.label}</span>
                                     <span class="marquee-sep">◆</span>
                                 </>
                             )),
-                        )}
+                            // One mask per repetition so it drifts past every ~20s even on narrow screens
+                            masks[rowIndex] ? (
+                                <>
+                                    <span class="marquee-mask" data-mask-slot={masks[rowIndex]} data-keen-slider-clickable>
+                                        <svg class="mask-art"><use href={`#mask-${masks[rowIndex]}`} /></svg>
+                                    </span>
+                                    <span class="marquee-sep">◆</span>
+                                </>
+                            ) : null,
+                        ])}
                     </div>
                 ))}
             </div>

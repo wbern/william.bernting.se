@@ -1,9 +1,12 @@
 ---
 /**
- * Mask tray: three carved masks (past / present / future). Drag one up onto
- * the greeting above the name to re-theme the whole site; drop it anywhere
- * else and it springs back. The theme itself lives in styles/masks.css and
- * MaskThemes.astro — this file only owns the masks and the equip interaction.
+ * Masks: three carved masks (past / present / future) ride along in the
+ * hero's marquee rows like words (rendered by MarqueeField.astro from the
+ * sprite below). Drag one up onto the greeting above the name to re-theme
+ * the whole site; drop it anywhere else and it springs back. Keyboard users
+ * get the chips in Hero.astro ([data-mask-key]). The themes themselves live
+ * in styles/masks.css and MaskThemes.astro; this file owns the artwork and
+ * the equip interaction.
  */
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
@@ -18,7 +21,7 @@ const masks = [
 ] as const;
 ---
 
-<!-- Mask artwork: original designs, referenced via <use> by the tray, the ghost and the worn slot -->
+<!-- Mask artwork: original designs, referenced via <use> by the marquee rows, the chips, the ghost and the worn slot -->
 <svg class="mask-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
     <defs>
         <linearGradient id="mk-wood" x1="0" y1="0" x2="1" y2="1">
@@ -92,21 +95,8 @@ const masks = [
     </defs>
 </svg>
 
-<div class="mask-tray" data-mask-tray role="group" aria-label={t("mask.tray")}>
-    {masks.map((m) => (
-        <button
-            type="button"
-            class="mask-slot"
-            data-mask-slot={m.id}
-            data-keen-slider-clickable
-            aria-pressed="false"
-            aria-label={t("mask.wear").replace("{name}", m.label)}
-        >
-            <svg class="mask-art" aria-hidden="true"><use href={`#mask-${m.id}`} /></svg>
-            <span class="mask-tip" aria-hidden="true">{m.label}</span>
-        </button>
-    ))}
-</div>
+<!-- Hover label for the marquee masks (fixed, so the row's overflow can't clip it) -->
+<span class="mask-tip" data-mask-tip aria-hidden="true"></span>
 <p class="sr-only" aria-live="polite" data-mask-live></p>
 
 <script
@@ -125,20 +115,23 @@ const masks = [
     const KEY = "wb-mask";
 
     function initMasks() {
-        const tray = document.querySelector<HTMLElement>("[data-mask-tray]");
+        const hero = document.querySelector<HTMLElement>("[data-hero]");
         const zone = document.querySelector<HTMLElement>("[data-mask-zone]");
         const worn = document.querySelector<HTMLButtonElement>("[data-mask-worn]");
         const wornUse = worn?.querySelector<SVGUseElement>("[data-mask-use]");
         const live = document.querySelector<HTMLElement>("[data-mask-live]");
-        if (!tray || !zone || !worn || !wornUse) return;
+        const tip = document.querySelector<HTMLElement>("[data-mask-tip]");
+        if (!hero || !zone || !worn || !wornUse) return;
 
         const i18n = JSON.parse(document.getElementById("mask-i18n")?.textContent ?? "{}") as {
             names: Record<MaskId, string>;
             on: string;
             off: string;
         };
-        const slots = new Map<MaskId, HTMLButtonElement>();
-        tray.querySelectorAll<HTMLButtonElement>("[data-mask-slot]").forEach((b) => slots.set(b.dataset.maskSlot as MaskId, b));
+        // Marquee copies (several per row, decorative) and the keyboard chips
+        const slots = [...hero.querySelectorAll<HTMLElement>("[data-mask-slot]")];
+        const keys = [...hero.querySelectorAll<HTMLButtonElement>("[data-mask-key]")];
+        const idOf = (el: HTMLElement) => (el.dataset.maskSlot ?? el.dataset.maskKey) as MaskId;
         const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
         // ---------- state ----------
@@ -149,10 +142,11 @@ const masks = [
 
         function render() {
             const m = current();
-            slots.forEach((btn, id) => {
-                btn.setAttribute("aria-pressed", String(id === m));
-                btn.classList.toggle("is-worn", id === m);
-            });
+            for (const el of slots) el.classList.toggle("is-worn", idOf(el) === m);
+            for (const btn of keys) {
+                btn.setAttribute("aria-pressed", String(idOf(btn) === m));
+                btn.classList.toggle("is-worn", idOf(btn) === m);
+            }
             zone.classList.toggle("is-worn", !!m);
             worn.hidden = !m;
             if (m) wornUse.setAttribute("href", `#mask-${m}`);
@@ -175,7 +169,7 @@ const masks = [
             document.dispatchEvent(new CustomEvent("mask-change", { detail: { mask: next, previous: prev } }));
         }
 
-        // Majora moment: the mask snaps on, the screen flashes and jolts.
+        // Majora moment: the mask snaps on, the screen flashes once and jolts.
         function transformFx(mask: MaskId) {
             worn.classList.remove("is-equipping");
             void worn.offsetWidth;
@@ -191,6 +185,22 @@ const masks = [
                 document.documentElement.classList.remove("mask-jolt");
             }, 700);
         }
+
+        // ---------- hover: pause the row, show the label ----------
+        function rowOf(el: HTMLElement) { return el.closest<HTMLElement>(".marquee-row"); }
+        function showTip(el: HTMLElement) {
+            if (!tip) return;
+            const r = el.getBoundingClientRect();
+            const above = rowOf(el)?.closest("[data-marquee-wrap]")?.getAttribute("data-marquee-wrap") !== "top";
+            tip.textContent = i18n.names[idOf(el)];
+            tip.classList.add("is-visible");
+            const tr = tip.getBoundingClientRect();
+            let left = r.left + r.width / 2 - tr.width / 2;
+            left = Math.max(8, Math.min(left, innerWidth - tr.width - 8));
+            tip.style.left = `${left}px`;
+            tip.style.top = `${above ? r.top - tr.height - 8 : r.bottom + 8}px`;
+        }
+        function hideTip() { tip?.classList.remove("is-visible"); }
 
         // ---------- drag ----------
         type Drag = {
@@ -215,7 +225,7 @@ const masks = [
             const r = zone.getBoundingClientRect();
             // Generous target: the greeting is small, the face outline grows into it
             const pad = 34;
-            return { left: r.left - pad, top: r.top - pad - 10, right: r.right + pad, bottom: r.bottom + pad, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+            return { left: r.left - pad, top: r.top - pad - 18, right: r.right + pad, bottom: r.bottom + pad, cx: r.left + r.width / 2, cy: r.top + r.height / 2 - 8 };
         }
 
         function makeGhost(id: MaskId) {
@@ -242,6 +252,7 @@ const masks = [
         function onPointerDown(e: PointerEvent, id: MaskId, source: HTMLElement, fromWorn: boolean) {
             if (e.button !== 0 || drag) return;
             drag = { id, pointerId: e.pointerId, source, fromWorn, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, active: false, over: false, ghost: null, raf: 0 };
+            rowOf(source)?.classList.add("is-paused");
             try { source.setPointerCapture(e.pointerId); } catch {}
         }
 
@@ -251,6 +262,7 @@ const masks = [
             d.source.classList.add("is-dragging");
             document.documentElement.classList.add("mask-dragging");
             zone.classList.add("is-target");
+            hideTip();
             placeGhost(d);
         }
 
@@ -278,8 +290,10 @@ const masks = [
             if (!d) return;
             drag = null;
             try { d.source.releasePointerCapture(d.pointerId); } catch {}
+            const unpause = () => { if (!d.source.matches(":hover")) rowOf(d.source)?.classList.remove("is-paused"); };
             if (!d.active) {
                 // plain click / tap
+                unpause();
                 if (!cancelled) {
                     if (d.fromWorn) setMask(null);
                     else setMask(d.id === current() ? null : d.id);
@@ -295,28 +309,38 @@ const masks = [
             if (d.over && !cancelled) {
                 // dropped on the face: equip (or keep the worn one in place)
                 ghost.remove();
+                unpause();
                 if (d.fromWorn) render();
                 else setMask(d.id);
                 return;
             }
             if (d.fromWorn && !cancelled) {
-                // pulled the mask off: remove and spring it to its tray slot
+                // pulled the mask off: remove and spring it to a marquee copy
                 setMask(null);
             }
-            springBack(ghost, d.fromWorn ? slots.get(d.id)! : d.source);
+            springBack(ghost, d.fromWorn ? visibleSlot(d.id) ?? d.source : d.source, unpause);
         }
 
-        function springBack(ghost: HTMLElement, target: HTMLElement) {
+        /** A marquee copy of this mask that is currently on screen, if any. */
+        function visibleSlot(id: MaskId): HTMLElement | null {
+            return slots.find((el) => {
+                if (idOf(el) !== id) return false;
+                const r = el.getBoundingClientRect();
+                return r.left >= 0 && r.right <= innerWidth;
+            }) ?? null;
+        }
+
+        function springBack(ghost: HTMLElement, target: HTMLElement, done: () => void) {
             const r = target.getBoundingClientRect();
             const from = ghost.style.transform;
-            const to = `translate3d(${r.left + r.width / 2 - GHOST / 2}px, ${r.top + r.height / 2 - GHOST / 2}px, 0) scale(0.6) rotate(0deg)`;
-            if (reduceMotion || !ghost.animate) { ghost.remove(); return; }
+            const to = `translate3d(${r.left + r.width / 2 - GHOST / 2}px, ${r.top + r.height / 2 - GHOST / 2}px, 0) scale(0.5) rotate(0deg)`;
+            if (reduceMotion || !ghost.animate) { ghost.remove(); done(); return; }
             const anim = ghost.animate(
                 [{ transform: from, opacity: 1 }, { transform: to, opacity: 0.2 }],
                 { duration: 380, easing: "cubic-bezier(.2,.8,.3,1.15)", fill: "forwards" },
             );
-            anim.onfinish = () => ghost.remove();
-            anim.oncancel = () => ghost.remove();
+            anim.onfinish = () => { ghost.remove(); done(); };
+            anim.oncancel = () => { ghost.remove(); done(); };
         }
 
         // Keen-slider listens to mousedown/touchstart on its container, so stop
@@ -333,15 +357,25 @@ const masks = [
             el.addEventListener("lostpointercapture", () => { if (drag?.active) finishDrag(true); });
         }
 
-        slots.forEach((btn, id) => {
-            shield(btn);
-            btn.addEventListener("pointerdown", (e) => onPointerDown(e, id, btn, false));
-            // Keyboard: Enter/Space fire click without a preceding pointerdown
-            btn.addEventListener("click", (e) => {
-                if (e.detail !== 0) return; // pointer clicks are handled in finishDrag
-                setMask(id === current() ? null : id);
+        for (const el of slots) {
+            shield(el);
+            el.addEventListener("pointerdown", (e) => onPointerDown(e, idOf(el), el, false));
+            el.addEventListener("pointerenter", (e) => {
+                if (e.pointerType !== "mouse" || drag) return;
+                rowOf(el)?.classList.add("is-paused");
+                showTip(el);
             });
-        });
+            el.addEventListener("pointerleave", (e) => {
+                if (e.pointerType !== "mouse" || drag) return;
+                rowOf(el)?.classList.remove("is-paused");
+                hideTip();
+            });
+            // the marquee is aria-hidden; its click is the pointer path (no keyboard here)
+            el.addEventListener("click", (e) => e.stopPropagation());
+        }
+        for (const btn of keys) {
+            btn.addEventListener("click", () => setMask(idOf(btn) === current() ? null : idOf(btn)));
+        }
 
         shield(worn);
         worn.addEventListener("pointerdown", (e) => { const m = current(); if (m) onPointerDown(e, m, worn, true); });
@@ -353,6 +387,7 @@ const masks = [
             if (drag) { finishDrag(true); return; }
             if (current() && document.activeElement && zone.contains(document.activeElement)) setMask(null);
         });
+        document.addEventListener("slide-changed", hideTip);
 
         render();
         // Let the theme layer know about the persisted mask (applied pre-paint by the layout)

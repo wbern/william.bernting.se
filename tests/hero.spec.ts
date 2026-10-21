@@ -39,11 +39,17 @@ for (const locale of LOCALES) {
     test("hover/tap on a marquee word shows its caption and pauses the row", async ({ page }, testInfo) => {
       await page.goto(locale.prefix + "/");
       await page.waitForTimeout(1600);
-      const item = page.locator('.hero-marquee-bottom .marquee-item').nth(1);
-      // The tap goes to page coordinates, so the marquee row must really be on screen.
+      // The tap goes to page coordinates, so the marquee row must really be on screen,
+      // and the word itself must be inside the viewport (the rows scroll; pick one that is).
       await expect(page.locator(".hero-marquee-bottom .marquee-field")).toBeInViewport({ ratio: 0.5 });
+      const idx = await page.evaluate(() => {
+        const items = [...document.querySelectorAll<HTMLElement>(".hero-marquee-bottom .marquee-item")];
+        return items.findIndex((el) => { const r = el.getBoundingClientRect(); return r.left > 24 && r.right < innerWidth - 24; });
+      });
+      expect(idx, "a marquee word is on screen").toBeGreaterThanOrEqual(0);
+      const item = page.locator('.hero-marquee-bottom .marquee-item').nth(idx);
       const box = (await item.boundingBox())!;
-      const x = Math.min(Math.max(box.x + box.width / 2, 40), page.viewportSize()!.width - 60);
+      const x = box.x + box.width / 2;
       const y = box.y + box.height / 2;
       if (testInfo.project.name === "mobile") await page.touchscreen.tap(x, y);
       else await page.mouse.move(x, y);

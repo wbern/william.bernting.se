@@ -316,7 +316,8 @@ const rungAria = (r: (typeof ladder)[number]) =>
 
     .skills-canvas.aim { cursor: pointer; }
     .skills-canvas:focus { outline: none; }
-    .skills-canvas:focus-visible { outline: 1px dashed var(--text-muted); outline-offset: -1px; border-radius: 8px; }
+    /* Keyboard focus only: pointer presses focus the canvas too (for the arrow keys) but set data-pointer-focus */
+    .skills-canvas:focus-visible:not([data-pointer-focus]) { outline: 1px dashed var(--text-muted); outline-offset: -1px; border-radius: 8px; }
 
     .skills-card {
         position: absolute;
@@ -719,7 +720,11 @@ import {
         // Room above the rim for the dropper holding the biggest droppable fruit.
         // Late in a game bigger fruit are dropped; they may overlap the hud a little.
         const dropRoom = radiusForTier(5, bw) * 2 + 18;
-        const bh = Math.max(180, Math.min(H - footH - hudH - dropRoom, 540));
+        // Never eat the drop room: a flat 180px floor left ~20px of headroom on
+        // short stages (narrow windows stack the layout), so the opening bowl
+        // was already over the rim and the first drop ended the game.
+        const room = H - footH - hudH - dropRoom;
+        const bh = Math.max(Math.min(room, 540), 110);
         const bx = (W - bw) / 2;
         const by = H - footH - bh;
         const corner = compact ? 14 : 20;
@@ -1729,35 +1734,54 @@ import {
     }
 
     // ─── Input ───
-    // The canvas rect is read when a gesture starts, never per frame.
-    let rect = canvas.getBoundingClientRect();
-    const refreshRect = () => { rect = canvas.getBoundingClientRect(); };
-    const local = (e: { clientX: number; clientY: number }) => ({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    // The canvas rect is read on every event, never cached: the slide moves
+    // under a resting pointer (slider transition, inner scroll, theme
+    // overlays, window resize) and a stale rect silently rejects every drop.
+    const local = (e: { clientX: number; clientY: number }) => {
+        const r = canvas.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
     const inColumn = (x: number, y: number) =>
         x >= bowl.x - 12 && x <= bowl.x + bowl.w + 12 && y <= bowl.y + bowl.h + 6;
     let lastTouch = 0;
 
-    canvas.addEventListener('mouseenter', refreshRect);
-    canvas.addEventListener('mousemove', (e) => {
-        if (performance.now() - lastTouch < 800) return;
+    // Mouse/pen go through pointer events and drop on pointerup: a "click"
+    // only fires when down and up land on the same element, so anything that
+    // shifts in between (a pop-up, a layout change) would swallow it.
+    let armed = false;
+    canvas.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch') return;
         const p = local(e);
         const on = inColumn(p.x, p.y);
         canvas.classList.toggle('aim', on && !gameOver);
         if (on) setAim(p.x);
     });
-    canvas.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        refreshRect();
+    canvas.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch' || e.button !== 0) return;
         const p = local(e);
-        // Presses in the bowl belong to the game, not to the slider's mouse drag.
-        if (inColumn(p.x, p.y)) { e.stopPropagation(); e.preventDefault(); canvas.focus({ preventScroll: true }); }
+        armed = inColumn(p.x, p.y);
+        if (!armed) return;
+        e.preventDefault();
+        // Focus for the arrow keys, without the keyboard focus ring: a
+        // preventDefault'ed mousedown makes Chrome treat script focus as
+        // keyboard focus, which is what painted the dashed outline.
+        canvas.dataset.pointerFocus = '1';
+        canvas.focus({ preventScroll: true });
+        setAim(p.x);
     });
-    canvas.addEventListener('click', (e) => {
-        if (performance.now() - lastTouch < 800) return;
+    canvas.addEventListener('pointerup', (e) => {
+        if (e.pointerType === 'touch' || !armed) return;
+        armed = false;
         const p = local(e);
         if (!inColumn(p.x, p.y)) return;
         setAim(p.x);
         drop();
+    });
+    canvas.addEventListener('pointercancel', () => { armed = false; });
+    // keen-slider starts its drag on the native mousedown; presses in the bowl belong to the game.
+    canvas.addEventListener('mousedown', (e) => {
+        const p = local(e);
+        if (inColumn(p.x, p.y)) { e.stopPropagation(); e.preventDefault(); }
     });
 
     // Touch: anything that starts in the bowl is aiming, so a vertical swipe
@@ -1766,7 +1790,6 @@ import {
     let touching = false;
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) { touching = false; return; }
-        refreshRect();
         const p = local(e.touches[0]);
         if (!inColumn(p.x, p.y) || gameOver) { touching = false; return; }
         touching = true;
@@ -1791,6 +1814,7 @@ import {
     canvas.addEventListener('touchcancel', () => { touching = false; });
 
     canvas.addEventListener('keydown', (e) => {
+        delete canvas.dataset.pointerFocus; // a real key press: show the focus ring again
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
             const stepFr = e.shiftKey ? 0.12 : 0.04;
@@ -1805,8 +1829,9 @@ import {
     });
 
     card.querySelector('.skills-card-close')?.addEventListener('click', () => hideCard());
-    overEl.querySelector('.skills-over-again')?.addEventListener('click', () => {
+    overEl.querySelector('.skills-over-again')?.addEventListener('click', (e) => {
         newGame();
+        if ((e as PointerEvent).detail !== 0) canvas.dataset.pointerFocus = '1';
         canvas.focus({ preventScroll: true });
     });
 

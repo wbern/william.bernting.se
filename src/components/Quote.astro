@@ -837,10 +837,13 @@ const defaultHref = buildMailto(CONTACT.email);
             justify-content: space-between;
         }
 
+        /* Centre on the button: anchored left it ran 32px past the viewport and gave the slide horizontal overflow */
         .end-nudge {
             right: auto;
-            left: 0;
+            left: 50%;
+            transform: translate(-50%, 4px);
         }
+        :global(.end-bump) .end-nudge { transform: translate(-50%, 0); }
     }
 
     @media (prefers-reduced-motion: reduce) {

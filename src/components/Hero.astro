@@ -4,7 +4,7 @@ import { defaultLang, type Lang } from "../i18n/ui";
 import { getTraitRows } from "../i18n/traits";
 import { CONTACT, trackEntries, type TrackId } from "../i18n/contact";
 import MarqueeField from "./MarqueeField.astro";
-import MaskTray from "./MaskTray.astro";
+import Masks from "./Masks.astro";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
@@ -27,8 +27,10 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
 ---
 
 <div class="hero-slide" data-hero>
+    <!-- The three masks ride along in the marquee rows (one per row); Masks.astro owns the sprite + interaction -->
+    <Masks />
     <div class="hero-marquee-wrap hero-marquee-top" data-marquee-wrap="top">
-        <MarqueeField rows={topRows} />
+        <MarqueeField rows={topRows} masks={["past"]} />
     </div>
 
     <div class="hero-center">
@@ -94,18 +96,26 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
                 </a>
             </div>
         </div>
+
+        <!-- Keyboard / assistive path to the masks (the marquee copies are decorative and aria-hidden) -->
+        <div class="mask-keys" data-mask-keys role="group" aria-label={t("mask.tray")}>
+            {(["past", "present", "future"] as const).map((id) => (
+                <button type="button" data-mask-key={id} aria-pressed="false" aria-label={t("mask.wear").replace("{name}", t(`mask.${id}`))}>
+                    <svg class="mask-art" aria-hidden="true"><use href={`#mask-${id}`} /></svg>
+                    <span>{t(`mask.${id}`)}</span>
+                </button>
+            ))}
+        </div>
     </div>
 
     <div class="hero-marquee-wrap hero-marquee-bottom" data-marquee-wrap="bottom">
-        <MarqueeField rows={bottomRows} />
+        <MarqueeField rows={bottomRows} masks={["present", "future"]} />
     </div>
 
     <button type="button" class="hero-scroll-hint" data-hero-next>
         <span>{t("hero.scroll")}</span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16.5 5.5 10l1.4-1.4 5.1 5.1 5.1-5.1 1.4 1.4z"/></svg>
     </button>
-
-    <MaskTray />
 
     <!-- Caption bubble for hovered/tapped marquee words (positioned by script) -->
     <div class="hero-trait-tip" data-trait-tip aria-hidden="true">
