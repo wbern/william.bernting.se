@@ -231,6 +231,82 @@ test.describe("masks", () => {
     });
   }
 
+  test("present: rejecting cookies cracks the glass; more rejects add cracks; taking the mask off clears them", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("wb-mask", "present"));
+    await open(page);
+    const reject = page.locator("[data-slop-cookie-reject]");
+    await expect(reject).toBeVisible();
+    await reject.click();
+    const cracks = page.locator(".slop-cracks path");
+    await expect.poll(() => cracks.count()).toBeGreaterThan(20);
+    const first = await cracks.count();
+    await expect(page.locator("[data-slop-cookie]")).toBeHidden();
+    // the overlay never blocks the site
+    expect(await page.locator(".slop-cracks").evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+    // the banner comes back, pleading
+    await expect(page.locator("[data-slop-cookie-text]")).toHaveText(/Är du säker|Are you sure/, { timeout: 4000 });
+    await reject.click();
+    await expect.poll(() => cracks.count()).toBeGreaterThan(first);
+    await expect(page.locator("[data-slop-cookie-text]")).toHaveText(/familj|families/, { timeout: 4000 });
+    // taking the mask off clears the cracks
+    await page.locator("[data-mask-worn]").click();
+    await page.waitForTimeout(300);
+    expect(await maskAttr(page)).toBeNull();
+    await expect(cracks).toHaveCount(0);
+  });
+
+  test("present: clicking anywhere on a pop-up dismisses it", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("wb-mask", "present"));
+    await open(page);
+    const pop = page.locator(".slop-pop").first();
+    await expect(pop).toBeVisible({ timeout: 4000 });
+    await pop.click({ position: { x: 10, y: 10 } });
+    await expect(page.locator(".slop-pop.is-leaving, .slop-pop")).toHaveCount(0, { timeout: 2000 });
+  });
+
+  test("past fonts are only fetched while the past mask is worn", async ({ page }) => {
+    const fonts: string[] = [];
+    page.on("request", (r) => { if (r.url().includes("/fonts/past/")) fonts.push(r.url().split("/").pop()!); });
+    await open(page);
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(SLIDE_MS);
+    expect(fonts, "default theme must not load the VHS fonts").toEqual([]);
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(SLIDE_MS);
+    await page.locator('[data-mask-slot="past"]').click();
+    await expect.poll(() => fonts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(2);
+    expect(fonts).toEqual(expect.arrayContaining(["VT323-Regular.woff2", "Silkscreen-Bold.woff2"]));
+    expect(await page.locator(".vhs-play").evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/VCR OSD/);
+  });
+
+  for (const mask of ["past", "present"]) {
+    test(`${mask}: the skills bowl still accepts a drop`, async ({ page }, testInfo) => {
+      await page.addInitScript((m) => localStorage.setItem("wb-mask", m), mask);
+      await open(page);
+      await page.click("body", { position: { x: 4, y: 4 } });
+      for (let i = 0; i < 4; i++) {
+        await page.keyboard.press("ArrowDown");
+        await page.waitForTimeout(SLIDE_MS);
+      }
+      await page.waitForTimeout(1500);
+      // clear any pop-up parked over the bowl, then drop
+      for (const pop of await page.locator(".slop-pop").all()) await pop.click().catch(() => {});
+      const canvas = (await page.locator(".skills-canvas").boundingBox())!;
+      const x = canvas.x + canvas.width * 0.5;
+      const y = canvas.y + canvas.height * 0.25;
+      const before = await page.evaluate(() => (window as any).__skillsBowl.state().score as number);
+      const fruitsBefore = await page.evaluate(() => (window as any).__skillsBowl.fruits().length as number);
+      if (testInfo.project.name === "mobile") await page.touchscreen.tap(x, y);
+      else { await page.mouse.move(x, y); await page.mouse.click(x, y); }
+      await page.waitForTimeout(1200);
+      const after = await page.evaluate(() => ({
+        score: (window as any).__skillsBowl.state().score as number,
+        fruits: (window as any).__skillsBowl.fruits().length as number,
+      }));
+      expect(after.fruits !== fruitsBefore || after.score > before, "a fruit should drop (or merge)").toBe(true);
+    });
+  }
+
   test("present: pop-ups can be dismissed and the cookie banner accepted", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("wb-mask", "present"));
     await open(page);

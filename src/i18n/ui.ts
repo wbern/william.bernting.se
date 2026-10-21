@@ -265,6 +265,10 @@ export const ui = {
     "slop.badge": "AI-driven",
     "slop.cookie": "🍪 Vi använder kakor — och lite till — för att leverera värde i världsklass.",
     "slop.cookie.accept": "Acceptera allt",
+    "slop.cookie.reject": "Neka",
+    "slop.cookie.again.1": "Är du säker? 🥺",
+    "slop.cookie.again.2": "Snälla? Vi har familjer. 🥺",
+    "slop.cookie.again.3": "…okej. 💔 (Vi sparade kakan ändå.)",
     "slop.close": "Stäng",
     "slop.tickerAria": "Rullande modeord",
 
@@ -547,6 +551,10 @@ export const ui = {
     "slop.badge": "AI-powered",
     "slop.cookie": "🍪 We use cookies — and then some — to deliver world-class value.",
     "slop.cookie.accept": "Accept all",
+    "slop.cookie.reject": "Reject",
+    "slop.cookie.again.1": "Are you sure? 🥺",
+    "slop.cookie.again.2": "Please? We have families. 🥺",
+    "slop.cookie.again.3": "…fine. 💔 (We kept the cookie anyway.)",
     "slop.close": "Close",
     "slop.tickerAria": "Scrolling buzzwords",
 

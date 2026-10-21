@@ -300,36 +300,68 @@ html.mask-jolt body { animation: mask-jolt 0.55s cubic-bezier(0.3, 0.1, 0.3, 1) 
 .vhs, .slop { display: none; }
 
 /* =====================================================================
-   PAST — a VHS tape from the mid-90s
+   PAST — a VHS tape from the mid-90s: cool washed-out greys, chroma noise,
+   matrix-green accents, and a camcorder's burned-in on-screen display.
+   The fonts below are only fetched once a rule using them is rendered,
+   i.e. while this mask is worn. Files + OFL licenses: public/fonts/past/.
    ===================================================================== */
-html[data-mask="past"] {
-    --bg: #15100c;
-    --bg-card: #211810;
-    --bg-card-hover: #2b2016;
-    --purple: #e39a3b;
-    --purple-dim: #a86b22;
-    --purple-glow: rgba(227, 154, 59, 0.15);
-    --purple-glow-strong: rgba(227, 154, 59, 0.32);
-    --text: #f3e6c8;
-    --text-dim: #bba27b;
-    --text-muted: #705d45;
-    --border: #3d2d1d;
+@font-face {
+    font-family: "VCR OSD";
+    src: url("/fonts/past/Silkscreen-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
 }
+@font-face {
+    font-family: "VCR OSD";
+    src: url("/fonts/past/Silkscreen-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    /* VT323 (OFL): teletext/terminal body face, picked over Pixelify Sans and
+       DotGothic16 for legible digits at 13px and a bolder heading. */
+    font-family: "Past Body";
+    src: url("/fonts/past/VT323-Regular.woff2") format("woff2");
+    font-weight: 300 900;
+    font-display: swap;
+}
+
+html[data-mask="past"] {
+    --bg: #131417;
+    --bg-card: #1c1e23;
+    --bg-card-hover: #25282f;
+    --purple: #5ee29a;
+    --purple-dim: #2f9c62;
+    --purple-glow: rgba(94, 226, 154, 0.14);
+    --purple-glow-strong: rgba(94, 226, 154, 0.32);
+    --text: #d6d8dc;
+    --text-dim: #9a9ea7;
+    --text-muted: #5d616a;
+    --border: #32363e;
+    --sans: "Past Body", "JetBrains Mono", monospace;
+    --mono: "Past Body", "JetBrains Mono", monospace;
+    --kendev: "Past Body", "JetBrains Mono", monospace;
+}
+html[data-mask="past"] body { font-family: var(--sans); }
 html[data-mask="past"] .section-heading,
 html[data-mask="past"] .hero-slide h1 {
+    letter-spacing: 0;
     text-shadow:
-        -2px 0 rgba(255, 40, 90, 0.55),
-        2px 0 rgba(40, 230, 255, 0.55),
-        0 0 16px rgba(255, 210, 150, 0.35);
+        -2px 0 rgba(255, 60, 120, 0.5),
+        2px 0 rgba(60, 230, 255, 0.5),
+        0 0 18px rgba(220, 230, 240, 0.35);
 }
 html[data-mask="past"] .section-label,
 html[data-mask="past"] .hero-greeting,
 html[data-mask="past"] .hero-tagline {
-    text-shadow: 1px 0 rgba(255, 40, 90, 0.45), -1px 0 rgba(40, 230, 255, 0.45);
+    text-shadow: 1px 0 rgba(255, 60, 120, 0.4), -1px 0 rgba(60, 230, 255, 0.4);
 }
-html[data-mask="past"] .hero-verb[data-track="build"] { --verb-ink: #f0b35a; --track: #f0b35a; }
+html[data-mask="past"] .section-label { color: #5ee29a; text-shadow: 0 0 8px rgba(94, 226, 154, 0.5); }
+html[data-mask="past"] .hero-verb[data-track="build"] { --verb-ink: #5ee29a; --track: #5ee29a; }
+html[data-mask="past"] .hero-verb[data-track="legacy"] { --verb-ink: #d9d9d9; --track: #bdbdbd; }
+html[data-mask="past"] .hero-contact .hero-email svg { color: #5ee29a; }
 html[data-mask="past"] .slide-dot { border-radius: 1px; }
-html[data-mask="past"] .lang-picker { filter: sepia(0.5) contrast(0.9); }
+html[data-mask="past"] .lang-picker { filter: saturate(0.4) contrast(0.9); }
 
 html[data-mask="past"] .vhs {
     display: block;
@@ -338,19 +370,42 @@ html[data-mask="past"] .vhs {
     z-index: 190;
     pointer-events: none;
     overflow: hidden;
-    font-family: var(--mono);
 }
 .vhs-scan {
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px);
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.32) 0 1px, transparent 1px 3px);
+}
+.vhs-chroma {
+    /* misaligned colour carrier: faint magenta/cyan stripes that jitter sideways */
+    position: absolute;
+    inset: 0 -8px;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 0, 140, 0.045) 0 2px,
+        transparent 2px 5px,
+        rgba(0, 220, 255, 0.045) 5px 7px,
+        transparent 7px 11px
+    );
+    animation: vhs-jitter 0.9s steps(3) infinite;
+    will-change: transform;
+}
+.vhs-noise {
+    /* static grain, flickering in opacity only */
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.85 0 0 0 0 0.9 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+    mix-blend-mode: screen;
+    opacity: 0.09;
+    animation: vhs-flicker 0.36s steps(1) infinite;
 }
 .vhs-tint {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 190, 110, 0.06), transparent 70%),
-        radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(140, 170, 200, 0.05), transparent 70%),
+        radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.62) 100%);
 }
 .vhs-edge {
     /* 4:3-ish feel on wide screens: the sides fade like an overscanned tube */
@@ -365,8 +420,8 @@ html[data-mask="past"] .vhs {
     top: -10%;
     height: 8%;
     background:
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 5px),
-        linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 35%, rgba(255, 255, 255, 0.22) 50%, rgba(0, 0, 0, 0.35) 72%, transparent);
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14) 35%, rgba(255, 255, 255, 0.24) 50%, rgba(0, 0, 0, 0.4) 72%, transparent);
     animation: vhs-band 9s linear infinite;
     will-change: transform;
 }
@@ -376,21 +431,40 @@ html[data-mask="past"] .vhs {
     30% { transform: translateY(1500%); opacity: 1; }
     31%, 100% { transform: translateY(1500%); opacity: 0; }
 }
+@keyframes vhs-jitter {
+    0% { transform: translateX(0); }
+    33% { transform: translateX(3px); }
+    66% { transform: translateX(-2px); }
+    100% { transform: translateX(0); }
+}
+@keyframes vhs-flicker {
+    0% { opacity: 0.07; }
+    50% { opacity: 0.11; }
+    100% { opacity: 0.07; }
+}
 .vhs-osd {
     position: absolute;
-    font-size: clamp(13px, 1.5vw, 21px);
+    font-family: "VCR OSD", "JetBrains Mono", monospace;
+    font-size: clamp(18px, 2vw, 28px);
     font-weight: 700;
-    letter-spacing: 0.12em;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
-    color: #f6f6f0;
-    text-shadow: 2px 0 rgba(255, 0, 80, 0.6), -2px 0 rgba(0, 210, 255, 0.6), 0 0 6px rgba(0, 0, 0, 0.9);
+    color: #fff;
+    text-shadow:
+        3px 3px 0 #000,
+        -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+        2px 0 rgba(255, 0, 110, 0.35), -2px 0 rgba(0, 220, 255, 0.35),
+        0 0 14px rgba(255, 255, 255, 0.55);
     white-space: nowrap;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
 }
-.vhs-play { top: 22px; left: 26px; }
-.vhs-rec { bottom: 22px; left: 26px; }
-.vhs-rec b { color: #ff3b3b; animation: vhs-blink 1s steps(1) infinite; }
-.vhs-stamp { bottom: 22px; right: 26px; text-align: right; color: #ffcf8a; }
-.vhs-stamp small { display: block; font-size: 0.75em; font-weight: 500; letter-spacing: 0.1em; }
+.vhs-play { top: 24px; left: 28px; }
+.vhs-rec { bottom: 24px; left: 28px; }
+.vhs-rec b { color: #ff2f2f; animation: vhs-blink 1s steps(1) infinite; }
+.vhs-stamp { bottom: 24px; right: 28px; text-align: right; color: #ffd36a; }
+.vhs-stamp small { display: block; font-size: 0.7em; font-weight: 400; letter-spacing: 0.04em; }
 @keyframes vhs-blink { 50% { opacity: 0; } }
 
 /* =====================================================================
@@ -572,7 +646,43 @@ html[data-mask="present"] .slop {
     cursor: pointer;
     white-space: nowrap;
 }
+.slop-cookie-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.slop-cookie button.slop-cookie-reject {
+    background: #fff;
+    color: #6b4fb3;
+    border: 2px solid #e4d9ff;
+    padding: 7px 12px;
+}
+.slop-cookie button.slop-cookie-reject:hover,
+.slop-cookie button.slop-cookie-reject:focus-visible { border-color: #c084fc; color: #4c1d95; }
 @keyframes slop-cookie-in { from { transform: translate(-50%, 120%); } to { transform: translate(-50%, 0); } }
+
+/* glass cracks (SVG, drawn by MaskThemes.astro) */
+.slop-cracks {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+.slop-cracks path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    vector-effect: non-scaling-stroke;
+}
+.slop-crack-shadow { stroke: rgba(0, 0, 0, 0.6); stroke-width: 2.6px; transform: translate(1px, 1.5px); }
+.slop-crack-glint { stroke: rgba(170, 225, 255, 0.28); stroke-width: 3.2px; }
+.slop-crack-line { stroke: rgba(255, 255, 255, 0.92); stroke-width: 1.2px; }
+.slop-crack-shadow.depth-1, .slop-crack-glint.depth-1 { stroke-width: 2px; }
+.slop-crack-line.depth-1 { stroke-width: 0.9px; }
+.slop-crack-shadow.depth-2, .slop-crack-shadow.depth-3, .slop-crack-glint.depth-2, .slop-crack-glint.depth-3 { stroke-width: 1.4px; }
+.slop-crack-line.depth-2, .slop-crack-line.depth-3 { stroke-width: 0.6px; stroke: rgba(255, 255, 255, 0.75); }
+.slop-crack-flash { fill: #fff; opacity: 0.95; }
+.slop-shards polygon { fill: rgba(255, 255, 255, 0.55); stroke: rgba(255, 255, 255, 0.9); stroke-width: 0.6px; }
 
 /* =====================================================================
    FUTURE — a cold system readout; only the name and one sentence remain
@@ -674,7 +784,7 @@ html[data-mask="future"] .slide-dot.active { background: #ddd; transform: scale(
     .vhs-edge { display: none; }
     .slop-ticker { font-size: 11px; height: 24px; }
     .slop-cookie { flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; bottom: 10px; font-size: 12px; width: calc(100vw - 24px); }
-    .slop-cookie span { flex: 1 1 100%; }
+    .slop-cookie > span:first-child { flex: 1 1 100%; }
     .slop-cookie button { padding: 7px 12px; font-size: 12px; }
     .slop-pop { font-size: 13px; }
     html[data-mask="present"] .lang-picker { top: 34px; }
@@ -693,6 +803,8 @@ html.mask-paused .slop * { animation-play-state: paused !important; }
     .mask-slot .mask-art,
     .hero-mask-worn .mask-art,
     .vhs-band,
+    .vhs-chroma,
+    .vhs-noise,
     .vhs-rec b,
     .slop-ticker-track,
     .slop-rain span,
