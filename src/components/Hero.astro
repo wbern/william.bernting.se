@@ -298,13 +298,17 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
     /* Brand purple is 4.05:1 on --bg; a lighter tint keeps body-size text above 4.5:1 */
     .hero-verb[data-track="build"] { --verb-ink: #b57edc; }
 
+    /* Inline + zero width, not absolute: an absolutely positioned child of a
+       link that wraps onto two lines is placed against the first line, so the
+       arrow showed up mid-sentence. Inline keeps it after the last word. */
     .hero-verb-arrow {
-        position: absolute;
-        top: -0.35em;
-        right: -0.75em;
+        display: inline-block;
+        width: 0;
+        white-space: nowrap;
+        vertical-align: 0.9em;
         font-size: 0.6em;
         opacity: 0;
-        transform: translate(-4px, 4px);
+        transform: translate(-2px, 4px);
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
 
@@ -316,7 +320,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
     .hero-verb:hover .hero-verb-arrow,
     .hero-verb:focus-visible .hero-verb-arrow {
         opacity: 1;
-        transform: none;
+        transform: translate(2px, 0);
     }
     .hero-verb:focus-visible {
         outline: 2px solid var(--track);
