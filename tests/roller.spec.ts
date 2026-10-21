@@ -672,15 +672,23 @@ for (const locale of LOCALES) {
     });
 
     test("invalid hash does not crash and auto-spin still works", async ({ page }) => {
+      // Record the spin from the very first paint: on a busy machine the arrival
+      // spin can start and finish before a poll after goto() would catch it.
+      await page.addInitScript(() => {
+        new MutationObserver(() => {
+          if (document.querySelector("[data-testid='roller']")?.classList.contains("roller-spinning")) {
+            (window as unknown as { __sawSpin: boolean }).__sawSpin = true;
+          }
+        }).observe(document, { subtree: true, attributes: true, attributeFilter: ["class"] });
+      });
       await page.goto(locale.prefix + "/#nonexistent-project", { waitUntil: "networkidle" });
       await page.waitForSelector(".keen-slider__slide", { timeout: 10_000 });
 
       // The invalid hash still triggers navigation to the projects slide,
       // where the arrival spin runs and settles (without opening a card)
-      await page.waitForFunction(
-        () => document.querySelector("[data-testid='roller']")?.classList.contains("roller-spinning"),
-        { timeout: 15000 },
-      );
+      await page.waitForFunction(() => (window as unknown as { __sawSpin?: boolean }).__sawSpin === true, {
+        timeout: 15000,
+      });
       await waitForSpinToSettle(page);
       await expect(page.locator("[data-testid='projects-section']")).not.toHaveClass(/detail-active/);
       await expect(page.locator("[data-testid='roller-hook']")).not.toBeEmpty();
