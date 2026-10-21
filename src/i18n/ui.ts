@@ -243,10 +243,10 @@ export const ui = {
 
     "future.hero": "Människa. Verifierad: 1.",
     "future.projects": "Byggt: 1. Levererat: 1. Klart: 1.",
-    "future.numbers": "Anställningsbar: SANT. Tvekan: 0.",
+    "future.numbers": "Tillgänglig för uppdrag: SANT. Tvekan: 0.",
     "future.timeline": "15 år. 0 fel. 0 frågor.",
     "future.skills": "Kompatibel med ditt system. Inga drivrutiner krävs.",
-    "future.contact": "Anställ? [J/n]",
+    "future.contact": "Avropa? [J/n]",
 
     "vhs.play": "PLAY",
     "vhs.date": "OKT 21 1994",
@@ -529,10 +529,10 @@ export const ui = {
 
     "future.hero": "Human. Verified: 1.",
     "future.projects": "Built: 1. Shipped: 1. Done: 1.",
-    "future.numbers": "Hireable: TRUE. Doubt: 0.",
+    "future.numbers": "Available for contracts: TRUE. Doubt: 0.",
     "future.timeline": "15 years. 0 errors. 0 questions.",
     "future.skills": "Compatible with your system. No drivers required.",
-    "future.contact": "Hire? [Y/n]",
+    "future.contact": "Procure? [Y/n]",
 
     "vhs.play": "PLAY",
     "vhs.date": "OCT 21 1994",

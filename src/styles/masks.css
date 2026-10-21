@@ -29,8 +29,8 @@
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
 }
-.marquee-track--md .marquee-mask { width: 30px; height: 38px; }
-.marquee-track--sm .marquee-mask { width: 22px; height: 28px; }
+.marquee-track--md .marquee-mask { width: 38px; height: 48px; margin-block: -6px; }
+.marquee-track--sm .marquee-mask { width: 34px; height: 42px; margin-block: -8px; }
 .marquee-mask .mask-art {
     filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.65));
     animation: mask-bob 4.2s ease-in-out infinite;
@@ -824,8 +824,8 @@ html[data-mask="future"] .slide-dot.active { background: #ddd; transform: scale(
 /* ---------- small screens ---------- */
 @media (max-width: 600px) {
     .marquee-mask { width: 34px; height: 42px; margin: 0 6px; }
-    .marquee-track--md .marquee-mask { width: 26px; height: 32px; }
-    .marquee-track--sm .marquee-mask { width: 20px; height: 25px; }
+    .marquee-track--md .marquee-mask { width: 32px; height: 40px; }
+    .marquee-track--sm .marquee-mask { width: 28px; height: 35px; }
     .vhs-osd { font-size: 12px; }
     .vhs-play { top: 16px; left: 14px; }
     .vhs-rec { bottom: 14px; left: 14px; }

@@ -142,9 +142,8 @@ const rain = RAIN.map((e, i) => ({
             setTimeout(() => el.remove(), 320);
         }
         function startSlop() {
-            let dismissed = false;
-            try { dismissed = sessionStorage.getItem("wb-slop-cookie") === "1"; } catch {}
-            cookie.hidden = dismissed;
+            // The banner always comes back, like the real thing.
+            cookie.hidden = false;
             if (reduceMotion || popTimer) return;
             setTimeout(spawnPop, 900);
             popTimer = setInterval(spawnPop, POP_EVERY_MS);
@@ -161,7 +160,12 @@ const rain = RAIN.map((e, i) => ({
         }
         cookie.querySelector("[data-slop-cookie-accept]")?.addEventListener("click", () => {
             cookie.hidden = true;
-            try { sessionStorage.setItem("wb-slop-cookie", "1"); } catch {}
+            if (againTimer) clearTimeout(againTimer);
+            againTimer = setTimeout(() => {
+                if (html.dataset.mask !== "present") return;
+                cookieText.textContent = cookieText.dataset.default ?? "";
+                cookie.hidden = false;
+            }, reduceMotion ? 1500 : 4000);
         });
 
         // ---------- PRESENT: "Reject" cracks the glass ----------

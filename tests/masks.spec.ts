@@ -199,8 +199,9 @@ test.describe("masks", () => {
     await expect(page.locator(".vhs-play")).toContainText("PLAY");
     // the "take off" caption is a hover tooltip, not visible text (move the pointer off the mask first)
     await page.mouse.move(5, 5);
-    await page.waitForTimeout(250);
-    expect(await page.locator(".hero-mask-off").evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
+    await expect
+      .poll(() => page.locator(".hero-mask-off").evaluate((el) => getComputedStyle(el).opacity), { timeout: 2000 })
+      .toBe("0");
     await expect(page.locator("[data-mask-worn]")).toHaveAttribute("aria-label", /Ta av masken|Take off the mask/);
   });
 
@@ -277,8 +278,8 @@ test.describe("masks", () => {
   });
 
   for (const locale of [
-    { prefix: "", lines: ["Människa", "Byggt: 1", "Anställningsbar", "15 år", "Kompatibel", "Anställ?"] },
-    { prefix: "/en", lines: ["Human", "Built: 1", "Hireable", "15 years", "Compatible", "Hire?"] },
+    { prefix: "", lines: ["Människa", "Byggt: 1", "Tillgänglig för uppdrag", "15 år", "Kompatibel", "Avropa?"] },
+    { prefix: "/en", lines: ["Human", "Built: 1", "Available for contracts", "15 years", "Compatible", "Procure?"] },
   ]) {
     test(`future [${locale.prefix || "sv"}]: only the name and one sentence per slide, navigation still works`, async ({ page }) => {
       await page.addInitScript(() => localStorage.setItem("wb-mask", "future"));
@@ -456,7 +457,7 @@ test.describe("masks", () => {
     expect(await page.locator(".vhs-band i").first().evaluate((el) => getComputedStyle(el).animationName)).toBe("vhs-tear");
   });
 
-  test("present: pop-ups can be dismissed and the cookie banner accepted", async ({ page }) => {
+  test("present: pop-ups can be dismissed; the cookie banner can be accepted but always comes back", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("wb-mask", "present"));
     await open(page);
     const pop = page.locator(".slop-pop").first();
@@ -466,6 +467,9 @@ test.describe("masks", () => {
     await page.locator("[data-slop-cookie-accept]").click();
     await expect(page.locator("[data-slop-cookie]")).toBeHidden();
     expect(await page.locator(".slop-rain span").count()).toBeLessThanOrEqual(24);
+    await expect(page.locator("[data-slop-cookie]")).toBeVisible({ timeout: 6000 });
+    await page.reload();
+    await expect(page.locator("[data-slop-cookie]")).toBeVisible({ timeout: 4000 });
   });
 });
 
