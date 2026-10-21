@@ -23,6 +23,7 @@ const verbs: { id: TrackId; text: string }[] = [
     { id: "build", text: t("hero.tagline.build") },
 ];
 const glue = [t("hero.tagline.sep1"), t("hero.tagline.sep2"), t("hero.tagline.end")];
+
 const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
 ---
 
@@ -62,7 +63,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
                         data-track={verb.id}
                         style={`--track: ${trackColor(verb.id)};`}
                         aria-describedby="hero-verb-jump"
-                    >{verb.text}<span class="hero-verb-arrow" aria-hidden="true">&#8599;</span></a>{glue[i]}
+                    >{verb.text}</a><span class="hero-verb-arrow" style={`--track: ${trackColor(verb.id)};`} aria-hidden="true">&#8599;</span>{glue[i]}
                 </>
             ))}
         </p>
@@ -324,18 +325,23 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
     /* Brand purple is 4.05:1 on --bg; a lighter tint keeps body-size text above 4.5:1 */
     .hero-verb[data-track="build"] { --verb-ink: #b57edc; }
 
-    /* Inline + zero width, not absolute: an absolutely positioned child of a
-       link that wraps onto two lines is placed against the first line, so the
-       arrow showed up mid-sentence. Inline keeps it after the last word. */
+    /* The arrow is a plain inline glyph right after the link, not inside it:
+       - not absolute: an absolute child of a wrapping link sits against its
+         first line, so the arrow showed up mid-sentence;
+       - not inline-block: Chrome lets a line break after an inline-block even
+         before a comma, so ", and" could start the next line.
+       As text it can't be separated from the word before or the comma after.
+       Negative margin keeps it zero-width so hover never shifts the line. */
     .hero-verb-arrow {
-        display: inline-block;
-        width: 0;
-        white-space: nowrap;
-        vertical-align: 0.9em;
+        position: relative;
+        top: -0.75em;
+        left: -2px;
+        margin-right: -1em;
         font-size: 0.6em;
+        color: var(--track);
         opacity: 0;
-        transform: translate(-2px, 4px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        transition: opacity 0.2s ease, left 0.2s ease, top 0.2s ease;
     }
 
     .hero-verb:hover,
@@ -343,10 +349,11 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         text-decoration-style: solid;
         text-decoration-color: var(--track);
     }
-    .hero-verb:hover .hero-verb-arrow,
-    .hero-verb:focus-visible .hero-verb-arrow {
+    .hero-verb:hover + .hero-verb-arrow,
+    .hero-verb:focus-visible + .hero-verb-arrow {
         opacity: 1;
-        transform: translate(2px, 0);
+        left: 2px;
+        top: -0.9em;
     }
     .hero-verb:focus-visible {
         outline: 2px solid var(--track);
