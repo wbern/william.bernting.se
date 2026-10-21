@@ -49,6 +49,14 @@ const ogImage = new URL("/og-image.jpg", Astro.site).href;
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
 
+        <!-- Mask theme: apply the persisted mask before first paint so sv/en navigation never flashes -->
+        <script is:inline>
+            try {
+                var m = localStorage.getItem("wb-mask");
+                if (m === "past" || m === "present" || m === "future") document.documentElement.setAttribute("data-mask", m);
+            } catch (e) {}
+        </script>
+
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
@@ -68,4 +76,5 @@ const ogImage = new URL("/og-image.jpg", Astro.site).href;
 <style is:global>
     @import "keen-slider/keen-slider.min.css";
     @import "../styles/global.css";
+    @import "../styles/masks.css";
 </style>

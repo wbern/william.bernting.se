@@ -1853,7 +1853,7 @@ import {
     let resizeTimer = 0;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(() => { if (started) { resize(); draw(); } }, 100);
+        resizeTimer = window.setTimeout(() => { if (started && stage.clientWidth > 0 && stage.clientHeight > 0) { resize(); draw(); } }, 100);
     });
 
     // Testing hook (same pattern as window.__numbersGame).
@@ -1874,6 +1874,9 @@ import {
 
     // Run while the slide is shown, pause (keeping the game) while it isn't.
     function show() {
+        // The future mask theme hides the stage (0x0); sizing the bowl then
+        // yields negative radii. Stay dormant until there is room to draw.
+        if (stage.clientWidth === 0 || stage.clientHeight === 0) return;
         visible = true;
         if (!started) {
             started = true;
@@ -1896,6 +1899,12 @@ import {
         });
         mo.observe(reveal, { attributes: true, attributeFilter: ['class'] });
         if (reveal.classList.contains('visible')) show();
+        // Mask themes can hide/reveal the stage without touching the slide
+        document.addEventListener('mask-change', () => {
+            const shown = reveal.classList.contains('visible') && stage.clientWidth > 0;
+            if (shown && !visible) show();
+            else if (!shown && visible) hide();
+        });
     }
 })();
 </script>

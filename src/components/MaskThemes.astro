@@ -1,0 +1,159 @@
+---
+/**
+ * Overlays for the mask themes (see MaskTray.astro + styles/masks.css).
+ * Both shells are display:none until html[data-mask] matches, and the
+ * script only wakes up when a mask is actually worn.
+ */
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const popups = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => t(`slop.pop.${n}` as Parameters<typeof t>[0]));
+const ticker = t("slop.ticker").trim().split(/\s+(?=[\p{Extended_Pictographic}])/u);
+
+// A fixed, deterministic shower of emoji (keeps SSR output stable; capped at 18 nodes)
+const RAIN = ["✨", "🚀", "💡", "🔥", "📈", "🎯", "🧠", "🤖", "💎", "🙏", "✨", "🚀", "💡", "✨", "🎉", "📊", "✨", "🚀"];
+const rain = RAIN.map((e, i) => ({
+    e,
+    x: `${(i * 37 + 11) % 100}%`,
+    s: `${18 + ((i * 7) % 16)}px`,
+    d: `${7 + ((i * 5) % 7)}s`,
+    delay: `${-((i * 1.7) % 9)}s`,
+    r: `${((i % 2 ? 1 : -1) * (120 + ((i * 53) % 300)))}deg`,
+}));
+---
+
+<style is:inline set:html={`:root{--slop-badge:"${t("slop.badge").replace(/"/g, "")}"}`}></style>
+
+<!-- PAST: a VCR's on-screen display -->
+<div class="vhs" data-vhs aria-hidden="true">
+    <div class="vhs-scan"></div>
+    <div class="vhs-tint"></div>
+    <div class="vhs-edge"></div>
+    <div class="vhs-band"></div>
+    <div class="vhs-osd vhs-play">▶ {t("vhs.play")}</div>
+    <div class="vhs-osd vhs-rec"><b>●</b> {t("vhs.rec")} <span data-vhs-counter>SP 0:00:00</span></div>
+    <div class="vhs-osd vhs-stamp">{t("vhs.date")}<small>PM 4:32</small></div>
+</div>
+
+<!-- PRESENT: content pouring out everywhere -->
+<div class="slop" data-slop>
+    <div class="slop-ticker" aria-hidden="true">
+        <div class="slop-ticker-track">
+            {[0, 1].map(() => ticker.map((w) => <span>{w}</span>))}
+        </div>
+    </div>
+    <div class="slop-rain" aria-hidden="true">
+        {rain.map((r) => <span style={`--x:${r.x};--s:${r.s};--d:${r.d};--delay:${r.delay};--r:${r.r}`}>{r.e}</span>)}
+    </div>
+    <div class="slop-pops" data-slop-pops></div>
+    <div class="slop-cookie" data-slop-cookie hidden>
+        <span>{t("slop.cookie")}</span>
+        <button type="button" data-slop-cookie-accept>{t("slop.cookie.accept")}</button>
+    </div>
+</div>
+
+<script type="application/json" id="slop-i18n" set:html={JSON.stringify({ popups, close: t("slop.close") })} />
+
+<script>
+    function initMaskThemes() {
+        const html = document.documentElement;
+        const vhs = document.querySelector<HTMLElement>("[data-vhs]");
+        const slop = document.querySelector<HTMLElement>("[data-slop]");
+        if (!vhs || !slop) return;
+        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const i18n = JSON.parse(document.getElementById("slop-i18n")?.textContent ?? "{}") as { popups: string[]; close: string };
+
+        // ---------- PAST: tape counter ----------
+        const counter = vhs.querySelector<HTMLElement>("[data-vhs-counter]");
+        let vhsTimer: ReturnType<typeof setInterval> | null = null;
+        let tapeSeconds = 0;
+        function tickTape() {
+            tapeSeconds++;
+            const h = Math.floor(tapeSeconds / 3600);
+            const m = Math.floor((tapeSeconds % 3600) / 60);
+            const s = tapeSeconds % 60;
+            if (counter) counter.textContent = `SP ${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+        }
+        function startVhs() {
+            if (vhsTimer || reduceMotion) return;
+            vhsTimer = setInterval(tickTape, 1000);
+        }
+        function stopVhs() {
+            if (vhsTimer) clearInterval(vhsTimer);
+            vhsTimer = null;
+        }
+
+        // ---------- PRESENT: pop-ups and a cookie banner ----------
+        const pops = slop.querySelector<HTMLElement>("[data-slop-pops]")!;
+        const cookie = slop.querySelector<HTMLElement>("[data-slop-cookie]")!;
+        const MAX_POPS = matchMedia("(max-width: 600px)").matches ? 2 : 3;
+        const POP_EVERY_MS = 4500;
+        const POP_LIFE_MS = 9000;
+        let popTimer: ReturnType<typeof setInterval> | null = null;
+        let popIndex = Math.floor(Math.random() * i18n.popups.length);
+
+        function spawnPop() {
+            if (pops.childElementCount >= MAX_POPS) return;
+            const el = document.createElement("div");
+            el.className = "slop-pop";
+            el.setAttribute("role", "status");
+            // keep pop-ups off the very edges, the slide dots and the ticker
+            el.style.setProperty("--x", `${8 + Math.random() * 58}%`);
+            el.style.setProperty("--y", `${10 + Math.random() * 62}%`);
+            const text = document.createElement("span");
+            text.textContent = i18n.popups[popIndex++ % i18n.popups.length];
+            const close = document.createElement("button");
+            close.type = "button";
+            close.setAttribute("aria-label", i18n.close);
+            close.textContent = "✕";
+            close.addEventListener("click", () => dismissPop(el));
+            el.append(text, close);
+            pops.appendChild(el);
+            const life = setTimeout(() => dismissPop(el), POP_LIFE_MS);
+            (el as any)._life = life;
+        }
+        function dismissPop(el: HTMLElement) {
+            clearTimeout((el as any)._life);
+            if (reduceMotion) { el.remove(); return; }
+            el.classList.add("is-leaving");
+            setTimeout(() => el.remove(), 320);
+        }
+        function startSlop() {
+            let dismissed = false;
+            try { dismissed = sessionStorage.getItem("wb-slop-cookie") === "1"; } catch {}
+            cookie.hidden = dismissed;
+            if (reduceMotion || popTimer) return;
+            setTimeout(spawnPop, 900);
+            popTimer = setInterval(spawnPop, POP_EVERY_MS);
+        }
+        function stopSlop() {
+            if (popTimer) clearInterval(popTimer);
+            popTimer = null;
+            pops.replaceChildren();
+        }
+        cookie.querySelector("[data-slop-cookie-accept]")?.addEventListener("click", () => {
+            cookie.hidden = true;
+            try { sessionStorage.setItem("wb-slop-cookie", "1"); } catch {}
+        });
+
+        // ---------- wiring ----------
+        function apply(mask: string | null) {
+            if (mask === "past") startVhs(); else stopVhs();
+            if (mask === "present") startSlop(); else stopSlop();
+        }
+        document.addEventListener("mask-change", ((e: CustomEvent) => apply(e.detail?.mask ?? null)) as EventListener);
+        document.addEventListener("visibilitychange", () => {
+            const hidden = document.hidden;
+            html.classList.toggle("mask-paused", hidden);
+            const mask = html.dataset.mask ?? null;
+            if (hidden) { stopVhs(); if (popTimer) { clearInterval(popTimer); popTimer = null; } }
+            else apply(mask);
+        });
+        apply(html.dataset.mask ?? null);
+    }
+
+    initMaskThemes();
+</script>

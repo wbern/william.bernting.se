@@ -1,0 +1,364 @@
+---
+/**
+ * Mask tray: three carved masks (past / present / future). Drag one up onto
+ * the greeting above the name to re-theme the whole site; drop it anywhere
+ * else and it springs back. The theme itself lives in styles/masks.css and
+ * MaskThemes.astro — this file only owns the masks and the equip interaction.
+ */
+import { useTranslations } from "../i18n/utils";
+import { defaultLang, type Lang } from "../i18n/ui";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const masks = [
+    { id: "past", label: t("mask.past") },
+    { id: "present", label: t("mask.present") },
+    { id: "future", label: t("mask.future") },
+] as const;
+---
+
+<!-- Mask artwork: original designs, referenced via <use> by the tray, the ghost and the worn slot -->
+<svg class="mask-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
+    <defs>
+        <linearGradient id="mk-wood" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#b3773f" />
+            <stop offset="0.55" stop-color="#7d4b22" />
+            <stop offset="1" stop-color="#4a2a12" />
+        </linearGradient>
+        <linearGradient id="mk-glossy" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ff6ad5" />
+            <stop offset="0.5" stop-color="#8b5cf6" />
+            <stop offset="1" stop-color="#22d3ee" />
+        </linearGradient>
+        <linearGradient id="mk-shine" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.6" />
+            <stop offset="1" stop-color="#fff" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="mk-chrome" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff" />
+            <stop offset="0.45" stop-color="#d4d4da" />
+            <stop offset="0.7" stop-color="#9a9aa4" />
+            <stop offset="1" stop-color="#e6e6ea" />
+        </linearGradient>
+
+        <!-- PAST: worn wood, CRT eye sockets, a VHS-reel mouth -->
+        <symbol id="mask-past" viewBox="0 0 80 100">
+            <path d="M13 15 Q40 1 67 15 Q77 50 66 83 Q57 99 40 98 Q23 99 14 83 Q3 50 13 15Z" fill="url(#mk-wood)" stroke="#2c1708" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M21 22 Q29 52 23 84 M59 20 Q51 50 57 86 M40 9 Q37 30 41 56 M31 86 Q40 90 49 86" stroke="#3b2110" stroke-width="1.2" fill="none" opacity="0.65" />
+            <path d="M53 7 L50 20 L55 28 L51 38" stroke="#1c0e04" stroke-width="1.7" fill="none" stroke-linecap="round" />
+            <path d="M14 62 L20 60 L17 70" stroke="#1c0e04" stroke-width="1.2" fill="none" stroke-linecap="round" />
+            <rect x="17" y="34" width="19" height="15" rx="3.5" fill="#0d0703" />
+            <rect x="44" y="34" width="19" height="15" rx="3.5" fill="#0d0703" />
+            <rect x="20" y="38" width="13" height="2" fill="#ffd27a" opacity="0.95" />
+            <rect x="20" y="42" width="13" height="1.4" fill="#ffd27a" opacity="0.45" />
+            <rect x="47" y="38" width="13" height="2" fill="#ffd27a" opacity="0.95" />
+            <rect x="47" y="42" width="13" height="1.4" fill="#ffd27a" opacity="0.45" />
+            <rect x="21" y="60" width="38" height="19" rx="3" fill="#1c0e04" />
+            <circle cx="31" cy="69.5" r="5.2" fill="none" stroke="#e0bb80" stroke-width="1.7" />
+            <circle cx="49" cy="69.5" r="5.2" fill="none" stroke="#e0bb80" stroke-width="1.7" />
+            <circle cx="31" cy="69.5" r="1.6" fill="#e0bb80" />
+            <circle cx="49" cy="69.5" r="1.6" fill="#e0bb80" />
+            <path d="M36 69.5 H44" stroke="#e0bb80" stroke-width="1.3" />
+            <circle cx="14" cy="27" r="1.7" fill="#1c0e04" />
+            <circle cx="66" cy="27" r="1.7" fill="#1c0e04" />
+            <circle cx="40" cy="92" r="1.7" fill="#1c0e04" />
+        </symbol>
+
+        <!-- PRESENT: glossy gradient, star eyes, a grin that is a bit too wide, dripping at the chin -->
+        <symbol id="mask-present" viewBox="0 0 80 100">
+            <path d="M40 1 L43.5 10 L36.5 10Z M17 7 L23 14 L15 16.5Z M63 7 L65 16.5 L57 14Z" fill="#ffe66d" />
+            <path d="M14 19 Q40 4 66 19 Q75 48 66 76 Q61 84 54 82 L52 93 L48 82 Q40 86 33 82 L30 96 L27 82 Q19 84 14 76 Q5 48 14 19Z" fill="url(#mk-glossy)" stroke="#3b1a7a" stroke-width="2" stroke-linejoin="round" />
+            <path d="M18 21 Q40 10 62 21 Q58 31 40 31 Q22 31 18 21Z" fill="url(#mk-shine)" />
+            <path d="M28 33 l2.7 5.6 6.1 .9 -4.4 4.3 1 6.1 -5.4 -2.9 -5.4 2.9 1 -6.1 -4.4 -4.3 6.1 -.9Z" fill="#fff" />
+            <path d="M52 33 l2.7 5.6 6.1 .9 -4.4 4.3 1 6.1 -5.4 -2.9 -5.4 2.9 1 -6.1 -4.4 -4.3 6.1 -.9Z" fill="#fff" />
+            <circle cx="28" cy="42" r="2.1" fill="#1a0b2e" />
+            <circle cx="52" cy="42" r="2.1" fill="#1a0b2e" />
+            <path d="M22 59 Q40 80 58 59 Q40 69 22 59Z" fill="#1a0b2e" />
+            <path d="M27 61.5 Q40 66.5 53 61.5" stroke="#fff" stroke-width="1.6" fill="none" />
+            <path d="M7 42 l1.6 3.2 3.2 1.6 -3.2 1.6 -1.6 3.2 -1.6 -3.2 -3.2 -1.6 3.2 -1.6Z M72 54 l1.6 3.2 3.2 1.6 -3.2 1.6 -1.6 3.2 -1.6 -3.2 -3.2 -1.6 3.2 -1.6Z M66 30 l1 2.1 2.1 1 -2.1 1 -1 2.1 -1 -2.1 -2.1 -1 2.1 -1Z" fill="#fff" />
+            <circle cx="61" cy="72" r="7.5" fill="#ffe66d" stroke="#3b1a7a" stroke-width="1.5" />
+            <text x="61" y="74.8" font-size="7.5" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" fill="#3b1a7a">AI</text>
+        </symbol>
+
+        <!-- FUTURE: smooth chrome, no face, one thin line for eyes, a tiny "0 1" engraving -->
+        <symbol id="mask-future" viewBox="0 0 80 100">
+            <path d="M16 14 Q40 3 64 14 Q75 48 64 81 Q56 97 40 97 Q24 97 16 81 Q5 48 16 14Z" fill="url(#mk-chrome)" stroke="#4a4a52" stroke-width="1.5" />
+            <path d="M23 16 Q40 9 55 15" stroke="#fff" stroke-width="2.2" fill="none" opacity="0.9" stroke-linecap="round" />
+            <path d="M21 45 H59" stroke="#0b0b0e" stroke-width="2.4" stroke-linecap="round" />
+            <path d="M21 45 H59" stroke="#7af0ff" stroke-width="0.8" stroke-linecap="round" opacity="0.8" />
+            <text x="40" y="72" font-size="6" text-anchor="middle" font-family="JetBrains Mono, monospace" fill="#5c5c66" letter-spacing="2">0 1</text>
+        </symbol>
+    </defs>
+</svg>
+
+<div class="mask-tray" data-mask-tray role="group" aria-label={t("mask.tray")}>
+    {masks.map((m) => (
+        <button
+            type="button"
+            class="mask-slot"
+            data-mask-slot={m.id}
+            data-keen-slider-clickable
+            aria-pressed="false"
+            aria-label={t("mask.wear").replace("{name}", m.label)}
+        >
+            <svg class="mask-art" aria-hidden="true"><use href={`#mask-${m.id}`} /></svg>
+            <span class="mask-tip" aria-hidden="true">{m.label}</span>
+        </button>
+    ))}
+</div>
+<p class="sr-only" aria-live="polite" data-mask-live></p>
+
+<script
+    type="application/json"
+    id="mask-i18n"
+    set:html={JSON.stringify({
+        names: Object.fromEntries(masks.map((m) => [m.id, m.label])),
+        on: t("mask.live.on"),
+        off: t("mask.live.off"),
+    })}
+/>
+
+<script>
+    type MaskId = "past" | "present" | "future";
+    const MASKS: MaskId[] = ["past", "present", "future"];
+    const KEY = "wb-mask";
+
+    function initMasks() {
+        const tray = document.querySelector<HTMLElement>("[data-mask-tray]");
+        const zone = document.querySelector<HTMLElement>("[data-mask-zone]");
+        const worn = document.querySelector<HTMLButtonElement>("[data-mask-worn]");
+        const wornUse = worn?.querySelector<SVGUseElement>("[data-mask-use]");
+        const live = document.querySelector<HTMLElement>("[data-mask-live]");
+        if (!tray || !zone || !worn || !wornUse) return;
+
+        const i18n = JSON.parse(document.getElementById("mask-i18n")?.textContent ?? "{}") as {
+            names: Record<MaskId, string>;
+            on: string;
+            off: string;
+        };
+        const slots = new Map<MaskId, HTMLButtonElement>();
+        tray.querySelectorAll<HTMLButtonElement>("[data-mask-slot]").forEach((b) => slots.set(b.dataset.maskSlot as MaskId, b));
+        const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // ---------- state ----------
+        function current(): MaskId | null {
+            const m = document.documentElement.dataset.mask;
+            return MASKS.includes(m as MaskId) ? (m as MaskId) : null;
+        }
+
+        function render() {
+            const m = current();
+            slots.forEach((btn, id) => {
+                btn.setAttribute("aria-pressed", String(id === m));
+                btn.classList.toggle("is-worn", id === m);
+            });
+            zone.classList.toggle("is-worn", !!m);
+            worn.hidden = !m;
+            if (m) wornUse.setAttribute("href", `#mask-${m}`);
+        }
+
+        function setMask(next: MaskId | null, opts: { announce?: boolean; fx?: boolean } = {}) {
+            const prev = current();
+            if (next === prev) return;
+            if (next) document.documentElement.dataset.mask = next;
+            else delete document.documentElement.dataset.mask;
+            try {
+                if (next) localStorage.setItem(KEY, next);
+                else localStorage.removeItem(KEY);
+            } catch {}
+            render();
+            if (opts.fx !== false && next) transformFx(next);
+            if (opts.announce !== false && live) {
+                live.textContent = next ? i18n.on.replace("{name}", i18n.names[next]) : i18n.off;
+            }
+            document.dispatchEvent(new CustomEvent("mask-change", { detail: { mask: next, previous: prev } }));
+        }
+
+        // Majora moment: the mask snaps on, the screen flashes and jolts.
+        function transformFx(mask: MaskId) {
+            worn.classList.remove("is-equipping");
+            void worn.offsetWidth;
+            worn.classList.add("is-equipping");
+            if (reduceMotion) return;
+            const flash = document.createElement("div");
+            flash.className = "mask-flash";
+            flash.dataset.mask = mask;
+            document.body.appendChild(flash);
+            document.documentElement.classList.add("mask-jolt");
+            setTimeout(() => {
+                flash.remove();
+                document.documentElement.classList.remove("mask-jolt");
+            }, 700);
+        }
+
+        // ---------- drag ----------
+        type Drag = {
+            id: MaskId;
+            pointerId: number;
+            source: HTMLElement;
+            fromWorn: boolean;
+            startX: number;
+            startY: number;
+            x: number;
+            y: number;
+            active: boolean;
+            over: boolean;
+            ghost: HTMLElement | null;
+            raf: number;
+        };
+        let drag: Drag | null = null;
+        const GHOST = 76; // px, ghost box size
+        const THRESHOLD = 6;
+
+        function zoneRect() {
+            const r = zone.getBoundingClientRect();
+            // Generous target: the greeting is small, the face outline grows into it
+            const pad = 34;
+            return { left: r.left - pad, top: r.top - pad - 10, right: r.right + pad, bottom: r.bottom + pad, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+        }
+
+        function makeGhost(id: MaskId) {
+            const g = document.createElement("div");
+            g.className = "mask-ghost";
+            g.dataset.mask = id;
+            g.innerHTML = `<svg class="mask-art" aria-hidden="true"><use href="#mask-${id}"/></svg>`;
+            document.body.appendChild(g);
+            return g;
+        }
+
+        function placeGhost(d: Drag) {
+            if (!d.ghost) return;
+            let x = d.x, y = d.y;
+            if (d.over) {
+                // magnetic snap towards the face
+                const z = zoneRect();
+                x += (z.cx - x) * 0.55;
+                y += (z.cy - y) * 0.55;
+            }
+            d.ghost.style.transform = `translate3d(${x - GHOST / 2}px, ${y - GHOST / 2}px, 0) scale(${d.over ? 0.92 : 1.08}) rotate(${d.over ? 0 : (d.x - d.startX) * 0.04}deg)`;
+        }
+
+        function onPointerDown(e: PointerEvent, id: MaskId, source: HTMLElement, fromWorn: boolean) {
+            if (e.button !== 0 || drag) return;
+            drag = { id, pointerId: e.pointerId, source, fromWorn, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, active: false, over: false, ghost: null, raf: 0 };
+            try { source.setPointerCapture(e.pointerId); } catch {}
+        }
+
+        function startDrag(d: Drag) {
+            d.active = true;
+            d.ghost = makeGhost(d.id);
+            d.source.classList.add("is-dragging");
+            document.documentElement.classList.add("mask-dragging");
+            zone.classList.add("is-target");
+            placeGhost(d);
+        }
+
+        function onPointerMove(e: PointerEvent) {
+            const d = drag;
+            if (!d || e.pointerId !== d.pointerId) return;
+            d.x = e.clientX;
+            d.y = e.clientY;
+            if (!d.active) {
+                if (Math.hypot(d.x - d.startX, d.y - d.startY) < THRESHOLD) return;
+                startDrag(d);
+            }
+            const z = zoneRect();
+            const over = d.x >= z.left && d.x <= z.right && d.y >= z.top && d.y <= z.bottom;
+            if (over !== d.over) {
+                d.over = over;
+                zone.classList.toggle("is-over", over);
+                d.ghost?.classList.toggle("is-over", over);
+            }
+            if (!d.raf) d.raf = requestAnimationFrame(() => { d.raf = 0; placeGhost(d); });
+        }
+
+        function finishDrag(cancelled: boolean) {
+            const d = drag;
+            if (!d) return;
+            drag = null;
+            try { d.source.releasePointerCapture(d.pointerId); } catch {}
+            if (!d.active) {
+                // plain click / tap
+                if (!cancelled) {
+                    if (d.fromWorn) setMask(null);
+                    else setMask(d.id === current() ? null : d.id);
+                }
+                return;
+            }
+            d.source.classList.remove("is-dragging");
+            document.documentElement.classList.remove("mask-dragging");
+            zone.classList.remove("is-target", "is-over");
+            if (d.raf) cancelAnimationFrame(d.raf);
+            const ghost = d.ghost!;
+
+            if (d.over && !cancelled) {
+                // dropped on the face: equip (or keep the worn one in place)
+                ghost.remove();
+                if (d.fromWorn) render();
+                else setMask(d.id);
+                return;
+            }
+            if (d.fromWorn && !cancelled) {
+                // pulled the mask off: remove and spring it to its tray slot
+                setMask(null);
+            }
+            springBack(ghost, d.fromWorn ? slots.get(d.id)! : d.source);
+        }
+
+        function springBack(ghost: HTMLElement, target: HTMLElement) {
+            const r = target.getBoundingClientRect();
+            const from = ghost.style.transform;
+            const to = `translate3d(${r.left + r.width / 2 - GHOST / 2}px, ${r.top + r.height / 2 - GHOST / 2}px, 0) scale(0.6) rotate(0deg)`;
+            if (reduceMotion || !ghost.animate) { ghost.remove(); return; }
+            const anim = ghost.animate(
+                [{ transform: from, opacity: 1 }, { transform: to, opacity: 0.2 }],
+                { duration: 380, easing: "cubic-bezier(.2,.8,.3,1.15)", fill: "forwards" },
+            );
+            anim.onfinish = () => ghost.remove();
+            anim.oncancel = () => ghost.remove();
+        }
+
+        // Keen-slider listens to mousedown/touchstart on its container, so stop
+        // those on the masks (data-keen-slider-clickable covers the mouse case;
+        // the touch case also needs preventDefault to keep the page still).
+        function shield(el: HTMLElement) {
+            el.addEventListener("mousedown", (e) => e.stopPropagation());
+            el.addEventListener("touchstart", (e) => { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }, { passive: false });
+            el.addEventListener("touchmove", (e) => { if (drag) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); } }, { passive: false });
+            el.addEventListener("touchend", (e) => e.stopPropagation(), { passive: true });
+            el.addEventListener("pointermove", onPointerMove);
+            el.addEventListener("pointerup", () => finishDrag(false));
+            el.addEventListener("pointercancel", () => finishDrag(true));
+            el.addEventListener("lostpointercapture", () => { if (drag?.active) finishDrag(true); });
+        }
+
+        slots.forEach((btn, id) => {
+            shield(btn);
+            btn.addEventListener("pointerdown", (e) => onPointerDown(e, id, btn, false));
+            // Keyboard: Enter/Space fire click without a preceding pointerdown
+            btn.addEventListener("click", (e) => {
+                if (e.detail !== 0) return; // pointer clicks are handled in finishDrag
+                setMask(id === current() ? null : id);
+            });
+        });
+
+        shield(worn);
+        worn.addEventListener("pointerdown", (e) => { const m = current(); if (m) onPointerDown(e, m, worn, true); });
+        worn.addEventListener("click", (e) => { if (e.detail === 0) setMask(null); });
+
+        // Escape takes the mask off, or cancels a drag in progress
+        document.addEventListener("keydown", (e) => {
+            if (e.key !== "Escape") return;
+            if (drag) { finishDrag(true); return; }
+            if (current() && document.activeElement && zone.contains(document.activeElement)) setMask(null);
+        });
+
+        render();
+        // Let the theme layer know about the persisted mask (applied pre-paint by the layout)
+        const m = current();
+        if (m) document.dispatchEvent(new CustomEvent("mask-change", { detail: { mask: m, previous: null, initial: true } }));
+    }
+
+    initMasks();
+</script>

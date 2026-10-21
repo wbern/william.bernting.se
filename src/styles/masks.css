@@ -1,0 +1,725 @@
+/* =====================================================================
+   MASK THEMES
+   Three carved masks in a tray on the hero. Drag one onto the greeting
+   above the name and the whole site re-themes via html[data-mask].
+   Default theme: nothing in here applies beyond the tray and drop zone.
+   ===================================================================== */
+
+/* ---------- tray ---------- */
+.mask-tray {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 18px 12px;
+    margin-top: 2px;
+    animation: mask-tray-in 0.8s ease 1.1s both;
+}
+.mask-tray::after {
+    /* the shelf the masks rest on */
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 5px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+}
+
+.mask-slot {
+    position: relative;
+    width: 52px;
+    height: 62px;
+    padding: 4px;
+    background: none;
+    border: 0;
+    border-radius: 10px;
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.mask-slot:focus-visible {
+    outline: 2px solid var(--purple);
+    outline-offset: 2px;
+}
+.mask-art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.mask-slot .mask-art {
+    filter: drop-shadow(0 6px 7px rgba(0, 0, 0, 0.65));
+    animation: mask-bob 4.2s ease-in-out infinite;
+    transition: transform 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+}
+.mask-slot:nth-child(2) .mask-art { animation-delay: -1.4s; }
+.mask-slot:nth-child(3) .mask-art { animation-delay: -2.8s; }
+.mask-slot:hover .mask-art,
+.mask-slot:focus-visible .mask-art {
+    animation: none;
+    transform: translateY(-5px) scale(1.1) rotate(-3deg);
+    filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.7));
+}
+.mask-slot:active { cursor: grabbing; }
+.mask-slot.is-worn .mask-art,
+.mask-slot.is-dragging .mask-art {
+    animation: none;
+    transform: none;
+    opacity: 0.18;
+    filter: none;
+}
+.mask-slot.is-worn::before {
+    /* empty hook where the worn mask used to hang */
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+    border: 1px dashed var(--text-muted);
+    border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%;
+}
+
+.mask-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 2px);
+    transform: translate(-50%, 4px);
+    padding: 5px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.mask-slot:hover .mask-tip,
+.mask-slot:focus-visible .mask-tip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+.mask-slot.is-dragging .mask-tip { opacity: 0; }
+
+@keyframes mask-bob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-3px) rotate(2deg); }
+}
+@keyframes mask-tray-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- drop zone around the greeting ---------- */
+.hero-face {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: min-height 0.25s ease, margin 0.25s ease;
+}
+.hero-face-outline,
+.hero-face-hint {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
+.hero-face-outline {
+    width: 64px;
+    height: 80px;
+    transform: translate(-50%, -50%) scale(0.85);
+    fill: none;
+    stroke: var(--text-dim);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-dasharray: 4 4;
+    transition: opacity 0.2s ease, transform 0.2s ease, stroke 0.2s ease;
+}
+.hero-face-hint {
+    top: calc(50% + 44px);
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text-dim);
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+html.mask-dragging .hero-face { min-height: 104px; margin-bottom: 4px; }
+html.mask-dragging .hero-greeting { opacity: 0.2; }
+html.mask-dragging .hero-face-outline { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+html.mask-dragging .hero-face-hint { opacity: 0.55; }
+.hero-face.is-over .hero-face-outline {
+    opacity: 1;
+    stroke: var(--purple);
+    stroke-dasharray: none;
+    transform: translate(-50%, -50%) scale(1.15);
+    filter: drop-shadow(0 0 12px var(--purple-glow-strong));
+}
+.hero-face.is-over .hero-face-hint { opacity: 1; color: var(--text); }
+
+.hero-face.is-worn { min-height: 104px; margin-bottom: 4px; }
+.hero-face.is-worn .hero-greeting { opacity: 0; animation: none; }
+html.mask-dragging .hero-face.is-worn .hero-face-outline { opacity: 0; }
+
+.hero-mask-worn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 84px;
+    height: 104px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: 12px;
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 2;
+}
+.hero-mask-worn[hidden] { display: none; }
+.hero-mask-worn:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.hero-mask-worn:active { cursor: grabbing; }
+.hero-mask-worn .mask-art {
+    width: 66px;
+    height: 82px;
+    filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.7));
+    animation: mask-breathe 3.4s ease-in-out infinite;
+}
+.hero-mask-worn.is-dragging .mask-art { opacity: 0.15; animation: none; }
+.hero-mask-worn.is-equipping .mask-art {
+    animation: mask-equip 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.35) both, mask-breathe 3.4s ease-in-out 0.6s infinite;
+}
+.hero-mask-off {
+    margin-top: 3px;
+    padding-bottom: 2px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text-dim);
+    border-bottom: 1px dotted currentColor;
+    transition: color 0.2s ease;
+}
+.hero-mask-worn:hover .hero-mask-off,
+.hero-mask-worn:focus-visible .hero-mask-off { color: var(--text); }
+
+@keyframes mask-breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2px) scale(1.025); }
+}
+@keyframes mask-equip {
+    0% { transform: scale(1.7) rotate(-10deg); opacity: 0.6; }
+    55% { transform: scale(0.9) rotate(3deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+}
+
+/* ---------- ghost that follows the pointer ---------- */
+.mask-ghost {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 76px;
+    height: 76px;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    will-change: transform;
+}
+.mask-ghost .mask-art {
+    width: 66px;
+    height: 82px;
+    filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.7));
+}
+.mask-ghost.is-over .mask-art { filter: drop-shadow(0 0 18px var(--purple-glow-strong)); }
+html.mask-dragging, html.mask-dragging * { cursor: grabbing !important; }
+html.mask-dragging body { -webkit-user-select: none; user-select: none; }
+
+/* ---------- the transformation moment ---------- */
+.mask-flash {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    pointer-events: none;
+    background: #fff;
+    animation: mask-flash 0.7s ease-out forwards;
+}
+.mask-flash[data-mask="past"] { background: radial-gradient(circle at 50% 40%, #fff3d6, #e39a3b 70%); }
+.mask-flash[data-mask="present"] { background: radial-gradient(circle at 50% 40%, #fff, #ff6ad5 45%, #8b5cf6 80%); }
+.mask-flash[data-mask="future"] { background: radial-gradient(circle at 50% 40%, #fff, #c9c9d0 60%, #3a3a42); }
+@keyframes mask-flash {
+    0% { opacity: 0; }
+    6% { opacity: 1; }
+    22% { opacity: 0.55; }
+    100% { opacity: 0; }
+}
+html.mask-jolt body { animation: mask-jolt 0.55s cubic-bezier(0.3, 0.1, 0.3, 1) both; }
+@keyframes mask-jolt {
+    0% { transform: translate(0, 0); }
+    12% { transform: translate(-8px, 4px) skewX(3deg); }
+    26% { transform: translate(7px, -5px) skewX(-2deg); }
+    42% { transform: translate(-5px, 3px); }
+    58% { transform: translate(4px, -2px) skewX(1deg); }
+    76% { transform: translate(-2px, 1px); }
+    100% { transform: translate(0, 0); }
+}
+
+/* ---------- shared: future-theme sentences are hidden unless the future mask is on ---------- */
+[data-future-line] { display: none; }
+
+/* ---------- shared: theme overlays are inert until their mask is on ---------- */
+.vhs, .slop { display: none; }
+
+/* =====================================================================
+   PAST — a VHS tape from the mid-90s
+   ===================================================================== */
+html[data-mask="past"] {
+    --bg: #15100c;
+    --bg-card: #211810;
+    --bg-card-hover: #2b2016;
+    --purple: #e39a3b;
+    --purple-dim: #a86b22;
+    --purple-glow: rgba(227, 154, 59, 0.15);
+    --purple-glow-strong: rgba(227, 154, 59, 0.32);
+    --text: #f3e6c8;
+    --text-dim: #bba27b;
+    --text-muted: #705d45;
+    --border: #3d2d1d;
+}
+html[data-mask="past"] .section-heading,
+html[data-mask="past"] .hero-slide h1 {
+    text-shadow:
+        -2px 0 rgba(255, 40, 90, 0.55),
+        2px 0 rgba(40, 230, 255, 0.55),
+        0 0 16px rgba(255, 210, 150, 0.35);
+}
+html[data-mask="past"] .section-label,
+html[data-mask="past"] .hero-greeting,
+html[data-mask="past"] .hero-tagline {
+    text-shadow: 1px 0 rgba(255, 40, 90, 0.45), -1px 0 rgba(40, 230, 255, 0.45);
+}
+html[data-mask="past"] .hero-verb[data-track="build"] { --verb-ink: #f0b35a; --track: #f0b35a; }
+html[data-mask="past"] .slide-dot { border-radius: 1px; }
+html[data-mask="past"] .lang-picker { filter: sepia(0.5) contrast(0.9); }
+
+html[data-mask="past"] .vhs {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    pointer-events: none;
+    overflow: hidden;
+    font-family: var(--mono);
+}
+.vhs-scan {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px);
+}
+.vhs-tint {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 190, 110, 0.06), transparent 70%),
+        radial-gradient(ellipse 85% 85% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.6) 100%);
+}
+.vhs-edge {
+    /* 4:3-ish feel on wide screens: the sides fade like an overscanned tube */
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.55));
+}
+.vhs-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -10%;
+    height: 8%;
+    background:
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 35%, rgba(255, 255, 255, 0.22) 50%, rgba(0, 0, 0, 0.35) 72%, transparent);
+    animation: vhs-band 9s linear infinite;
+    will-change: transform;
+}
+@keyframes vhs-band {
+    0% { transform: translateY(0); opacity: 0; }
+    3% { opacity: 1; }
+    30% { transform: translateY(1500%); opacity: 1; }
+    31%, 100% { transform: translateY(1500%); opacity: 0; }
+}
+.vhs-osd {
+    position: absolute;
+    font-size: clamp(13px, 1.5vw, 21px);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f6f6f0;
+    text-shadow: 2px 0 rgba(255, 0, 80, 0.6), -2px 0 rgba(0, 210, 255, 0.6), 0 0 6px rgba(0, 0, 0, 0.9);
+    white-space: nowrap;
+}
+.vhs-play { top: 22px; left: 26px; }
+.vhs-rec { bottom: 22px; left: 26px; }
+.vhs-rec b { color: #ff3b3b; animation: vhs-blink 1s steps(1) infinite; }
+.vhs-stamp { bottom: 22px; right: 26px; text-align: right; color: #ffcf8a; }
+.vhs-stamp small { display: block; font-size: 0.75em; font-weight: 500; letter-spacing: 0.1em; }
+@keyframes vhs-blink { 50% { opacity: 0; } }
+
+/* =====================================================================
+   PRESENT — the AI-slop era, content pouring out of every crack
+   ===================================================================== */
+html[data-mask="present"] {
+    --bg: #130829;
+    --bg-card: #1e1045;
+    --bg-card-hover: #281659;
+    --purple: #c084fc;
+    --purple-dim: #9333ea;
+    --purple-glow: rgba(192, 132, 252, 0.25);
+    --purple-glow-strong: rgba(192, 132, 252, 0.45);
+    --text: #fdf4ff;
+    --text-dim: #c7b6ff;
+    --text-muted: #7f6cae;
+    --border: #3f2a72;
+}
+html[data-mask="present"] body,
+html[data-mask="present"] #slider.keen-slider {
+    background: linear-gradient(135deg, #1a0b3a 0%, #2d1060 45%, #0f1d55 100%);
+}
+html[data-mask="present"] .section-heading,
+html[data-mask="present"] .hero-slide h1,
+html[data-mask="present"] .section-heading .highlight {
+    background: linear-gradient(90deg, #ff6ad5, #c084fc 45%, #22d3ee);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+html[data-mask="present"] .section-heading::after,
+html[data-mask="present"] .hero-slide h1::after {
+    content: var(--slop-badge, "AI-powered");
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.4em;
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    background: linear-gradient(90deg, #ff6ad5, #8b5cf6);
+    border-radius: 100px;
+    box-shadow: 0 4px 16px rgba(255, 106, 213, 0.45);
+    transform: rotate(-6deg);
+}
+html[data-mask="present"] .section-label::before { content: "✨ "; }
+html[data-mask="present"] .section-label::after { content: " — 🚀"; }
+html[data-mask="present"] .hero-proof li + li::before { content: "—"; color: #ff6ad5; }
+html[data-mask="present"] .hero-tagline::after { content: " 🚀💡✨"; }
+html[data-mask="present"] .lang-picker { top: 42px; }
+html[data-mask="present"] .slide-dot.active { background: #ff6ad5; box-shadow: 0 0 10px #ff6ad5; }
+
+html[data-mask="present"] .slop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    pointer-events: none;
+    overflow: hidden;
+    font-family: var(--sans);
+}
+.slop-ticker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: linear-gradient(90deg, #ff6ad5, #8b5cf6, #22d3ee, #ff6ad5);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 2px 14px rgba(139, 92, 246, 0.5);
+}
+.slop-ticker-track {
+    display: inline-block;
+    padding-left: 0;
+    animation: slop-ticker 40s linear infinite;
+    will-change: transform;
+}
+.slop-ticker-track span { padding-right: 1.5em; }
+@keyframes slop-ticker { to { transform: translateX(-50%); } }
+
+.slop-rain { position: absolute; inset: 0; }
+.slop-rain span {
+    position: absolute;
+    top: -8vh;
+    left: var(--x);
+    font-size: var(--s);
+    opacity: 0.85;
+    animation: slop-fall var(--d) linear var(--delay) infinite;
+    will-change: transform;
+}
+@keyframes slop-fall {
+    to { transform: translateY(125vh) rotate(var(--r)); }
+}
+
+.slop-pop {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    max-width: min(300px, calc(100vw - 32px));
+    padding: 14px 36px 14px 16px;
+    pointer-events: auto;
+    background: #fff;
+    color: #2a1a4a;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 500;
+    border-radius: 14px;
+    border: 2px solid transparent;
+    background-image: linear-gradient(#fff, #fff), linear-gradient(135deg, #ff6ad5, #8b5cf6, #22d3ee);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(255, 255, 255, 0.08);
+    transform-origin: center;
+    animation: slop-pop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.slop-pop.is-leaving { animation: slop-pop-out 0.3s ease-in forwards; }
+.slop-pop button {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: #f1e8ff;
+    color: #5b3ea6;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.slop-pop button:hover, .slop-pop button:focus-visible { background: #ff6ad5; color: #fff; }
+@keyframes slop-pop-in { from { transform: scale(0.4) rotate(-6deg); opacity: 0; } to { transform: scale(1) rotate(-1.5deg); opacity: 1; } }
+@keyframes slop-pop-out { to { transform: scale(0.6) translateY(20px); opacity: 0; } }
+
+.slop-cookie {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100vw - 24px);
+    padding: 10px 12px 10px 16px;
+    pointer-events: auto;
+    background: #fff;
+    color: #2a1a4a;
+    font-size: 13px;
+    line-height: 1.35;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.7);
+    animation: slop-cookie-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.8s both;
+}
+.slop-cookie[hidden] { display: none; }
+.slop-cookie button {
+    flex-shrink: 0;
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 100px;
+    background: linear-gradient(90deg, #ff6ad5, #8b5cf6);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+@keyframes slop-cookie-in { from { transform: translate(-50%, 120%); } to { transform: translate(-50%, 0); } }
+
+/* =====================================================================
+   FUTURE — a cold system readout; only the name and one sentence remain
+   ===================================================================== */
+html[data-mask="future"] {
+    --bg: #050506;
+    --bg-card: #0b0b0d;
+    --bg-card-hover: #111114;
+    --purple: #a9a9b1;
+    --purple-dim: #6d6d75;
+    --purple-glow: transparent;
+    --purple-glow-strong: rgba(255, 255, 255, 0.18);
+    --text: #e4e4e8;
+    --text-dim: #8a8a92;
+    --text-muted: #46464d;
+    --border: #1e1e22;
+}
+html[data-mask="future"] #slider > .keen-slider__slide {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden !important;
+}
+/* everything but the readout goes dark */
+html[data-mask="future"] #slider > .keen-slider__slide > :not([data-future-line]):not(.hero-slide) { display: none !important; }
+html[data-mask="future"] .hero-slide { height: auto; position: static; } /* static: the tray anchors to the slide instead */
+html[data-mask="future"] .hero-slide > :not(.hero-center):not(.mask-tray):not(.mask-sprite) { display: none !important; }
+html[data-mask="future"] .hero-center > :not(h1):not(.hero-face) { display: none !important; }
+html[data-mask="future"] .hero-center { padding: 0; }
+html[data-mask="future"] .hero-greeting { visibility: hidden; }
+html[data-mask="future"] .hero-slide h1 {
+    font-weight: 300;
+    font-size: clamp(26px, 4.2vw, 50px);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    margin-left: 0.32em; /* optically centre the tracked text */
+    animation: none;
+}
+html[data-mask="future"] .mask-tray {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    animation: none;
+    filter: grayscale(1) contrast(1.1);
+}
+html[data-mask="future"] .mask-tray::after { background: linear-gradient(90deg, transparent, #333 20%, #333 80%, transparent); }
+html[data-mask="future"] .hero-mask-worn .mask-art { animation: none; }
+html[data-mask="future"] [data-future-line] {
+    display: block;
+    margin: 26px 0 0;
+    padding: 0 16px;
+    font-family: var(--mono);
+    font-size: clamp(14px, 1.5vw, 19px);
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.6;
+    color: var(--text);
+}
+html[data-mask="future"] [data-future-line]::before {
+    content: "";
+    display: block;
+    width: 44px;
+    height: 1px;
+    margin: 0 auto 24px;
+    background: var(--text-muted);
+}
+html[data-mask="future"] [data-future-line] .future-text::after {
+    content: "▮";
+    margin-left: 0.35em;
+    color: var(--text-dim);
+    animation: future-cursor 1.1s steps(1) infinite;
+}
+html[data-mask="future"] [data-future-line] a {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+    text-decoration-color: var(--text-muted);
+}
+html[data-mask="future"] [data-future-line] a:hover,
+html[data-mask="future"] [data-future-line] a:focus-visible { text-decoration-color: var(--text); }
+html[data-mask="future"] [data-future-line] .future-email { display: block; margin-top: 18px; letter-spacing: 0.08em; text-transform: none; font-size: 0.85em; }
+@keyframes future-cursor { 50% { opacity: 0; } }
+html[data-mask="future"] .lang-picker { filter: grayscale(1); opacity: 0.8; }
+html[data-mask="future"] .slide-dot { border-radius: 0; border-color: #555; }
+html[data-mask="future"] .slide-dot.active { background: #ddd; transform: scale(1); }
+
+/* ---------- small screens ---------- */
+@media (max-width: 600px) {
+    .mask-tray { gap: 8px; padding: 6px 12px 8px; margin-top: 0; }
+    .mask-tray::after { bottom: 3px; }
+    .mask-slot { width: 44px; height: 52px; }
+    .vhs-osd { font-size: 12px; }
+    .vhs-play { top: 16px; left: 14px; }
+    .vhs-rec { bottom: 14px; left: 14px; }
+    .vhs-stamp { bottom: 14px; right: 24px; }
+    .vhs-edge { display: none; }
+    .slop-ticker { font-size: 11px; height: 24px; }
+    .slop-cookie { flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; bottom: 10px; font-size: 12px; width: calc(100vw - 24px); }
+    .slop-cookie span { flex: 1 1 100%; }
+    .slop-cookie button { padding: 7px 12px; font-size: 12px; }
+    .slop-pop { font-size: 13px; }
+    html[data-mask="present"] .lang-picker { top: 34px; }
+    html[data-mask="future"] .hero-slide h1 { letter-spacing: 0.2em; margin-left: 0.2em; }
+    html[data-mask="future"] [data-future-line] { letter-spacing: 0.14em; }
+    html[data-mask="future"] .mask-tray { bottom: 20px; }
+}
+
+/* ---------- hidden tab: stop the overlays from burning cycles ---------- */
+html.mask-paused .vhs *,
+html.mask-paused .slop * { animation-play-state: paused !important; }
+
+/* ---------- reduced motion: the themed look, nothing rolling or pouring ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .mask-tray,
+    .mask-slot .mask-art,
+    .hero-mask-worn .mask-art,
+    .vhs-band,
+    .vhs-rec b,
+    .slop-ticker-track,
+    .slop-rain span,
+    .slop-pop,
+    .slop-cookie,
+    html[data-mask="future"] [data-future-line]::after {
+        animation: none !important;
+    }
+    .vhs-band { transform: translateY(700%); opacity: 0.5; }
+    .slop-rain { display: none; }
+    html.mask-jolt body { animation: none; }
+    .mask-flash { animation-duration: 0.25s; }
+    .hero-face, .hero-face-outline, .mask-slot .mask-art { transition: none; }
+}
+
+/* ---------- a11y helper (Hero's .sr-only is scoped; the live region lives in the tray component) ---------- */
+.mask-tray ~ .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- print: no masks, no overlays ---------- */
+@media print {
+    .mask-tray, .mask-ghost, .mask-flash, .vhs, .slop, .mask-sprite { display: none !important; }
+}

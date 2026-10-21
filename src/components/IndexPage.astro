@@ -8,8 +8,10 @@ import Skills from "../components/Skills.astro";
 import Quote from "../components/Quote.astro";
 import SlideDots from "../components/SlideDots.astro";
 import PdfButton from "../components/PdfButton.astro";
+import MaskThemes from "../components/MaskThemes.astro";
 import { useTranslations } from "../i18n/utils";
 import type { Lang } from "../i18n/ui";
+import { CONTACT } from "../i18n/contact";
 
 const lang = (Astro.currentLocale ?? "sv") as Lang;
 const t = useTranslations(lang);
@@ -19,25 +21,35 @@ const t = useTranslations(lang);
     <div id="slider" class="keen-slider">
         <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Hero />
+            <p class="future-line" data-future-line><span class="future-text">{t("future.hero")}</span></p>
         </div>
         <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Projects />
+            <p class="future-line" data-future-line><span class="future-text">{t("future.projects")}</span></p>
         </div>
         <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <NumbersGame />
+            <p class="future-line" data-future-line><span class="future-text">{t("future.numbers")}</span></p>
         </div>
         <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Timeline />
+            <p class="future-line" data-future-line><span class="future-text">{t("future.timeline")}</span></p>
         </div>
         <div class="keen-slider__slide" data-keen-slider-scrollable style="overflow-y: scroll">
             <Skills />
+            <p class="future-line" data-future-line><span class="future-text">{t("future.skills")}</span></p>
         </div>
         <div class="keen-slider__slide section-quote" data-keen-slider-scrollable style="overflow-y: scroll">
             <Quote />
+            <p class="future-line" data-future-line>
+                <span class="future-text">{t("future.contact")}</span>
+                <a class="future-email" href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+            </p>
         </div>
     </div>
 
     <SlideDots count={6} />
+    <MaskThemes />
     {/* Hidden until the CV view is ready for public consumption. */}
     {/* <PdfButton /> */}
 </Layout>
