@@ -62,6 +62,24 @@ for (const locale of LOCALES) {
       }
     });
 
+    // WebKit can run the slider script before the stylesheet applies; the slider
+    // must still end up with one viewport-tall slide per page.
+    test("every slide is exactly one viewport tall", async ({ page }) => {
+      await page.goto(locale.prefix + "/");
+      await page.waitForSelector("#slider[data-keen-slider-v]", { timeout: 10_000 });
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            [...document.querySelectorAll<HTMLElement>("#slider > .keen-slider__slide")].map((s) =>
+              Math.round(s.getBoundingClientRect().height - window.innerHeight),
+            ),
+          ),
+        )
+        .toEqual(SLIDES.map(() => 0));
+      // The hero is the visible slide, flush with the top
+      expect(await page.evaluate(() => document.querySelector("#slider > .keen-slider__slide")!.getBoundingClientRect().top)).toBe(0);
+    });
+
     test("no slide content extends behind navigation dots", async ({ page }, testInfo) => {
       if (testInfo.project.name !== "mobile") {
         test.skip();

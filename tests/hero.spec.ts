@@ -40,6 +40,8 @@ for (const locale of LOCALES) {
       await page.goto(locale.prefix + "/");
       await page.waitForTimeout(1600);
       const item = page.locator('.hero-marquee-bottom .marquee-item').nth(1);
+      // The tap goes to page coordinates, so the marquee row must really be on screen.
+      await expect(page.locator(".hero-marquee-bottom .marquee-field")).toBeInViewport({ ratio: 0.5 });
       const box = (await item.boundingBox())!;
       const x = Math.min(Math.max(box.x + box.width / 2, 40), page.viewportSize()!.width - 60);
       const y = box.y + box.height / 2;
