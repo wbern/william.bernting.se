@@ -60,6 +60,8 @@ const strings = {
     </div>
 
     <div class="skills-stage">
+        {/* The bowl never moves: its own layer, painted once per resize. */}
+        <canvas class="skills-bowl" aria-hidden="true"></canvas>
         <canvas class="skills-canvas" role="img" aria-label={t("skills.aria.canvas")}></canvas>
         <div class="skills-card" hidden>
             <button type="button" class="skills-card-close" aria-label={t("skills.card.close")}>×</button>
@@ -250,6 +252,15 @@ const strings = {
         position: relative;
         min-width: 0;
         min-height: 0;
+    }
+
+    .skills-bowl {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        pointer-events: none;
     }
 
     .skills-canvas {
@@ -484,7 +495,10 @@ const strings = {
     const stage = root.querySelector<HTMLElement>('.skills-stage')!;
     const canvas = root.querySelector<HTMLCanvasElement>('.skills-canvas')!;
     const card = root.querySelector<HTMLElement>('.skills-card')!;
-    const ctx = canvas.getContext('2d')!;
+    const bowlCanvas = root.querySelector<HTMLCanvasElement>('.skills-bowl')!;
+    const mainCtx = canvas.getContext('2d')!;
+    // The fruit painters draw on `ctx`; sprite builders point it at an offscreen canvas.
+    let ctx = mainCtx;
 
     interface SkillData {
         id: string; label: string; pillar: boolean; tier: number;
@@ -537,6 +551,8 @@ const strings = {
     const IDLE_HOP_EVERY = 6500;
     const BOWL_STROKE = '#9b4dca';
     const BOWL_GLOW = 'rgba(155, 77, 202, 0.35)';
+    // Phones report DPR 3; at 2 the fruit look the same and the canvas has 44% of the pixels.
+    const MAX_DPR = 2;
 
     interface Fruit {
         skill: SkillData;
@@ -563,7 +579,7 @@ const strings = {
     const fruits: Fruit[] = [];
     const particles: Particle[] = [];
     let bowl = {} as Bowl;
-    let W = 0, H = 0, scale = 1, compact = false;
+    let W = 0, H = 0, scale = 1, compact = false, dpr = 1;
     let animId: number | null = null;
     let running = false;
     let fillIdx = 0;
@@ -581,12 +597,12 @@ const strings = {
 
     // ─── Layout ───
     function resize() {
-        const dpr = window.devicePixelRatio || 1;
+        dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
         W = stage.clientWidth;
         H = stage.clientHeight;
-        canvas.width = Math.round(W * dpr);
-        canvas.height = Math.round(H * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvas.width = bowlCanvas.width = Math.round(W * dpr);
+        canvas.height = bowlCanvas.height = Math.round(H * dpr);
+        mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         compact = W < 520;
 
         const caption = root.querySelector<HTMLElement>('.skills-caption');
@@ -606,6 +622,12 @@ const strings = {
         };
         scale = Math.max(0.6, Math.min(1.12, bw / 540, bh / 400));
         for (const f of fruits) setRadius(f);
+        clearSprites();
+        measureCard = true;
+        const bctx = bowlCanvas.getContext('2d')!;
+        bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx = bctx;
+        try { drawBowl(); } finally { ctx = mainCtx; }
     }
 
     function setRadius(f: Fruit) {
@@ -640,6 +662,8 @@ const strings = {
     }
 
     // ─── Collision helpers ───
+    // One shared result object: this runs ~200 times a frame, so no garbage.
+    const hitScratch = { nx: 0, ny: 0, depth: 0 };
     function circleLineCollision(cx: number, cy: number, r: number,
         x1: number, y1: number, x2: number, y2: number) {
         const dx = x2 - x1, dy = y2 - y1;
@@ -651,7 +675,10 @@ const strings = {
         const distY = cy - (y1 + t * dy);
         const dist = Math.sqrt(distX * distX + distY * distY);
         if (dist < r) {
-            return { nx: dist > 0 ? distX / dist : 0, ny: dist > 0 ? distY / dist : -1, depth: r - dist };
+            hitScratch.nx = dist > 0 ? distX / dist : 0;
+            hitScratch.ny = dist > 0 ? distY / dist : -1;
+            hitScratch.depth = r - dist;
+            return hitScratch;
         }
         return null;
     }
@@ -861,6 +888,7 @@ const strings = {
         cardEls.meta.style.whiteSpace = 'pre-line';
         card.hidden = false;
         card.classList.toggle('is-pinned', state.pinned);
+        measureCard = true;
         positionCard();
         requestAnimationFrame(() => card.classList.add('is-open'));
         if (state.autoHide) {
@@ -880,22 +908,31 @@ const strings = {
         if (reducedMotion) draw();
     }
 
+    // The card's size only changes with its content or the viewport, so it's
+    // measured then, not every frame (a per-frame offsetWidth after a style
+    // write forces a synchronous layout).
+    let measureCard = true;
+    let cardW = 0, cardH = 0, cardLeft = '', cardTop = '';
+    function placeCard(left: string, top: string) {
+        if (left !== cardLeft) { card.style.left = left; cardLeft = left; }
+        if (top !== cardTop) { card.style.top = top; cardTop = top; }
+    }
+
     function positionCard() {
         if (!cardState || card.hidden) return;
         const f = cardState.fruit;
         if (compact) {
             // Phones: a full-width card at the top of the stage, away from the thumb.
-            card.style.left = '0px';
-            card.style.top = '0px';
+            placeCard('0px', '0px');
             return;
         }
-        const cw = card.offsetWidth, ch = card.offsetHeight;
+        if (measureCard) { cardW = card.offsetWidth; cardH = card.offsetHeight; measureCard = false; }
+        const cw = cardW, ch = cardH;
         let x = f.x - cw / 2;
         let y = f.y - f.r - ch - 14;
         x = Math.max(4, Math.min(W - cw - 4, x));
         if (y < 4) y = Math.min(H - ch - 4, f.y + f.r + 14);
-        card.style.left = `${Math.round(x)}px`;
-        card.style.top = `${Math.round(Math.max(4, y))}px`;
+        placeCard(`${Math.round(x)}px`, `${Math.round(Math.max(4, y))}px`);
     }
 
     function lightPillar(id: string | null) {
@@ -1248,6 +1285,91 @@ const strings = {
 
     const DRAWERS = [drawCherry, drawStrawberry, drawGrape, drawOrange, drawApple, drawPineapple, drawWatermelon, drawPeach];
 
+    // ─── Sprite cache ───
+    // Every fruit shape casts a blurred shadow, and blur is by far the most
+    // expensive thing a 2D canvas does. So each fruit, label, the bowl and the
+    // glows are painted once into an offscreen canvas and stamped with
+    // drawImage every frame. Sprites are built at device resolution, and
+    // compositing with source-over is associative, so the result is the same
+    // picture. Only shapes drawn with a varying globalAlpha keep the solid part
+    // live and stamp the glow alone (alpha must hit glow and fill separately).
+    interface Sprite { c: HTMLCanvasElement; x: number; y: number; w: number; h: number }
+    const fruitSprites = new Map<string, Sprite>();
+    const glowSprites = new Map<string, Sprite>();
+    const labelSprites = new Map<string, { sp: Sprite; boxW: number; boxH: number }>();
+    const SHADOW_SHIFT = 4096; // css px: glow-only sprites draw the shape off-canvas
+
+    function clearSprites() {
+        fruitSprites.clear();
+        glowSprites.clear();
+        labelSprites.clear();
+    }
+    // Labels (and the card) are measured with web fonts; redo once they've arrived.
+    const fontsChanged = () => { labelSprites.clear(); measureCard = true; };
+    document.fonts?.ready.then(fontsChanged);
+    document.fonts?.addEventListener?.('loadingdone', fontsChanged);
+
+    /** Paint into a fresh canvas covering css rect (x, y, w, h), snapped to device pixels. */
+    function makeSprite(x: number, y: number, w: number, h: number, paint: () => void): Sprite {
+        const dx = Math.floor(x * dpr), dy = Math.floor(y * dpr);
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.ceil((x + w) * dpr) - dx);
+        c.height = Math.max(1, Math.ceil((y + h) * dpr) - dy);
+        const g = c.getContext('2d')!;
+        // Same device-pixel grid as the main canvas, so the drawing code is unchanged.
+        g.setTransform(dpr, 0, 0, dpr, -dx, -dy);
+        const prev = ctx;
+        ctx = g;
+        try { paint(); } finally { ctx = prev; }
+        return { c, x: dx / dpr, y: dy / dpr, w: c.width / dpr, h: c.height / dpr };
+    }
+
+    /** Stamp a sprite built around (0, 0) at (x, y), optionally scaled by k. */
+    function stamp(s: Sprite, x: number, y: number, k = 1) {
+        mainCtx.drawImage(s.c, x + s.x * k, y + s.y * k, s.w * k, s.h * k);
+    }
+
+    // Shadow blur is in device pixels; this is how far it reaches, in css px.
+    const blurReach = (blur: number) => (blur * 1.5) / dpr + 2;
+
+    function fruitSprite(f: Fruit, blur: number): Sprite {
+        const tier = f.skill.tier, r = f.r;
+        const key = `${tier}|${r}|${blur}`;
+        let s = fruitSprites.get(key);
+        if (!s) {
+            // Round body plus glow; stems and crowns poke out to ~1.3 r above.
+            const m = blurReach(blur);
+            const side = r + m, top = r * 1.35 + m;
+            s = makeSprite(-side, -top, side * 2, top + side, () => {
+                ctx.shadowColor = data.colors[tier];
+                ctx.shadowBlur = blur;
+                DRAWERS[tier](0, 0, r);
+            });
+            fruitSprites.set(key, s);
+        }
+        return s;
+    }
+
+    /** The blurred glow of a circle (filled, or stroked with lineWidth), without the circle. */
+    function glowSprite(color: string, blur: number, radius: number, lineWidth: number): Sprite {
+        const key = `${color}|${blur}|${radius}|${lineWidth}`;
+        let s = glowSprites.get(key);
+        if (!s) {
+            const e = radius + lineWidth + blurReach(blur);
+            s = makeSprite(-e, -e, e * 2, e * 2, () => {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = blur;
+                ctx.shadowOffsetX = SHADOW_SHIFT * dpr; // shadow offsets ignore the transform
+                ctx.beginPath();
+                ctx.arc(-SHADOW_SHIFT, 0, radius, 0, Math.PI * 2);
+                if (lineWidth) { ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.stroke(); }
+                else { ctx.fillStyle = color; ctx.fill(); }
+            });
+            glowSprites.set(key, s);
+        }
+        return s;
+    }
+
     function drawBowl() {
         const { x, y, w, h, cornerRadius: cr, taperInset: ti } = bowl;
         ctx.save();
@@ -1268,35 +1390,44 @@ const strings = {
         ctx.restore();
     }
 
+    // A combo flash widens the glow from 12 to 42 px and fades back. Sprites
+    // exist for a few blur steps; in between, the next one fades in on top.
+    const FLASH_STEP = 10;
+
     function drawFruitBody(f: Fruit, now: number) {
-        const r = f.r * f.scaleAnim;
-        const color = data.colors[f.skill.tier];
-        ctx.save();
+        const k = f.scaleAnim; // pop after a grab or combo: scale the stamp
+        const r = f.r * k;
         if (f.skill.pillar) {
             // Gold halo: "this is what I sell".
             const pulse = 0.5 + 0.5 * Math.sin(now / 700 + f.skill.tier);
-            ctx.beginPath();
-            ctx.arc(f.x, f.y, r + 5 * scale, 0, Math.PI * 2);
-            ctx.strokeStyle = GOLD;
-            ctx.globalAlpha = 0.55 + 0.25 * pulse;
-            ctx.lineWidth = 2;
-            ctx.shadowColor = GOLD;
-            ctx.shadowBlur = 14;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
+            mainCtx.globalAlpha = 0.55 + 0.25 * pulse;
+            stamp(glowSprite(GOLD, 14, f.r + 5 * scale, 2), f.x, f.y, k);
+            mainCtx.beginPath();
+            mainCtx.arc(f.x, f.y, r + 5 * scale, 0, Math.PI * 2);
+            mainCtx.strokeStyle = GOLD;
+            mainCtx.lineWidth = 2;
+            mainCtx.stroke();
+            mainCtx.globalAlpha = 1;
         }
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 12 + f.flash * 30;
-        DRAWERS[f.skill.tier](f.x, f.y, r);
-        if (f.flash > 0) {
-            ctx.beginPath();
-            ctx.arc(f.x, f.y, r + 2, 0, Math.PI * 2);
-            ctx.strokeStyle = GOLD;
-            ctx.globalAlpha = f.flash;
-            ctx.lineWidth = 3;
-            ctx.stroke();
+        if (f.flash <= 0) { stamp(fruitSprite(f, 12), f.x, f.y, k); return; }
+
+        const blur = 12 + f.flash * 30;
+        const lo = 12 + Math.floor((blur - 12) / FLASH_STEP) * FLASH_STEP;
+        const t = (blur - lo) / FLASH_STEP;
+        stamp(fruitSprite(f, lo), f.x, f.y, k);
+        if (t > 0.02 && lo < 42) {
+            mainCtx.globalAlpha = t;
+            stamp(fruitSprite(f, lo + FLASH_STEP), f.x, f.y, k);
         }
-        ctx.restore();
+        // Gold ring, glowing in the fruit's colour.
+        mainCtx.globalAlpha = f.flash;
+        stamp(glowSprite(data.colors[f.skill.tier], t < 0.5 ? lo : lo + FLASH_STEP, f.r + 2, 3), f.x, f.y, k);
+        mainCtx.beginPath();
+        mainCtx.arc(f.x, f.y, r + 2, 0, Math.PI * 2);
+        mainCtx.strokeStyle = GOLD;
+        mainCtx.lineWidth = 3;
+        mainCtx.stroke();
+        mainCtx.globalAlpha = 1;
     }
 
     function wrapLabel(text: string, maxW: number): string[] {
@@ -1317,13 +1448,17 @@ const strings = {
         return best;
     }
 
-    function drawLabel(f: Fruit, focused: boolean) {
+    /** A fruit's name tag, laid out and painted once. Box top-left at (0, 0). */
+    function labelSprite(f: Fruit, focused: boolean) {
+        const key = `${f.skill.id}|${focused ? 1 : 0}`;
+        const hit = labelSprites.get(key);
+        if (hit) return hit;
         const s = f.skill;
         const pill = s.pillar;
         const nameSize = compact ? (pill ? 13 : 11) : Math.round((pill ? 15 : 12.5) * Math.max(0.86, scale));
         const nameFont = `${pill ? 700 : 600} ${nameSize}px Inter, system-ui, sans-serif`;
         const subFont = `500 ${compact ? 9.5 : 10.5}px "JetBrains Mono", monospace`;
-        ctx.save();
+        mainCtx.save();
         ctx.font = nameFont;
         const lines = wrapLabel(s.label, compact ? Math.max(f.r * 1.6, 54) : Math.max(f.r * 1.7, 64));
         const sub = pill ? '' : `${fmtYears(s.years ?? 0)} ${S.yearsShort}`;
@@ -1331,55 +1466,66 @@ const strings = {
         const subH = sub ? nameSize * 0.95 : 0;
         let textW = Math.max(...lines.map((l) => ctx.measureText(l).width));
         if (sub) { ctx.font = subFont; textW = Math.max(textW, ctx.measureText(sub).width); }
+        mainCtx.restore();
         const padX = 6, padY = 3;
         const boxW = textW + padX * 2;
         const boxH = lines.length * lineH + subH + padY * 2;
+        const sp = makeSprite(-2, -2, boxW + 4, boxH + 4, () => {
+            const cx = boxW / 2;
+            ctx.globalAlpha = focused ? 0.95 : 0.78;
+            ctx.fillStyle = '#0a0a0f';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, boxW, boxH, Math.min(7, boxH / 2));
+            ctx.fill();
+            if (focused) {
+                ctx.strokeStyle = pill ? GOLD : data.colors[s.tier];
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = 1;
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = nameFont;
+            ctx.fillStyle = '#ffffff';
+            lines.forEach((l, i) => ctx.fillText(l, cx, padY + lineH * (i + 0.5)));
+            if (sub) {
+                ctx.font = subFont;
+                ctx.fillStyle = '#b8b8cc';
+                ctx.fillText(sub, cx, padY + lines.length * lineH + subH * 0.5);
+            }
+        });
+        const entry = { sp, boxW, boxH };
+        labelSprites.set(key, entry);
+        return entry;
+    }
+
+    function drawLabel(f: Fruit, focused: boolean) {
+        const { sp, boxW, boxH } = labelSprite(f, focused);
         // Keep the label on the canvas even when the fruit hugs the edge.
         const bx = Math.max(2, Math.min(W - boxW - 2, f.x - boxW / 2));
         const by = f.y - boxH / 2;
-        const cx = bx + boxW / 2;
-        ctx.globalAlpha = focused ? 0.95 : 0.78;
-        ctx.fillStyle = '#0a0a0f';
-        ctx.beginPath();
-        ctx.roundRect(bx, by, boxW, boxH, Math.min(7, boxH / 2));
-        ctx.fill();
-        if (focused) {
-            ctx.strokeStyle = pill ? GOLD : data.colors[s.tier];
-            ctx.lineWidth = 1.5;
-            ctx.globalAlpha = 1;
-            ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = nameFont;
-        ctx.fillStyle = '#ffffff';
-        lines.forEach((l, i) => ctx.fillText(l, cx, by + padY + lineH * (i + 0.5)));
-        if (sub) {
-            ctx.font = subFont;
-            ctx.fillStyle = '#b8b8cc';
-            ctx.fillText(sub, cx, by + padY + lines.length * lineH + subH * 0.5);
-        }
-        ctx.restore();
+        // Whole device pixels keep the text crisp.
+        stamp(sp, Math.round(bx * dpr) / dpr, Math.round(by * dpr) / dpr);
     }
 
     function drawParticles() {
         for (const p of particles) {
-            ctx.save();
-            ctx.globalAlpha = Math.max(0, p.life);
-            ctx.shadowColor = p.color;
-            ctx.shadowBlur = 8;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
+            const alpha = Math.max(0, p.life);
+            const radius = Math.max(0.1, p.size * p.life);
+            mainCtx.globalAlpha = alpha;
+            // Glow from a sprite (radius rounded to a quarter pixel), dot live.
+            stamp(glowSprite(p.color, 8, Math.max(0.25, Math.round(radius * 4) / 4), 0), p.x, p.y);
+            mainCtx.fillStyle = p.color;
+            mainCtx.beginPath();
+            mainCtx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            mainCtx.fill();
         }
+        mainCtx.globalAlpha = 1;
     }
 
     function draw(now = performance.now()) {
-        ctx.clearRect(0, 0, W, H);
-        drawBowl();
+        mainCtx.clearRect(0, 0, W, H);
         for (const f of fruits) drawFruitBody(f, now);
         // Labels in a second pass so no fruit ever covers another fruit's name;
         // the focused one goes last so it's always on top.
@@ -1715,7 +1861,7 @@ const strings = {
         tween = null;
         hoverFruit = null;
         if (cardState) hideCard();
-        ctx.clearRect(0, 0, W, H);
+        mainCtx.clearRect(0, 0, W, H);
     }
 
     /** Reduced motion: settle the bowl off-screen, draw one still frame. */
