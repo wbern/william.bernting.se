@@ -26,15 +26,15 @@ export type SkillId =
 interface SkillDef {
     id: SkillId;
     label: Bi;
+    /** Shorter fruit label for phones, where long names collide with their neighbours. */
+    short?: Bi;
     pillar: boolean;
     /** cv.ts techStack names that count as this skill (tools only). */
     aliases: string[];
     /** Plain-language "what it buys you" line for a non-technical reader. */
     value: Bi;
-    /** Pillars: the proof line shown instead of years. */
+    /** Pillars: the proof line, shown in the fruit's card on demand (not in the left column). */
     proof?: Bi;
-    /** Pillars: one-line client promise ("You get: ...") on the left-column card only. */
-    gets?: Bi;
     proofSlug?: ProjectSlug;
 }
 
@@ -43,52 +43,40 @@ const defs: SkillDef[] = [
         id: "tdd", pillar: true, aliases: ["TDD"],
         label: { sv: "Testa först", en: "Test first" },
         value: {
-            sv: "Jag skriver testet innan koden. Då kan vi ändra snabbt utan att något annat går sönder.",
-            en: "I write the test before the code, so we can change things fast without breaking anything else.",
+            sv: "Testet före koden. På Hedin körde vi så i 90 % av jobbet, och leveranserna kom utan buggar.",
+            en: "Test before code. At Hedin we did that for 90% of the work and shipped without bugs.",
         },
         proof: {
-            sv: "TDD i 90% av arbetet hos Hedin gav buggfria leveranser.",
-            en: "TDD in 90% of the work at Hedin meant bug-free deliveries.",
+            sv: "Mina TDD-kommandon för AI-agenter fick 100 GitHub-stjärnor på under två dygn.",
+            en: "My TDD commands for AI agents got 100 GitHub stars in under two days.",
         },
         proofSlug: "tdd-command-generator",
-        gets: {
-            sv: "Kod som går att ändra utan rädsla.",
-            en: "Code you can change without fear.",
-        },
     },
     {
         id: "ai", pillar: true, aliases: [],
         label: { sv: "AI-agenter", en: "AI agents" },
         value: {
-            sv: "AI gör kod billigare. Jag ser till att det inte blir billig kod, och lär ditt team göra likadant.",
-            en: "AI makes code cheaper. I make sure it doesn't make cheap code, and teach your team to do the same.",
+            sv: "AI skriver koden snabbt. Jag lär ditt team att kolla den.",
+            en: "AI writes the code fast. I teach your team to check it.",
         },
         proof: {
             sv: "Lottningen till en schackturnering för ~500 barn: AI-kodad, inte en rad skriven för hand.",
             en: "The pairing tool for a chess event with ~500 kids: AI-coded, not one line typed by hand.",
         },
         proofSlug: "legacy-chess-tool-rewrite",
-        gets: {
-            sv: "Ett team som vet när AI:n går att lita på, och när den inte gör det.",
-            en: "A team that knows when to trust the AI, and when not to.",
-        },
     },
     {
         id: "coaching", pillar: true, aliases: [],
         label: { sv: "Coachning", en: "Coaching" },
         value: {
-            sv: "Mob programming, coachning och rekrytering. Folk tar mer ägarskap och ställer rätt frågor.",
-            en: "Mob programming, coaching and hiring. People take more ownership and ask the right questions.",
+            sv: "Mob programming och coachning, tills teamet klarar sig utan mig.",
+            en: "Mob programming and coaching, until the team doesn't need me.",
         },
         proof: {
             sv: "Stöttade 14 utvecklingsteam på Telia. Rekryterade 6 personer på 6 månader.",
             en: "Supported 14 development teams at Telia. Hired 6 people in 6 months.",
         },
         proofSlug: "sembo-se-startpage",
-        gets: {
-            sv: "Ett team som fortsätter dra åt samma håll när jag har gått vidare.",
-            en: "A team that keeps pulling in the same direction after I move on.",
-        },
     },
     {
         id: "typescript", pillar: false, aliases: ["TypeScript"],
@@ -141,6 +129,7 @@ const defs: SkillDef[] = [
     {
         id: "devops", pillar: false, aliases: ["DevOps"],
         label: { sv: "DevOps / CI/CD", en: "DevOps / CI/CD" },
+        short: { sv: "CI/CD", en: "CI/CD" },
         value: {
             sv: "Varje ändring testas och skeppas automatiskt.",
             en: "Every change gets tested and shipped automatically.",
@@ -149,6 +138,7 @@ const defs: SkillDef[] = [
     {
         id: "cloud", pillar: false, aliases: ["AWS", "Azure"],
         label: { sv: "AWS / Azure", en: "AWS / Azure" },
+        short: { sv: "AWS/Azure", en: "AWS/Azure" },
         value: {
             sv: "Molnet, uppsatt så att det bara funkar.",
             en: "The cloud, set up so it just works.",
@@ -165,6 +155,7 @@ const defs: SkillDef[] = [
     {
         id: "microfrontends", pillar: false, aliases: ["Single-SPA"],
         label: { sv: "Micro-frontends", en: "Micro-frontends" },
+        short: { sv: "Micro-FE", en: "Micro-FE" },
         value: {
             sv: "Många team kan bygga samma sajt utan att trampa varandra på tårna.",
             en: "Many teams can ship one website without stepping on each other's toes.",
@@ -296,6 +287,8 @@ const PILLAR_TIER: Partial<Record<SkillId, number>> = { tdd: 6, ai: 5, coaching:
 export interface SkillProfile {
     id: SkillId;
     label: string;
+    /** Phone-sized fruit label (falls back to `label`). */
+    short: string;
     pillar: boolean;
     tier: number;
     /** Years on assignments with this tool in the stack (tools only), 1 decimal. */
@@ -305,7 +298,6 @@ export interface SkillProfile {
     value: string;
     proof: string | null;
     proofSlug: ProjectSlug | null;
-    gets: string | null;
 }
 
 export interface SkillCombo {
@@ -325,6 +317,7 @@ export function getSkillProfiles(lang: Lang, now: Date = new Date()): SkillProfi
         return {
             id: d.id,
             label: d.label[lang],
+            short: (d.short ?? d.label)[lang],
             pillar: d.pillar,
             tier: d.pillar ? PILLAR_TIER[d.id]! : tierForYears(years ?? 0),
             years,
@@ -332,7 +325,6 @@ export function getSkillProfiles(lang: Lang, now: Date = new Date()): SkillProfi
             value: d.value[lang],
             proof: d.proof?.[lang] ?? null,
             proofSlug: d.proofSlug ?? null,
-            gets: d.gets?.[lang] ?? null,
         };
     });
 }

@@ -71,7 +71,17 @@ test.describe("skills bowl", () => {
 
     test("a pillar's project link opens that project on the projects slide", async ({ page }) => {
         await gotoSkills(page);
-        await page.locator(".skills-pillar-link").first().click();
+        const listLink = page.locator(".skills-pillar-link").first();
+        if (await listLink.isVisible()) {
+            await listLink.click();
+        } else {
+            // Phones hide the list links; the same link sits in the fruit's card.
+            await waitForFullBowl(page);
+            const box = (await page.locator(".skills-canvas").boundingBox())!;
+            const tdd = (await fruits(page)).find((f) => f.id === "tdd")!;
+            await page.mouse.click(box.x + tdd.x, box.y + tdd.y);
+            await page.locator(".skills-card-link").click();
+        }
         await expect.poll(() => activeSlide(page)).toBe(1);
         await expect(page).toHaveURL(/#tdd-command-generator$/);
     });
