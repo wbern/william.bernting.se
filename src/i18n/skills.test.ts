@@ -1,13 +1,8 @@
 import { describe, it, expect } from "vitest";
-import {
-    getSkillProfiles,
-    getSkillCombos,
-    parseDateRange,
-    unionMonths,
-    tierForYears,
-} from "./skills";
+import { getSkillLadder, getSkillPillars, parseDateRange, unionMonths } from "./skills";
 import { getCvJobs } from "./cv";
 import { getProjectSlugs } from "./projects";
+import { TIER_COUNT, FRUITS } from "../utils/skill-ladder";
 
 const NOW = new Date(2026, 9, 20);
 
@@ -26,35 +21,37 @@ describe("skills: year math", () => {
         expect(unionMonths([[0, 10], [5, 20], [30, 32]])).toBe(22);
         expect(unionMonths([])).toBe(0);
     });
-
-    it("maps years to tool tiers", () => {
-        expect(tierForYears(1.9)).toBe(0);
-        expect(tierForYears(2)).toBe(1);
-        expect(tierForYears(4.5)).toBe(2);
-        expect(tierForYears(6.2)).toBe(3);
-        expect(tierForYears(9.1)).toBe(4);
-    });
 });
 
-describe("skills: profiles derived from cv.ts", () => {
-    const byId = Object.fromEntries(getSkillProfiles("en", NOW).map((s) => [s.id, s]));
+describe("skills: the ladder", () => {
+    const ladder = getSkillLadder("en", NOW);
+    const byId = Object.fromEntries(ladder.map((r) => [r.id, r]));
+
+    it("has one rung per fruit, in growth order, AI agents on top", () => {
+        expect(ladder).toHaveLength(TIER_COUNT);
+        expect(ladder.map((r) => r.id)).toEqual([
+            "vue", "angular", "node", "react", "typescript", "csharp",
+            "devops", "cloud", "tdd", "mob", "ai",
+        ]);
+        ladder.forEach((r, i) => {
+            expect(r.tier).toBe(i);
+            expect(r.fruit).toBe(FRUITS[i]);
+        });
+    });
 
     // Sources: techStack + dateRange per job in src/i18n/cv.ts
     it.each([
-        ["typescript", 9.1, 4],
-        ["react", 7.7, 3],
-        ["node", 7.0, 3],
-        ["angular", 6.2, 3],
-        ["vue", 5.2, 2],
-        ["next", 4.5, 2],
-        ["devops", 3.3, 1],
-        ["cloud", 3.1, 1],
-        ["microfrontends", 1.7, 0],
-        ["csharp", 1.5, 0],
-    ])("%s: %f years, tier %i", (id, years, tier) => {
+        ["vue", 5.2],
+        ["angular", 6.2],
+        ["node", 7.0],
+        ["react", 7.7],
+        ["typescript", 9.1],
+        ["csharp", 1.5],
+        ["devops", 3.3],
+        ["cloud", 3.1],
+    ])("%s: %f years on the job, computed from cv.ts", (id, years) => {
         expect(byId[id].years).toBe(years);
-        expect(byId[id].tier).toBe(tier);
-        expect(byId[id].pillar).toBe(false);
+        expect(byId[id].employers.length).toBeGreaterThan(0);
     });
 
     it("lists employers from the timeline, most recent first", () => {
@@ -62,64 +59,63 @@ describe("skills: profiles derived from cv.ts", () => {
         expect(byId.csharp.employers).toEqual(["Hedin IT", "HP · HPE"]);
     });
 
-    it("every tool is backed by at least one cv.ts job", () => {
-        for (const s of Object.values(byId)) {
-            if (!s.pillar) expect(s.employers.length, s.id).toBeGreaterThan(0);
+    it("the three top rungs are the things he sells, backed by proof, not years", () => {
+        for (const id of ["tdd", "mob", "ai"]) {
+            expect(byId[id].years).toBeNull();
+            expect(byId[id].proof).toBeTruthy();
+            expect(byId[id].slug).toBeTruthy();
+        }
+        expect(byId.tdd.pillar).toBe("tdd");
+        expect(byId.mob.pillar).toBe("coaching");
+        expect(byId.ai.pillar).toBe("ai");
+    });
+
+    it("story lines reuse the verified facts", () => {
+        expect(byId.csharp.line).toContain("5,000");
+        expect(byId.tdd.line).toContain("90%");
+        expect(byId.tdd.proof).toContain("100 GitHub stars");
+        expect(byId.mob.line).toContain("14");
+        expect(byId.ai.line).toContain("~500");
+        expect(byId.angular.line).toContain("7 client products");
+    });
+
+    it("sv and en describe the same ladder", () => {
+        const sv = getSkillLadder("sv", NOW);
+        expect(sv.map((r) => [r.id, r.tier, r.years, r.slug])).toEqual(ladder.map((r) => [r.id, r.tier, r.years, r.slug]));
+        for (const r of [...sv, ...ladder]) {
+            expect(r.line.trim()).toBeTruthy();
+            expect(r.short.trim()).toBeTruthy();
         }
     });
 
-    it("has three pillars, bigger than every tool, each with proof", () => {
-        const all = Object.values(byId);
-        const pillars = all.filter((s) => s.pillar);
-        const maxTool = Math.max(...all.filter((s) => !s.pillar).map((s) => s.tier));
-        expect(pillars.map((p) => p.id)).toEqual(["tdd", "ai", "coaching"]);
-        for (const p of pillars) {
-            expect(p.tier).toBeGreaterThan(maxTool);
-            expect(p.years).toBeNull();
-            expect(p.proof).toBeTruthy();
-            expect(p.proofSlug).toBeTruthy();
-        }
-        expect(new Set(pillars.map((p) => p.tier)).size).toBe(3);
-    });
-
-    it("has no duplicate labels", () => {
+    it("has no duplicate labels or short labels, and short labels stay short", () => {
         for (const lang of ["sv", "en"] as const) {
-            const labels = getSkillProfiles(lang, NOW).map((s) => s.label);
-            expect(new Set(labels).size).toBe(labels.length);
+            const l = getSkillLadder(lang, NOW);
+            expect(new Set(l.map((r) => r.label)).size).toBe(l.length);
+            expect(new Set(l.map((r) => r.short)).size).toBe(l.length);
+            for (const r of l) expect(r.short.length, r.short).toBeLessThanOrEqual(7);
         }
     });
 
-    it("sv and en describe the same skills", () => {
-        const sv = getSkillProfiles("sv", NOW);
-        const en = getSkillProfiles("en", NOW);
-        expect(sv.map((s) => [s.id, s.tier, s.years])).toEqual(en.map((s) => [s.id, s.tier, s.years]));
-        for (const s of [...sv, ...en]) expect(s.value.trim()).toBeTruthy();
+    it("links only to projects that exist", () => {
+        const slugs = new Set(getProjectSlugs());
+        for (const r of ladder) if (r.slug) expect(slugs.has(r.slug), r.slug).toBe(true);
+        for (const p of getSkillPillars("en")) expect(slugs.has(p.slug), p.slug).toBe(true);
     });
 
     it("cv.ts still has the jobs the numbers come from", () => {
-        expect(getCvJobs("en").some((j) => j.techStack.includes("Single-SPA"))).toBe(true);
+        expect(getCvJobs("en").some((j) => j.techStack.includes("TDD"))).toBe(true);
     });
 });
 
-describe("skills: combos", () => {
-    it("pair existing skills, each pair once, with valid project links", () => {
-        const ids = new Set(getSkillProfiles("en", NOW).map((s) => s.id));
-        const slugs = new Set(getProjectSlugs());
-        const seen = new Set<string>();
-        for (const lang of ["sv", "en"] as const) {
-            for (const c of getSkillCombos(lang)) {
-                expect(ids.has(c.pair[0]) && ids.has(c.pair[1])).toBe(true);
-                expect(c.pair[0]).not.toBe(c.pair[1]);
-                expect(c.title.trim()).toBeTruthy();
-                expect(c.body.trim()).toBeTruthy();
-                if (c.slug) expect(slugs.has(c.slug)).toBe(true);
-                if (lang === "en") {
-                    const key = [...c.pair].sort().join("+");
-                    expect(seen.has(key), key).toBe(false);
-                    seen.add(key);
-                }
-            }
+describe("skills: the pillar list", () => {
+    it("keeps the three pillars, each pointing at a rung on the ladder", () => {
+        const ids = new Set(getSkillLadder("en", NOW).map((r) => r.id));
+        const pillars = getSkillPillars("sv");
+        expect(pillars.map((p) => p.label)).toEqual(["Testa först", "AI-agenter", "Coachning"]);
+        for (const p of pillars) {
+            expect(ids.has(p.rung)).toBe(true);
+            expect(p.value.trim()).toBeTruthy();
         }
-        expect(getSkillCombos("sv")).toHaveLength(getSkillCombos("en").length);
     });
 });

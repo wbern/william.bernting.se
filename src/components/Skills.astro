@@ -1,8 +1,9 @@
 ---
 import { useTranslations } from "../i18n/utils";
 import { defaultLang, type Lang } from "../i18n/ui";
-import { getSkillProfiles, getSkillCombos } from "../i18n/skills";
+import { getSkillLadder, getSkillPillars } from "../i18n/skills";
 import { projectEntries } from "../i18n/projects";
+import { TIER_COLORS, TIER_COUNT } from "../utils/skill-ladder";
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
@@ -10,27 +11,35 @@ const t = useTranslations(lang);
 const projectTitle = (slug: string | null) =>
     slug ? (projectEntries.find((p) => p.slug === slug)?.[lang].title ?? null) : null;
 
-const skills = getSkillProfiles(lang).map((s) => ({ ...s, proofTitle: projectTitle(s.proofSlug) }));
-const combos = getSkillCombos(lang).map((c) => ({ ...c, slugTitle: projectTitle(c.slug) }));
-const pillars = skills.filter((s) => s.pillar);
-const tools = skills.filter((s) => !s.pillar).sort((a, b) => (b.years ?? 0) - (a.years ?? 0));
+const ladder = getSkillLadder(lang).map((r) => ({ ...r, slugTitle: projectTitle(r.slug) }));
+const pillars = getSkillPillars(lang).map((p) => ({ ...p, slugTitle: projectTitle(p.slug) }));
 
 const numberLocale = lang === "sv" ? "sv-SE" : "en-GB";
-const fmtYears = (y: number | null) =>
-    y === null ? "" : y.toLocaleString(numberLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtYears = (y: number) =>
+    y.toLocaleString(numberLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fill = (s: string, vars: Record<string, string | number>) =>
+    s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ""));
 
-// Fruit colours, shared by the canvas and the pillar cards (tier → colour).
-const FRUIT_COLORS = ["#ff3366", "#ff6688", "#aa66dd", "#ffaa22", "#ff4444", "#ffdd44", "#44dd66", "#ff9a76"];
+const FRUIT_NAMES: Record<Lang, string[]> = {
+    sv: ["körsbär", "jordgubbe", "vindruva", "citron", "apelsin", "äpple", "päron", "persika", "ananas", "melon", "vattenmelon"],
+    en: ["cherry", "strawberry", "grape", "lemon", "orange", "apple", "pear", "peach", "pineapple", "melon", "watermelon"],
+};
 
 const strings = {
     lang: numberLocale,
     years: t("skills.card.years"),
-    yearsShort: t("skills.card.yearsShort"),
     at: t("skills.card.at"),
+    level: t("skills.card.level"),
+    isNew: t("skills.card.new"),
+    top: t("skills.card.top"),
     pillar: t("skills.card.pillar"),
-    combo: t("skills.card.combo"),
-    tryIt: t("skills.card.try"),
+    locked: t("skills.ladder.locked"),
+    reached: t("skills.aria.reached"),
+    overScore: t("skills.over.score"),
 };
+
+const rungAria = (r: (typeof ladder)[number]) =>
+    `${fill(t("skills.card.level"), { n: r.tier + 1, total: TIER_COUNT })}: ${r.label} (${FRUIT_NAMES[lang][r.tier]})`;
 ---
 
 <div class="skills-slide">
@@ -42,56 +51,90 @@ const strings = {
         <p class="skills-sub">{t("skills.sub")}</p>
 
         <ol class="skills-pillars" aria-label={t("skills.pillars.label")}>
-            {pillars.map((p) => (
-                <li class="skills-pillar" data-skill={p.id} style={`--fruit: ${FRUIT_COLORS[p.tier]}`}>
-                    <h3 class="skills-pillar-title">{p.label}</h3>
-                    <p class="skills-pillar-value">{p.value}</p>
-                    {p.proofSlug && p.proofTitle && (
-                        <a class="skills-pillar-link" href={`#${p.proofSlug}`} data-project={p.proofSlug}>
-                            {p.proofTitle}<span aria-hidden="true"> →</span>
-                        </a>
-                    )}
-                </li>
-            ))}
+            {pillars.map((p) => {
+                const rung = ladder.find((r) => r.id === p.rung)!;
+                return (
+                    <li class="skills-pillar" data-pillar={p.id} data-tier={rung.tier} style={`--fruit: ${TIER_COLORS[rung.tier]}`}>
+                        <h3 class="skills-pillar-title">{p.label}</h3>
+                        <p class="skills-pillar-value">{p.value}</p>
+                        {p.slugTitle && (
+                            <a class="skills-pillar-link" href={`#${p.slug}`} data-project={p.slug}>
+                                {p.slugTitle}<span aria-hidden="true"> →</span>
+                            </a>
+                        )}
+                    </li>
+                );
+            })}
         </ol>
     </div>
 
     <div class="skills-stage">
+        <div class="skills-hud">
+            <p class="skills-score">{t("skills.score")} <b data-score>0</b></p>
+            <p class="skills-next">{t("skills.next")} <canvas class="skills-next-fruit" aria-hidden="true"></canvas></p>
+        </div>
         {/* The bowl never moves: its own layer, painted once per resize. */}
         <canvas class="skills-bowl" aria-hidden="true"></canvas>
-        <canvas class="skills-canvas" role="img" aria-label={t("skills.aria.canvas")}></canvas>
+        <canvas class="skills-canvas" tabindex="0" role="img" aria-label={t("skills.aria.canvas")}></canvas>
         <div class="skills-card" hidden>
             <button type="button" class="skills-card-close" aria-label={t("skills.card.close")}>×</button>
-            <div class="skills-card-kicker"></div>
-            <div class="skills-card-title"></div>
+            <div class="skills-card-head">
+                <canvas class="skills-card-icon" aria-hidden="true"></canvas>
+                <div>
+                    <div class="skills-card-kicker"></div>
+                    <div class="skills-card-title"></div>
+                </div>
+            </div>
             <p class="skills-card-body"></p>
             <p class="skills-card-proof"></p>
             <p class="skills-card-meta"></p>
             <a class="skills-card-link" href="#"></a>
         </div>
-        <div class="skills-caption">
-            <p class="skills-caption-text">{t("skills.caption")}</p>
-            <p class="skills-caption-hint">
-                <span>{t("skills.hint")}</span>
-                <span class="skills-combos" aria-live="polite"><span data-combos-found>0</span>/{combos.length} {t("skills.combos.found")}</span>
+        <div class="skills-over" hidden>
+            <p class="skills-over-title">{t("skills.over.title")}</p>
+            <p class="skills-over-score"></p>
+            <button type="button" class="skills-over-again">{t("skills.over.again")}</button>
+        </div>
+        <div class="skills-footer">
+            <ol class="skills-ladder" aria-label={t("skills.ladder.label")}>
+                {ladder.map((r) => (
+                    <li>
+                        <button
+                            type="button"
+                            class="skills-rung"
+                            data-tier={r.tier}
+                            aria-label={`${rungAria(r)}, ${t("skills.ladder.locked")}`}
+                            data-aria={rungAria(r)}
+                            aria-disabled="true"
+                        >
+                            <canvas class="skills-rung-icon" aria-hidden="true"></canvas>
+                            <span class="skills-rung-name" aria-hidden="true">{r.short}</span>
+                        </button>
+                    </li>
+                ))}
+            </ol>
+            <p class="skills-caption">{t("skills.caption")}</p>
+            <p class="skills-hint">
+                <span class="skills-hint-mouse">{t("skills.hint")}</span>
+                <span class="skills-hint-touch">{t("skills.hint.touch")}</span>
             </p>
         </div>
     </div>
 
-    {/* Screen readers, crawlers and print get the whole bowl as text. */}
-    <ul class="sr-only skills-list" aria-label={t("skills.aria.list")}>
-        {pillars.map((p) => (
-            <li>{p.label}: {p.value} {p.proof}</li>
+    {/* Screen readers, crawlers and print get the whole ladder as text. */}
+    <ol class="sr-only skills-list" aria-label={t("skills.aria.list")}>
+        {ladder.map((r) => (
+            <li>
+                {r.label} ({FRUIT_NAMES[lang][r.tier]}){r.years !== null && `, ${fmtYears(r.years)} ${t("skills.card.years")}`}: {r.line}{r.proof && ` ${r.proof}`}
+            </li>
         ))}
-        {tools.map((s) => (
-            <li>{s.label}, {fmtYears(s.years)} {t("skills.card.years")} ({s.employers.join(", ")}): {s.value}</li>
-        ))}
-    </ul>
+    </ol>
+    <p class="sr-only skills-live" aria-live="polite"></p>
 
     <script
         type="application/json"
         class="skills-data"
-        set:html={JSON.stringify({ skills, combos, strings, colors: FRUIT_COLORS })}
+        set:html={JSON.stringify({ ladder, strings, colors: TIER_COLORS })}
     />
 </div>
 
@@ -101,8 +144,8 @@ const strings = {
         <div class="section-label">{t("skills.label")}</div>
         <h2 class="section-heading">{t("skills.heading.before")}<span class="highlight">{t("skills.heading.highlight")}</span>{t("skills.heading.after")}</h2>
         <div class="skills-cloud-print">
-            {pillars.map((s) => <span class="skill-pill-print featured">{s.label}</span>)}
-            {tools.map((s) => <span class="skill-pill-print">{s.label} · {fmtYears(s.years)} {t("skills.card.yearsShort")}</span>)}
+            {pillars.map((p) => <span class="skill-pill-print featured">{p.label}</span>)}
+            {ladder.filter((r) => r.years !== null).map((r) => <span class="skill-pill-print">{r.label} · {fmtYears(r.years!)} {t("skills.card.years")}</span>)}
         </div>
     </div>
 </div>
@@ -164,8 +207,8 @@ const strings = {
         transition: text-decoration-color 0.2s ease;
     }
 
-    .skills-pillar.is-lit .skills-pillar-title,
-    .skills-pillar:hover .skills-pillar-title {
+    .skills-pillar:hover .skills-pillar-title,
+    .skills-pillar:focus-within .skills-pillar-title {
         text-decoration-color: var(--fruit);
     }
 
@@ -185,31 +228,67 @@ const strings = {
 
     .skills-card-link {
         display: inline-block;
-        margin-top: 6px;
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--purple);
-        text-decoration: none;
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--text-dim);
+        text-decoration: underline 1px;
+        text-underline-offset: 3px;
     }
 
-    .skills-pillar-link:hover,
-    .skills-card-link:hover { text-decoration: underline; }
+    .skills-pillar-link:hover { text-decoration: underline; }
+    .skills-card-link:hover { color: var(--text); }
 
     .skills-card-link[hidden] { display: none; }
 
     .skills-pillar-link:focus-visible,
     .skills-card-link:focus-visible,
-    .skills-card-close:focus-visible {
+    .skills-card-close:focus-visible,
+    .skills-rung:focus-visible,
+    .skills-over-again:focus-visible {
         outline: 2px solid var(--purple);
         outline-offset: 2px;
         border-radius: 4px;
     }
 
-    /* ── Stage: canvas + floating card + caption ── */
+    /* ── Stage: hud, canvases, card, footer ── */
     .skills-stage {
         position: relative;
         min-width: 0;
         min-height: 0;
+    }
+
+    .skills-hud {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+        z-index: 1;
+        font-size: 13px;
+        color: var(--text-dim);
+    }
+
+    .skills-score b {
+        color: var(--text);
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 15px;
+        margin-left: 4px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .skills-next {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .skills-next-fruit {
+        width: 28px;
+        height: 28px;
     }
 
     .skills-bowl {
@@ -228,43 +307,39 @@ const strings = {
         height: 100%;
         display: block;
         cursor: default;
+        touch-action: none;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
     }
 
-    .skills-canvas.poke { cursor: pointer; }
-    .skills-canvas.grab { cursor: grab; }
-    .skills-canvas.grabbing { cursor: grabbing; }
+    .skills-canvas.aim { cursor: pointer; }
+    .skills-canvas:focus { outline: none; }
+    .skills-canvas:focus-visible { outline: 1px dashed var(--text-muted); outline-offset: -1px; border-radius: 8px; }
 
     .skills-card {
-        --c: var(--purple);
         position: absolute;
         left: 0;
         top: 0;
-        z-index: 2;
-        width: min(320px, calc(100% - 16px));
+        z-index: 3;
+        width: min(330px, calc(100% - 16px));
         background: rgba(19, 19, 26, 0.96);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 12px 34px 12px 16px;
+        padding: 12px 34px 12px 14px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(6px);
         pointer-events: none;
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(calc(var(--shift, 0%) + 6px));
         transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
     .skills-card.is-open {
         opacity: 1;
-        transform: none;
+        transform: translateY(var(--shift, 0%));
+        pointer-events: auto;
     }
-
-    .skills-card.is-pinned { pointer-events: auto; }
-
-    .skills-card[data-kind="combo"] { --c: #ffd166; }
 
     .skills-card-close {
         position: absolute;
@@ -278,25 +353,32 @@ const strings = {
         font-size: 18px;
         line-height: 1;
         cursor: pointer;
-        display: none;
     }
 
-    .skills-card.is-pinned .skills-card-close { display: block; }
+    .skills-card-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .skills-card-icon {
+        width: 34px;
+        height: 34px;
+        flex: none;
+    }
 
     .skills-card-kicker {
         font-family: var(--mono);
         font-size: 11px;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: var(--c);
-        margin-bottom: 4px;
+        color: var(--text-dim);
+        margin-bottom: 2px;
     }
 
     .skills-card-title {
         font-size: 17px;
         font-weight: 700;
         line-height: 1.25;
-        margin-bottom: 4px;
     }
 
     .skills-card-body {
@@ -323,35 +405,122 @@ const strings = {
     .skills-card-proof:empty,
     .skills-card-meta:empty { display: none; }
 
-    .skills-caption {
+    .skills-over {
+        position: absolute;
+        z-index: 2;
+        left: 50%;
+        top: 42%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background: rgba(19, 19, 26, 0.94);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 26px 20px;
+        width: max-content;
+        max-width: calc(100% - 24px);
+    }
+
+    .skills-over[hidden] { display: none; }
+
+    .skills-over-title {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .skills-over-score {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--text-dim);
+        margin: 4px 0 14px;
+    }
+
+    .skills-over-again {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--bg, #0a0a0f);
+        background: var(--text);
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 18px;
+        cursor: pointer;
+    }
+
+    .skills-footer {
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
         text-align: center;
-        pointer-events: none;
     }
 
-    .skills-caption-text {
+    .skills-ladder {
+        list-style: none;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 2px;
+        margin: 0 auto 8px;
+        max-width: 640px;
+    }
+
+    .skills-ladder li { flex: 1 1 0; min-width: 0; }
+
+    .skills-rung {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        width: 100%;
+        padding: 4px 0 3px;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        color: var(--text-muted);
+        font: inherit;
+        cursor: default;
+    }
+
+    .skills-rung-icon {
+        display: block;
+        filter: grayscale(1) brightness(0.32);
+        opacity: 0.55;
+        transition: filter 0.3s ease, opacity 0.3s ease;
+    }
+
+    .skills-rung-name {
+        font-size: 11px;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
+        max-width: 100%;
+    }
+
+    .skills-rung.is-reached { color: var(--text-dim); cursor: pointer; }
+    .skills-rung.is-reached .skills-rung-icon { filter: none; opacity: 1; }
+    .skills-rung.is-reached:hover,
+    .skills-rung.is-current { color: var(--text); }
+    .skills-rung.is-lit { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+    .skills-rung.is-lit .skills-rung-icon { opacity: 1; }
+
+    .skills-caption {
         font-size: 14px;
-        color: var(--text-dim);
+        color: var(--text);
         line-height: 1.4;
     }
 
-    .skills-caption-hint {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 4px 14px;
-        margin-top: 4px;
-        font-family: var(--mono);
-        font-size: 11.5px;
-        letter-spacing: 0.5px;
-        color: var(--purple);
+    .skills-hint {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--text-muted);
     }
 
-    .skills-combos { color: var(--text-muted); }
-    .skills-combos.has-found { color: #ffd166; }
+    .skills-hint-touch { display: none; }
+    @media (hover: none) and (pointer: coarse) {
+        .skills-hint-mouse { display: none; }
+        .skills-hint-touch { display: inline; }
+    }
 
     .sr-only {
         position: absolute;
@@ -365,7 +534,7 @@ const strings = {
         border: 0;
     }
 
-    /* ── Narrow screens: stack copy over the bowl, pillars as a swipeable row ── */
+    /* ── Narrow screens: stack copy over the game ── */
     @media (max-width: 860px) {
         .skills-slide {
             grid-template-columns: minmax(0, 1fr);
@@ -381,16 +550,20 @@ const strings = {
         .skills-pillar { padding: 7px 0; }
         .skills-pillar-title { font-size: 15px; margin-bottom: 1px; text-underline-offset: 4px; }
         .skills-pillar-value { font-size: 13px; line-height: 1.35; }
-        /* Phones: the project link lives in the fruit's card (tap the big fruit). */
-        .skills-pillar-link { display: none; }
+        .skills-pillar-link { margin-top: 2px; font-size: 12px; }
 
         .skills-card {
             width: auto;
             right: 0;
         }
 
-        .skills-caption-text { font-size: 12px; }
-        .skills-caption-hint { font-size: 10px; gap: 2px 10px; letter-spacing: 0; }
+        .skills-hud { font-size: 12px; }
+        .skills-next-fruit { width: 22px; height: 22px; }
+        .skills-ladder { margin-bottom: 4px; gap: 0; }
+        .skills-rung { padding: 2px 0; gap: 2px; }
+        .skills-rung-name { font-size: 8.5px; letter-spacing: -0.2px; }
+        .skills-caption { font-size: 12.5px; }
+        .skills-hint { font-size: 11px; }
     }
 
     @media (max-width: 600px) {
@@ -417,84 +590,77 @@ const strings = {
 
     @media (prefers-reduced-motion: reduce) {
         .skills-pillar-title,
-        .skills-card { transition: none; }
+        .skills-card,
+        .skills-rung-icon { transition: none; }
     }
 </style>
 
 <script>
+import {
+    TIER_COUNT, TOP_TIER, radiusForTier, mergeResult, scoreForMerge,
+    createDropSequence, SEED_PILE, dangerStep,
+} from "../utils/skill-ladder";
+
 (function () {
     const root = document.querySelector<HTMLElement>('.skills-slide');
     if (!root) return;
     const stage = root.querySelector<HTMLElement>('.skills-stage')!;
     const canvas = root.querySelector<HTMLCanvasElement>('.skills-canvas')!;
-    const card = root.querySelector<HTMLElement>('.skills-card')!;
     const bowlCanvas = root.querySelector<HTMLCanvasElement>('.skills-bowl')!;
+    const card = root.querySelector<HTMLElement>('.skills-card')!;
+    const hud = root.querySelector<HTMLElement>('.skills-hud')!;
+    const footer = root.querySelector<HTMLElement>('.skills-footer')!;
+    const overEl = root.querySelector<HTMLElement>('.skills-over')!;
+    const scoreEl = root.querySelector<HTMLElement>('[data-score]')!;
+    const nextCanvas = root.querySelector<HTMLCanvasElement>('.skills-next-fruit')!;
+    const liveEl = root.querySelector<HTMLElement>('.skills-live')!;
+    const rungEls = [...root.querySelectorAll<HTMLButtonElement>('.skills-rung')];
     const mainCtx = canvas.getContext('2d')!;
     // The fruit painters draw on `ctx`; sprite builders point it at an offscreen canvas.
     let ctx = mainCtx;
 
-    interface SkillData {
-        id: string; label: string; short: string; pillar: boolean; tier: number;
-        years: number | null; employers: string[]; value: string;
-        proof: string | null; proofSlug: string | null; proofTitle: string | null;
-    }
-    interface ComboData {
-        pair: [string, string]; title: string; body: string;
-        slug: string | null; slugTitle: string | null;
+    interface Rung {
+        id: string; tier: number; label: string; short: string;
+        years: number | null; employers: string[]; line: string;
+        proof: string | null; slug: string | null; slugTitle: string | null;
+        pillar: string | null;
     }
     const data: {
-        skills: SkillData[]; combos: ComboData[]; colors: string[];
-        strings: Record<'lang' | 'years' | 'yearsShort' | 'at' | 'pillar' | 'combo' | 'tryIt', string>;
+        ladder: Rung[]; colors: string[];
+        strings: Record<'lang' | 'years' | 'at' | 'level' | 'isNew' | 'top' | 'pillar' | 'locked' | 'reached' | 'overScore', string>;
     } = JSON.parse(root.querySelector('.skills-data')?.textContent || '{}');
-    if (!data.skills?.length) return;
+    if (!data.ladder?.length) return;
     const S = data.strings;
+    const COLORS = data.colors;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
+    const fill = (s: string, vars: Record<string, string | number>) =>
+        s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
     const fmtYears = (y: number) =>
         y.toLocaleString(S.lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    const skillById = new Map(data.skills.map((s) => [s.id, s]));
-    const comboKey = (a: string, b: string) => [a, b].sort().join('+');
-    const comboByKey = new Map(data.combos.map((c) => [comboKey(c.pair[0], c.pair[1]), c]));
-    const foundCombos = new Set<string>();
 
-    // Drop order: pillars first so they settle at the bottom, then tools by
-    // years so the small ones land on top where their labels stay readable.
-    const dropOrder = [
-        ...data.skills.filter((s) => s.pillar),
-        ...data.skills.filter((s) => !s.pillar).sort((a, b) => (b.years ?? 0) - (a.years ?? 0)),
-    ];
-    const DROP_X = [0.5, 0.2, 0.8, 0.38, 0.62, 0.14, 0.86, 0.5, 0.28, 0.72, 0.42, 0.58, 0.22];
-
-    // ─── Fruit sizes: tools by tier (years), pillars all the same, biggest ───
-    const TOOL_RADIUS = [30, 35, 41, 48, 56];
-    const PILLAR_RADIUS = 66;
-    const baseRadius = (s: SkillData) => (s.pillar ? PILLAR_RADIUS : TOOL_RADIUS[s.tier]);
-    const GOLD = '#ffd166';
-
-    // ─── Physics constants ───
-    const GRAVITY = 900;
-    const BOUNCE = 0.25;
-    const AIR_DRAG = 0.998;
+    // ─── Tuning (all speeds scale with the bowl, tuned at 560 px wide) ───
+    const REF_W = 560;
+    const GRAVITY = 1500;
+    const BOUNCE = 0.15;
+    const AIR_DRAG = 0.996;
     const DT_CAP = 0.033;
-    const MAX_SPEED = 1100;
-    const FILL_INTERVAL = 230;
-    const THROW_WINDOW = 1400;     // ms after release a thrown fruit can still make a combo
-    const COMBO_COOLDOWN = 3500;
-    const IDLE_BEFORE_DEMO = 2600; // ms after the bowl is full
-    const IDLE_HOP_EVERY = 6500;
+    const MAX_SPEED = 1300;
+    const DROP_COOLDOWN = 450;   // ms between drops
+    const SLEEP_AFTER = 900;     // ms of stillness before the loop parks itself
     const BOWL_STROKE = '#9b4dca';
     const BOWL_GLOW = 'rgba(155, 77, 202, 0.35)';
+    const GOLD = '#ffd166';
     // Phones report DPR 3; at 2 the fruit look the same and the canvas has 44% of the pixels.
     const MAX_DPR = 2;
 
     interface Fruit {
-        skill: SkillData;
+        tier: number;
         x: number; y: number; vx: number; vy: number;
         r: number; mass: number;
-        grabbed: boolean;
-        thrownAt: number;
+        bornAt: number;
         scaleAnim: number;
-        flash: number; // 0..1 highlight pulse
+        flash: number;
+        dead: boolean;
     }
     interface Particle {
         x: number; y: number; vx: number; vy: number;
@@ -505,88 +671,106 @@ const strings = {
         taperInset: number; cornerRadius: number;
         leftWall: { x1: number; y1: number; x2: number; y2: number };
         rightWall: { x1: number; y1: number; x2: number; y2: number };
-        bottomWall: { x1: number; y1: number; x2: number; y2: number };
         bottom: number;
+        dangerY: number;
+        dropY: number;
     }
 
     const fruits: Fruit[] = [];
     const particles: Particle[] = [];
     let bowl = {} as Bowl;
-    let W = 0, H = 0, scale = 1, compact = false, dpr = 1;
+    let W = 0, H = 0, k = 1, compact = false, dpr = 1;
     let animId: number | null = null;
-    let running = false;
-    let fillIdx = 0;
-    let lastFill = 0;
-    let filledAt = 0;
-    let userInteracted = false;
-    let lastUserAction = 0;
-    let lastHop = 0;
-    let demoDone = false;
-    let settling = false; // reduced motion: simulating off-screen, no combos
-    const comboCooldown = new Map<string, number>();
+    let visible = false;
+    let started = false;
+    let settling = false;     // seeding off-screen: no merges, no story cards
+    let lastActive = 0;
+    let shake = 0;
 
-    // Kinematic tween used by the one-time demo throw.
-    let tween: { f: Fruit; target: Fruit; fx: number; fy: number; t0: number; dur: number } | null = null;
+    // ─── Game state ───
+    let nextDrop = createDropSequence();
+    let current = 0, upcoming = 0;
+    let dropX = 0.5;           // fraction of the bowl's width
+    let readyAt = 0;
+    let score = 0;
+    let overSince: number | null = null;
+    let gameOver = false;
+    const reached = new Set<number>();
+    let lit: number | null = null;
+
+    const biggest = () => fruits.reduce((m, f) => (f.dead ? m : Math.max(m, f.tier)), 0);
 
     // ─── Layout ───
     function resize() {
         dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+        const oldBowl = bowl;
         W = stage.clientWidth;
         H = stage.clientHeight;
         canvas.width = bowlCanvas.width = Math.round(W * dpr);
         canvas.height = bowlCanvas.height = Math.round(H * dpr);
         mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         compact = W < 520;
+        // Strip icons first: their size sets the footer's height.
+        paintIcons();
 
-        const caption = root.querySelector<HTMLElement>('.skills-caption');
-        const captionH = (caption?.offsetHeight ?? 40) + (compact ? 10 : 18);
-        const bw = Math.min(W - (compact ? 4 : 24), 640);
-        const bh = Math.max(160, Math.min(H * (compact ? 0.8 : 0.7), 500, H - captionH - 40));
+        const hudH = hud.offsetHeight;
+        const footH = footer.offsetHeight + (compact ? 8 : 14);
+        const bw = Math.min(W - (compact ? 4 : 24), 600);
+        // Room above the rim for the dropper holding the biggest droppable fruit.
+        // Late in a game bigger fruit are dropped; they may overlap the hud a little.
+        const dropRoom = radiusForTier(5, bw) * 2 + 18;
+        const bh = Math.max(180, Math.min(H - footH - hudH - dropRoom, 540));
         const bx = (W - bw) / 2;
-        const by = H - captionH - bh;
-        const corner = 20;
-        const taper = compact ? 10 : 18;
+        const by = H - footH - bh;
+        const corner = compact ? 14 : 20;
+        const taper = compact ? 8 : 14;
         bowl = {
             x: bx, y: by, w: bw, h: bh, taperInset: taper, cornerRadius: corner,
             leftWall: { x1: bx + taper, y1: by + bh - corner, x2: bx, y2: by },
             rightWall: { x1: bx + bw - taper, y1: by + bh - corner, x2: bx + bw, y2: by },
-            bottomWall: { x1: bx + taper, y1: by + bh - corner, x2: bx + bw - taper, y2: by + bh - corner },
             bottom: by + bh - corner,
+            dangerY: by + 6,
+            dropY: by - radiusForTier(5, bw) - 10,
         };
-        scale = Math.max(0.6, Math.min(1.12, bw / 540, bh / 400));
+        // The hud sits right above the drop zone, not at the top of a tall stage.
+        hud.style.top = `${Math.max(0, Math.round(by - dropRoom - hudH))}px`;
+        k = bw / REF_W;
+        // Keep the pile where it was, relative to the bowl.
+        if (oldBowl.w) {
+            const s = bw / oldBowl.w;
+            for (const f of fruits) {
+                f.x = bowl.x + (f.x - oldBowl.x) * s;
+                f.y = bowl.bottom - (oldBowl.bottom - f.y) * s;
+            }
+        }
         for (const f of fruits) setRadius(f);
         clearSprites();
-        measureCard = true;
         const bctx = bowlCanvas.getContext('2d')!;
         bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx = bctx;
         try { drawBowl(); } finally { ctx = mainCtx; }
+        prewarm();
+        wake();
     }
 
     function setRadius(f: Fruit) {
-        f.r = baseRadius(f.skill) * scale;
+        f.r = radiusForTier(f.tier, bowl.w);
         f.mass = f.r * f.r;
     }
 
-    function spawn(skill: SkillData, xFrac: number): Fruit {
-        const f: Fruit = {
-            skill, x: 0, y: 0, vx: 0, vy: 0, r: 0, mass: 0,
-            grabbed: false, thrownAt: -Infinity, scaleAnim: 1, flash: 0,
-        };
+    function addFruit(tier: number, x: number, y: number, now: number): Fruit {
+        const f: Fruit = { tier, x, y, vx: 0, vy: 0, r: 0, mass: 0, bornAt: now, scaleAnim: 1, flash: 0, dead: false };
         setRadius(f);
-        const inner = bowl.w - f.r * 2 - 8;
-        f.x = bowl.x + f.r + 4 + inner * xFrac;
-        f.y = f.r + 4;
-        f.vy = 60;
         fruits.push(f);
         return f;
     }
 
     // ─── Particles ───
     function spawnParticles(x: number, y: number, color: string, count = 8, speed = 160) {
+        if (reducedMotion) return;
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.5;
-            const v = speed * (0.5 + Math.random() * 0.8);
+            const v = speed * k * (0.5 + Math.random() * 0.8);
             particles.push({
                 x, y, vx: Math.cos(angle) * v, vy: Math.sin(angle) * v,
                 life: 1, maxLife: 0.5 + Math.random() * 0.4, color, size: 2 + Math.random() * 3,
@@ -595,7 +779,6 @@ const strings = {
     }
 
     // ─── Collision helpers ───
-    // One shared result object: this runs ~200 times a frame, so no garbage.
     const hitScratch = { nx: 0, ny: 0, depth: 0 };
     function circleLineCollision(cx: number, cy: number, r: number,
         x1: number, y1: number, x2: number, y2: number) {
@@ -617,7 +800,7 @@ const strings = {
     }
 
     function bounceOff(f: Fruit, hit: { nx: number; ny: number; depth: number } | null) {
-        if (!hit) return false;
+        if (!hit) return;
         f.x += hit.nx * hit.depth;
         f.y += hit.ny * hit.depth;
         const vDotN = f.vx * hit.nx + f.vy * hit.ny;
@@ -625,138 +808,181 @@ const strings = {
             f.vx -= (1 + BOUNCE) * vDotN * hit.nx;
             f.vy -= (1 + BOUNCE) * vDotN * hit.ny;
         }
-        return true;
     }
 
-    /** Keep a fruit inside the bowl, or inside the column above it. Nothing escapes. */
+    /** Keep a fruit inside the bowl, or inside the column above it. */
     function confine(f: Fruit) {
         bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.leftWall.x1, bowl.leftWall.y1, bowl.leftWall.x2, bowl.leftWall.y2));
         bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.rightWall.x1, bowl.rightWall.y1, bowl.rightWall.x2, bowl.rightWall.y2));
-        if (bounceOff(f, circleLineCollision(f.x, f.y, f.r, bowl.bottomWall.x1, bowl.bottomWall.y1, bowl.bottomWall.x2, bowl.bottomWall.y2))) {
-            f.vx *= 0.9;
-        }
         if (f.y + f.r > bowl.bottom) {
             f.y = bowl.bottom - f.r;
             if (f.vy > 0) f.vy = -f.vy * BOUNCE;
-            f.vx *= 0.9;
+            f.vx *= 0.92;
         }
-        // Side bounds: tapered inside the bowl, straight walls in the column above.
         const t = Math.max(0, Math.min(1, (f.y - bowl.y) / (bowl.bottom - bowl.y)));
         const left = bowl.x + bowl.taperInset * t + f.r;
         const right = bowl.x + bowl.w - bowl.taperInset * t - f.r;
         if (f.x < left) { f.x = left; if (f.vx < 0) f.vx = -f.vx * BOUNCE; }
         if (f.x > right) { f.x = right; if (f.vx > 0) f.vx = -f.vx * BOUNCE; }
-        // Ceiling: thrown fruit never leaves the stage (so never covers the heading).
-        if (f.y - f.r < 2) { f.y = f.r + 2; if (f.vy < 0) f.vy = -f.vy * BOUNCE; }
+        if (f.y - f.r < 2) { f.y = f.r + 2; if (f.vy < 0) f.vy = 0; }
     }
-
-    function clampVelocity(f: Fruit) {
-        const speed = Math.hypot(f.vx, f.vy);
-        if (speed > MAX_SPEED) { f.vx *= MAX_SPEED / speed; f.vy *= MAX_SPEED / speed; }
-    }
-
-    const isActive = (f: Fruit, now: number) => f.grabbed || now - f.thrownAt < THROW_WINDOW;
 
     // ─── Physics step ───
+    const born: Fruit[] = [];
     function step(dt: number, now: number) {
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt;
+            p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * k * dt;
             p.life -= dt / p.maxLife;
             if (p.life <= 0) particles.splice(i, 1);
         }
 
+        const g = GRAVITY * k, vmax = MAX_SPEED * k;
         for (const f of fruits) {
-            if (f.scaleAnim > 1.005) f.scaleAnim += (1 - f.scaleAnim) * 8 * dt;
+            if (f.scaleAnim > 1.005) f.scaleAnim += (1 - f.scaleAnim) * 9 * dt;
             else f.scaleAnim = 1;
-            if (f.flash > 0) f.flash = Math.max(0, f.flash - dt * 0.9);
-            if (f.grabbed) continue;
-            f.vy += GRAVITY * dt;
+            if (f.flash > 0) f.flash = Math.max(0, f.flash - dt * 1.4);
+            f.vy += g * dt;
             f.vx *= AIR_DRAG; f.vy *= AIR_DRAG;
-            clampVelocity(f);
+            const sp = Math.hypot(f.vx, f.vy);
+            if (sp > vmax) { f.vx *= vmax / sp; f.vy *= vmax / sp; }
             f.x += f.vx * dt; f.y += f.vy * dt;
             confine(f);
         }
 
-        for (let iter = 0; iter < 4; iter++) {
+        for (let iter = 0; iter < 5; iter++) {
             for (let i = 0; i < fruits.length; i++) {
                 const a = fruits[i];
+                if (a.dead) continue;
                 for (let j = i + 1; j < fruits.length; j++) {
                     const b = fruits[j];
+                    if (b.dead) continue;
                     const dx = b.x - a.x, dy = b.y - a.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
                     const minDist = a.r + b.r;
-                    if (dist >= minDist) continue;
+                    if (dx * dx + dy * dy >= minDist * minDist) continue;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (!settling) {
+                        const merged = mergeResult(a.tier, b.tier);
+                        if (merged !== null) { merge(a, b, merged, now); break; }
+                    }
+
                     const overlap = minDist - dist;
                     const nx = dist > 0 ? dx / dist : 0;
                     const ny = dist > 0 ? dy / dist : -1;
-
-                    if (iter === 0 && !settling && (isActive(a, now) || isActive(b, now))) {
-                        tryCombo(a, b, now);
-                    }
-
-                    if (a.grabbed && b.grabbed) continue;
-                    if (a.grabbed) { b.x += nx * overlap; b.y += ny * overlap; }
-                    else if (b.grabbed) { a.x -= nx * overlap; a.y -= ny * overlap; }
-                    else {
-                        const total = a.mass + b.mass;
-                        a.x -= nx * overlap * (b.mass / total); a.y -= ny * overlap * (b.mass / total);
-                        b.x += nx * overlap * (a.mass / total); b.y += ny * overlap * (a.mass / total);
-                    }
+                    const total = a.mass + b.mass;
+                    a.x -= nx * overlap * (b.mass / total); a.y -= ny * overlap * (b.mass / total);
+                    b.x += nx * overlap * (a.mass / total); b.y += ny * overlap * (a.mass / total);
 
                     if (iter === 0) {
-                        if (a.grabbed || b.grabbed) {
-                            const other = a.grabbed ? b : a;
-                            const sign = a.grabbed ? 1 : -1;
-                            other.vx += nx * sign * 120; other.vy += ny * sign * 120;
-                        } else {
-                            const dvDotN = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-                            if (dvDotN > 0) {
-                                const impulse = (1 + BOUNCE) * dvDotN / (a.mass + b.mass);
-                                a.vx -= impulse * b.mass * nx; a.vy -= impulse * b.mass * ny;
-                                b.vx += impulse * a.mass * nx; b.vy += impulse * a.mass * ny;
-                            }
+                        const dvDotN = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+                        if (dvDotN > 0) {
+                            const impulse = (1 + BOUNCE) * dvDotN / total;
+                            a.vx -= impulse * b.mass * nx; a.vy -= impulse * b.mass * ny;
+                            b.vx += impulse * a.mass * nx; b.vy += impulse * a.mass * ny;
                         }
+                        // Contact friction: a resting pile settles instead of creeping.
+                        a.vx *= 0.985; b.vx *= 0.985;
                     }
                 }
             }
-            for (const f of fruits) if (!f.grabbed) confine(f);
+            for (const f of fruits) if (!f.dead) confine(f);
+        }
+
+        if (born.length) {
+            for (let i = fruits.length - 1; i >= 0; i--) if (fruits[i].dead) fruits.splice(i, 1);
+            fruits.push(...born);
+            born.length = 0;
         }
     }
 
-    // ─── Combos ───
-    function tryCombo(a: Fruit, b: Fruit, now: number) {
-        const key = comboKey(a.skill.id, b.skill.id);
-        const combo = comboByKey.get(key);
-        if (!combo) return;
-        if (now - (comboCooldown.get(key) ?? -Infinity) < COMBO_COOLDOWN) return;
-        comboCooldown.set(key, now);
-        const mx = (a.x * b.r + b.x * a.r) / (a.r + b.r);
-        const my = (a.y * b.r + b.y * a.r) / (a.r + b.r);
-        spawnParticles(mx, my, GOLD, 14, 240);
-        spawnParticles(mx, my, data.colors[a.skill.tier], 5, 160);
-        spawnParticles(mx, my, data.colors[b.skill.tier], 5, 160);
-        a.flash = 1; b.flash = 1;
-        a.scaleAnim = 1.12; b.scaleAnim = 1.12;
-        foundCombos.add(key);
-        updateComboCounter();
-        const anchor = a.y < b.y ? a : b;
-        showCard({ kind: 'combo', combo, fruit: anchor, pinned: true, autoHide: tween ? 6500 : 0 });
+    // ─── Merging ───
+    function merge(a: Fruit, b: Fruit, tier: number, now: number) {
+        a.dead = true; b.dead = true;
+        // The new fruit appears where the two touched, weighted to the lower one
+        // (that's where the pile has room), carrying their momentum.
+        const lower = a.y > b.y ? a : b;
+        const x = (a.x + b.x) / 2;
+        const y = lower.y * 0.65 + (a.y + b.y) / 2 * 0.35;
+        const f: Fruit = {
+            tier, x, y, vx: (a.vx + b.vx) / 2, vy: Math.min(0, (a.vy + b.vy) / 2),
+            r: 0, mass: 0, bornAt: now, scaleAnim: reducedMotion ? 1 : 1.18, flash: 1, dead: false,
+        };
+        setRadius(f);
+        born.push(f);
+        score += scoreForMerge(tier);
+        scoreEl.textContent = String(score);
+        spawnParticles(x, y, COLORS[tier], 8 + tier * 2, 150 + tier * 22);
+        spawnParticles(x, y, COLORS[a.tier], 6, 120);
+        if (tier >= 6 && !reducedMotion) shake = Math.min(1, 0.35 + (tier - 6) * 0.15);
+        if (!reached.has(tier)) {
+            reach(tier, true);
+            showCard(tier, { anchorX: x, anchorY: y - f.r, isNew: true });
+            if (tier === TOP_TIER) celebrate(x, y);
+        }
     }
 
-    function updateComboCounter() {
-        const el = root.querySelector('[data-combos-found]');
-        if (el) el.textContent = String(foundCombos.size);
-        root.querySelector('.skills-combos')?.classList.toggle('has-found', foundCombos.size > 0);
+    function celebrate(x: number, y: number) {
+        spawnParticles(x, y, GOLD, 30, 420);
+        spawnParticles(x, y, COLORS[TOP_TIER], 16, 300);
+        if (!reducedMotion) shake = 1;
     }
 
-    // ─── Floating card ───
-    type CardState =
-        | { kind: 'skill'; fruit: Fruit; pinned: boolean; autoHide?: number }
-        | { kind: 'combo'; combo: ComboData; fruit: Fruit; pinned: boolean; autoHide?: number };
-    let cardState: CardState | null = null;
+    // ─── Dropping ───
+    function aimX(fr: number) {
+        const r = radiusForTier(current, bowl.w);
+        const lo = bowl.x + r + 2, hi = bowl.x + bowl.w - r - 2;
+        return Math.max(lo, Math.min(hi, bowl.x + fr * bowl.w));
+    }
+
+    function setAim(x: number) {
+        dropX = Math.max(0, Math.min(1, (x - bowl.x) / bowl.w));
+        wake();
+    }
+
+    function drop(now = performance.now(), forceTier?: number) {
+        if (gameOver || settling || now < readyAt) return false;
+        const tier = forceTier ?? current;
+        const r = radiusForTier(tier, bowl.w);
+        const f = addFruit(tier, aimX(dropX), bowl.dropY, now);
+        f.y = Math.max(r + 2, bowl.dropY);
+        f.vy = 40 * k;
+        current = upcoming;
+        upcoming = nextDrop(biggest());
+        paintNext();
+        readyAt = now + DROP_COOLDOWN;
+        wake();
+        return true;
+    }
+
+    // ─── Progress strip ───
+    function reach(tier: number, announce: boolean) {
+        if (reached.has(tier)) return;
+        reached.add(tier);
+        const el = rungEls[tier];
+        if (el) {
+            el.classList.add('is-reached');
+            el.removeAttribute('aria-disabled');
+            el.setAttribute('aria-label', el.dataset.aria ?? '');
+        }
+        const best = Math.max(...reached);
+        rungEls.forEach((r, i) => r.classList.toggle('is-current', i === best));
+        if (announce) liveEl.textContent = fill(S.reached, { skill: data.ladder[tier].label });
+    }
+
+    function lightTier(tier: number | null) {
+        lit = tier;
+        rungEls.forEach((el, i) => el.classList.toggle('is-lit', i === tier));
+        if (tier === null) return;
+        for (const f of fruits) if (f.tier === tier) f.flash = 1;
+        wake();
+    }
+
+    // ─── Story card ───
+    let cardTier: number | null = null;
     let cardHideTimer = 0;
     const cardEls = {
+        icon: card.querySelector<HTMLCanvasElement>('.skills-card-icon')!,
         kicker: card.querySelector<HTMLElement>('.skills-card-kicker')!,
         title: card.querySelector<HTMLElement>('.skills-card-title')!,
         body: card.querySelector<HTMLElement>('.skills-card-body')!,
@@ -765,491 +991,404 @@ const strings = {
         link: card.querySelector<HTMLAnchorElement>('.skills-card-link')!,
     };
 
-    function setLink(slug: string | null, title: string | null) {
-        if (slug && title) {
+    function showCard(tier: number, opts: { anchorX?: number; anchorY?: number; anchorEl?: HTMLElement; isNew?: boolean }) {
+        clearTimeout(cardHideTimer);
+        const rung = data.ladder[tier];
+        cardTier = tier;
+        const level = fill(S.level, { n: tier + 1, total: TIER_COUNT });
+        cardEls.kicker.textContent = opts.isNew ? `${tier === TOP_TIER ? S.top : S.isNew} · ${level}` : level;
+        cardEls.title.textContent = rung.label;
+        cardEls.body.textContent = rung.line;
+        cardEls.proof.textContent = rung.proof ?? '';
+        const meta: string[] = [];
+        if (rung.years !== null) meta.push(`${fmtYears(rung.years)} ${S.years}`);
+        if (rung.employers.length) meta.push(`${S.at}: ${rung.employers.join(', ')}`);
+        if (rung.pillar) meta.push(S.pillar);
+        cardEls.meta.textContent = meta.join('\n');
+        cardEls.meta.style.whiteSpace = 'pre-line';
+        if (rung.slug && rung.slugTitle) {
             cardEls.link.hidden = false;
-            cardEls.link.href = '#' + slug;
-            cardEls.link.dataset.project = slug;
-            cardEls.link.textContent = title + ' →';
+            cardEls.link.href = '#' + rung.slug;
+            cardEls.link.dataset.project = rung.slug;
+            cardEls.link.textContent = rung.slugTitle + ' →';
         } else {
             cardEls.link.hidden = true;
             delete cardEls.link.dataset.project;
         }
-    }
-
-    function partnersOf(id: string): string[] {
-        return data.combos
-            .filter((c) => c.pair.includes(id))
-            .map((c) => {
-                const other = c.pair[0] === id ? c.pair[1] : c.pair[0];
-                const done = foundCombos.has(comboKey(c.pair[0], c.pair[1]));
-                return (skillById.get(other)?.label ?? other) + (done ? ' ✓' : '');
-            });
-    }
-
-    function showCard(state: CardState) {
-        clearTimeout(cardHideTimer);
-        cardState = state;
-        if (state.kind === 'skill') {
-            const s = state.fruit.skill;
-            card.dataset.kind = s.pillar ? 'pillar' : 'tool';
-            card.style.setProperty('--c', data.colors[s.tier]);
-            cardEls.kicker.textContent = s.pillar ? S.pillar : `${fmtYears(s.years ?? 0)} ${S.years}`;
-            cardEls.title.textContent = s.label;
-            cardEls.body.textContent = s.value;
-            cardEls.proof.textContent = s.pillar ? (s.proof ?? '') : '';
-            const meta: string[] = [];
-            if (!s.pillar && s.employers.length) meta.push(`${S.at}: ${s.employers.join(' · ')}`);
-            const partners = partnersOf(s.id);
-            if (partners.length) meta.push(`${S.tryIt}: ${partners.join(', ')}`);
-            cardEls.meta.textContent = meta.join('\n');
-            setLink(s.pillar ? s.proofSlug : null, s.pillar ? s.proofTitle : null);
-            lightPillar(s.pillar ? s.id : null);
-        } else {
-            const c = state.combo;
-            card.dataset.kind = 'combo';
-            card.style.removeProperty('--c');
-            const [a, b] = c.pair.map((id) => skillById.get(id)?.label ?? id);
-            cardEls.kicker.textContent = `${S.combo}: ${a} + ${b}`;
-            cardEls.title.textContent = c.title;
-            cardEls.body.textContent = c.body;
-            cardEls.proof.textContent = '';
-            cardEls.meta.textContent = '';
-            setLink(c.slug, c.slugTitle);
-            lightPillar(null);
-        }
-        cardEls.meta.style.whiteSpace = 'pre-line';
+        paintIcon(cardEls.icon, tier, 34);
+        card.dataset.tier = String(tier);
         card.hidden = false;
-        card.classList.toggle('is-pinned', state.pinned);
-        measureCard = true;
-        positionCard();
-        requestAnimationFrame(() => card.classList.add('is-open'));
-        if (state.autoHide) {
-            cardHideTimer = window.setTimeout(() => {
-                if (!card.matches(':hover')) hideCard();
-            }, state.autoHide);
+        // Placed once per open, and never measured: the card's width is known
+        // from CSS and a transform hangs it above (or below) its anchor, so a
+        // merge never forces a layout mid-game.
+        if (compact) {
+            card.style.left = '0px';
+            card.style.top = '0px';
+            card.style.removeProperty('--shift');
+        } else {
+            let ax: number, ay: number;
+            if (opts.anchorEl) {
+                // A click on the strip: reading layout here is fine, it's not a frame.
+                const sr = stage.getBoundingClientRect();
+                const er = opts.anchorEl.getBoundingClientRect();
+                ax = er.left - sr.left + er.width / 2;
+                ay = er.top - sr.top - 8;
+            } else {
+                ax = opts.anchorX ?? W / 2;
+                ay = (opts.anchorY ?? H / 2) - 12;
+            }
+            const cw = Math.min(330, W - 16);
+            const left = Math.max(4, Math.min(W - cw - 4, ax - cw / 2));
+            const above = ay > H * 0.42;
+            card.style.left = `${Math.round(left)}px`;
+            card.style.top = `${Math.round(above ? ay : Math.max(4, ay + 24))}px`;
+            card.style.setProperty('--shift', above ? '-100%' : '0%');
         }
-        if (reducedMotion) draw();
+        requestAnimationFrame(() => card.classList.add('is-open'));
+        lightTier(tier);
+        // Cards from a merge get out of the way again; the strip reopens them.
+        if (opts.isNew) {
+            cardHideTimer = window.setTimeout(function hideUnlessHovered() {
+                if (card.matches(':hover') || card.contains(document.activeElement)) {
+                    cardHideTimer = window.setTimeout(hideUnlessHovered, 1500);
+                } else hideCard();
+            }, tier === TOP_TIER ? 9000 : 6000);
+        }
     }
 
     function hideCard() {
         clearTimeout(cardHideTimer);
-        cardState = null;
-        card.classList.remove('is-open', 'is-pinned');
-        lightPillar(null);
-        window.setTimeout(() => { if (!cardState) card.hidden = true; }, 200);
-        if (reducedMotion) draw();
+        if (cardTier === null) return;
+        cardTier = null;
+        card.classList.remove('is-open');
+        lightTier(null);
+        window.setTimeout(() => { if (cardTier === null) card.hidden = true; }, 200);
     }
 
-    // The card's size only changes with its content or the viewport, so it's
-    // measured then, not every frame (a per-frame offsetWidth after a style
-    // write forces a synchronous layout).
-    let measureCard = true;
-    let cardW = 0, cardH = 0, cardLeft = '', cardTop = '';
-    function placeCard(left: string, top: string) {
-        if (left !== cardLeft) { card.style.left = left; cardLeft = left; }
-        if (top !== cardTop) { card.style.top = top; cardTop = top; }
-    }
-
-    function positionCard() {
-        if (!cardState || card.hidden) return;
-        const f = cardState.fruit;
-        if (compact) {
-            // Phones: a full-width card at the top of the stage, away from the thumb.
-            placeCard('0px', '0px');
-            return;
-        }
-        if (measureCard) { cardW = card.offsetWidth; cardH = card.offsetHeight; measureCard = false; }
-        const cw = cardW, ch = cardH;
-        let x = f.x - cw / 2;
-        let y = f.y - f.r - ch - 14;
-        x = Math.max(4, Math.min(W - cw - 4, x));
-        if (y < 4) y = Math.min(H - ch - 4, f.y + f.r + 14);
-        placeCard(`${Math.round(x)}px`, `${Math.round(Math.max(4, y))}px`);
-    }
-
-    function lightPillar(id: string | null) {
-        root.querySelectorAll<HTMLElement>('.skills-pillar').forEach((el) => {
-            el.classList.toggle('is-lit', el.dataset.skill === id);
-        });
-    }
-
-    // ─── Drawing ───
-    // ─── Draw fruit shapes — Suika-style round circles ───
-    function drawCherry(x: number, y: number, r: number) {
-        // Cherry: solid round red ball with stem + tiny leaf
-        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-        grad.addColorStop(0, '#ff6666');
-        grad.addColorStop(0.5, '#dd1133');
-        grad.addColorStop(1, '#880011');
+    // ─── Fruit painters ───
+    // All of them draw a round fruit of radius r at (x, y); stems and crowns
+    // may poke out to about 1.3 r above.
+    function ball(x: number, y: number, r: number, stops: [number, string][], hx = -0.3, hy = -0.3) {
+        const grad = ctx.createRadialGradient(x + r * hx, y + r * hy, r * 0.08, x, y, r);
+        for (const [o, c] of stops) grad.addColorStop(o, c);
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
-        // Stem
-        ctx.strokeStyle = '#3a6622';
+    }
+
+    function clipBall(x: number, y: number, r: number, paint: () => void) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
+        paint();
+        ctx.restore();
+    }
+
+    function shine(x: number, y: number, r: number, a = 0.25) {
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.32, y - r * 0.34, r * 0.16, r * 0.24, -0.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fill();
+    }
+
+    function stem(x: number, y: number, r: number, color: string, len: number, bend = 0.12) {
+        ctx.strokeStyle = color;
         ctx.lineWidth = Math.max(1.5, r * 0.07);
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x, y - r * 0.85);
-        ctx.quadraticCurveTo(x + r * 0.15, y - r * 1.15, x + r * 0.1, y - r * 1.05);
+        ctx.moveTo(x, y - r * 0.82);
+        ctx.quadraticCurveTo(x + r * bend, y - r * (0.82 + len * 0.6), x + r * bend * 1.6, y - r * (0.82 + len));
         ctx.stroke();
-        // Tiny leaf
+    }
+
+    function leaf(x: number, y: number, len: number, wid: number, angle: number, color = '#3fa64a') {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
         ctx.beginPath();
-        ctx.ellipse(x + r * 0.18, y - r * 0.95, r * 0.15, r * 0.06, 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#44aa44';
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(len * 0.5, -wid, len, 0);
+        ctx.quadraticCurveTo(len * 0.5, wid, 0, 0);
+        ctx.fillStyle = color;
         ctx.fill();
-        // Highlight
+        ctx.restore();
+    }
+
+    function drawCherry(x: number, y: number, r: number) {
+        ball(x, y, r, [[0, '#ff5a6e'], [0.5, '#c0102c'], [1, '#5c0010']]);
+        stem(x, y, r, '#4d7a22', 0.55, 0.25);
+        leaf(x + r * 0.28, y - r * 1.25, r * 0.5, r * 0.18, -0.4);
         ctx.beginPath();
-        ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.17, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
     }
 
     function drawStrawberry(x: number, y: number, r: number) {
-        // Strawberry: round red/pink ball with yellow seed dots + green cap
-        const grad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
-        grad.addColorStop(0, '#ff7788');
-        grad.addColorStop(0.5, '#ee2244');
-        grad.addColorStop(1, '#aa1133');
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        // Seeds — tiny yellow dots scattered on surface
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.fillStyle = '#ffdd66';
-        const seedPositions = [
-            [-0.35, -0.3], [0.3, -0.35], [-0.5, 0.05], [0.45, 0.1],
-            [-0.15, 0.1], [0.15, -0.1], [-0.3, 0.4], [0.35, 0.35],
-            [0.0, 0.5], [0.0, -0.5], [-0.5, -0.15], [0.5, -0.1],
-        ];
-        for (const [sx, sy] of seedPositions) {
-            ctx.beginPath();
-            ctx.arc(x + r * sx, y + r * sy, r * 0.04, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        ctx.restore();
-        // Green cap at top — small spiky leaves
-        ctx.fillStyle = '#33aa44';
+        ball(x, y, r, [[0, '#ff8a96'], [0.5, '#f0233f'], [1, '#a50f2a']], -0.2, -0.1);
+        clipBall(x, y, r, () => {
+            ctx.fillStyle = '#ffe27a';
+            const seeds = [[-0.35, -0.2], [0.3, -0.25], [-0.55, 0.15], [0.5, 0.18], [-0.15, 0.2],
+                [0.12, -0.02], [-0.3, 0.5], [0.3, 0.5], [0, 0.7], [-0.05, -0.38], [0.6, -0.15], [-0.6, -0.12]];
+            for (const [sx, sy] of seeds) {
+                ctx.beginPath();
+                ctx.ellipse(x + r * sx, y + r * sy, r * 0.045, r * 0.065, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
         for (let i = 0; i < 5; i++) {
-            const angle = -Math.PI / 2 + (i - 2) * 0.4;
-            ctx.beginPath();
-            ctx.ellipse(
-                x + Math.cos(angle) * r * 0.1,
-                y - r * 0.85 + Math.sin(angle) * r * 0.05,
-                r * 0.2, r * 0.07,
-                angle + Math.PI / 2, 0, Math.PI * 2
-            );
-            ctx.fill();
+            const a = -Math.PI / 2 + (i - 2) * 0.55;
+            leaf(x, y - r * 0.78, r * 0.48, r * 0.14, a + Math.PI / 2 - Math.PI / 2, i % 2 ? '#2f9a3c' : '#45b84f');
         }
-        // Highlight
-        ctx.beginPath();
-        ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.18, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.fill();
+        shine(x, y, r, 0.2);
     }
 
     function drawGrape(x: number, y: number, r: number) {
-        // Grape: round purple ball with subtle shine + tiny stem
-        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.05, x, y, r);
-        grad.addColorStop(0, '#cc88ff');
-        grad.addColorStop(0.4, '#8844cc');
-        grad.addColorStop(1, '#441166');
+        ball(x, y, r, [[0, '#d7a2ff'], [0.4, '#8a3fd0'], [1, '#3b0f63']]);
+        clipBall(x, y, r, () => {
+            ctx.fillStyle = 'rgba(220, 200, 255, 0.12)';
+            ctx.beginPath();
+            ctx.arc(x + r * 0.25, y + r * 0.25, r * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        stem(x, y, r, '#6b4a22', 0.3, 0.05);
+        shine(x, y, r, 0.3);
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        // Stem
-        ctx.strokeStyle = '#5a3a1a';
-        ctx.lineWidth = Math.max(1.5, r * 0.06);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x, y - r * 0.9);
-        ctx.lineTo(x + r * 0.05, y - r * 1.1);
-        ctx.stroke();
-        // Highlight — glossy reflection
-        ctx.beginPath();
-        ctx.ellipse(x - r * 0.25, y - r * 0.3, r * 0.15, r * 0.25, -0.3, 0, Math.PI * 2);
+        ctx.arc(x - r * 0.12, y - r * 0.55, r * 0.07, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.25)';
         ctx.fill();
-        // Secondary small highlight
+    }
+
+    function drawLemon(x: number, y: number, r: number) {
+        ball(x, y, r, [[0, '#fffbb0'], [0.45, '#f6dc2a'], [1, '#b99a05']]);
+        clipBall(x, y, r, () => {
+            // Pores and a small tip on each side.
+            ctx.fillStyle = 'rgba(160, 130, 0, 0.18)';
+            for (let i = 0; i < 26; i++) {
+                const a = i * 2.39996, d = r * Math.sqrt((i + 0.5) / 26) * 0.9;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.035, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        ctx.fillStyle = '#e4c514';
         ctx.beginPath();
-        ctx.arc(x - r * 0.15, y - r * 0.45, r * 0.08, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.ellipse(x + r * 0.97, y + r * 0.05, r * 0.12, r * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.97, y - r * 0.05, r * 0.1, r * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        leaf(x + r * 0.05, y - r * 0.9, r * 0.5, r * 0.16, -0.7);
+        shine(x, y, r, 0.35);
     }
 
     function drawOrange(x: number, y: number, r: number) {
-        // Orange: round, textured peel, small navel at bottom, leaf on top
-        const grad = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
-        grad.addColorStop(0, '#ffcc44');
-        grad.addColorStop(0.4, '#ff9900');
-        grad.addColorStop(1, '#cc6600');
+        ball(x, y, r, [[0, '#ffcf5a'], [0.4, '#ff9500'], [1, '#c45a00']]);
+        clipBall(x, y, r, () => {
+            ctx.fillStyle = 'rgba(255, 238, 200, 0.16)';
+            for (let i = 0; i < 40; i++) {
+                const a = i * 2.39996, d = r * Math.sqrt((i + 0.5) / 40) * 0.95;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.03, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
+        ctx.arc(x, y - r * 0.82, r * 0.07, 0, Math.PI * 2);
+        ctx.fillStyle = '#5a7a1a';
         ctx.fill();
-        // Peel texture — subtle bumpy dots
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.globalAlpha *= 0.12;
-        for (let i = 0; i < 30; i++) {
-            const angle = (Math.PI * 2 / 30) * i + (i % 2) * 0.1;
-            const dist = r * (0.2 + (i % 3) * 0.25);
-            ctx.beginPath();
-            ctx.arc(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, r * 0.04, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffeecc';
-            ctx.fill();
-        }
-        ctx.restore();
-        // Navel at bottom
-        ctx.beginPath();
-        ctx.arc(x, y + r * 0.7, r * 0.1, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(180,100,0,0.3)';
-        ctx.fill();
-        // Small leaf + stem at top (kept within circle area)
-        ctx.strokeStyle = '#3a6622';
-        ctx.lineWidth = Math.max(1.5, r * 0.06);
-        ctx.beginPath();
-        ctx.moveTo(x, y - r * 0.85);
-        ctx.lineTo(x, y - r * 0.95);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.ellipse(x + r * 0.1, y - r * 0.9, r * 0.12, r * 0.06, 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#44aa44';
-        ctx.fill();
-        // Highlight
-        ctx.beginPath();
-        ctx.arc(x - r * 0.25, y - r * 0.3, r * 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.fill();
+        leaf(x + r * 0.04, y - r * 0.85, r * 0.42, r * 0.15, -0.5);
+        shine(x, y, r, 0.22);
     }
 
     function drawApple(x: number, y: number, r: number) {
-        // Apple: round red ball with top indent shadow, small stem + leaf inside circle
-        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.2, r * 0.1, x, y + r * 0.1, r);
-        grad.addColorStop(0, '#ff6666');
-        grad.addColorStop(0.4, '#dd2233');
-        grad.addColorStop(0.8, '#aa1122');
-        grad.addColorStop(1, '#771111');
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        // Top indent (darker shadow)
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.beginPath();
-        ctx.ellipse(x, y - r * 0.8, r * 0.35, r * 0.2, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.fill();
-        // Bottom bump
-        ctx.beginPath();
-        ctx.ellipse(x, y + r * 0.85, r * 0.2, r * 0.1, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.fill();
-        ctx.restore();
-        // Stem (short, inside circle)
-        ctx.strokeStyle = '#5a3a1a';
-        ctx.lineWidth = Math.max(2, r * 0.05);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x, y - r * 0.8);
-        ctx.lineTo(x + r * 0.03, y - r * 0.92);
-        ctx.stroke();
-        // Leaf (small, inside circle)
-        ctx.beginPath();
-        ctx.moveTo(x + r * 0.05, y - r * 0.85);
-        ctx.quadraticCurveTo(x + r * 0.3, y - r * 0.98, x + r * 0.25, y - r * 0.78);
-        ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.85, x + r * 0.05, y - r * 0.85);
-        ctx.fillStyle = '#33aa33';
-        ctx.fill();
-        // Highlight
-        ctx.beginPath();
-        ctx.ellipse(x - r * 0.3, y - r * 0.2, r * 0.15, r * 0.25, -0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fill();
+        ball(x, y, r, [[0, '#ff8a7a'], [0.35, '#e8262c'], [0.8, '#a3121b'], [1, '#6e0a10']], -0.3, -0.15);
+        clipBall(x, y, r, () => {
+            // Yellow blush on one cheek, and the dip where the stem sits.
+            const g = ctx.createRadialGradient(x + r * 0.55, y + r * 0.35, 0, x + r * 0.55, y + r * 0.35, r * 0.6);
+            g.addColorStop(0, 'rgba(255, 210, 80, 0.45)');
+            g.addColorStop(1, 'rgba(255, 210, 80, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            ctx.beginPath();
+            ctx.ellipse(x, y - r * 0.82, r * 0.34, r * 0.18, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(60, 0, 0, 0.3)';
+            ctx.fill();
+        });
+        stem(x, y, r, '#5a3a1a', 0.32, 0.08);
+        leaf(x + r * 0.08, y - r * 0.95, r * 0.42, r * 0.15, -0.35, '#3caa3c');
+        shine(x, y, r, 0.28);
     }
 
-    function drawPineapple(x: number, y: number, r: number) {
-        // Pineapple: round golden ball with crosshatch pattern, green crown inside circle
-        const grad = ctx.createRadialGradient(x - r * 0.15, y - r * 0.1, r * 0.2, x, y, r);
-        grad.addColorStop(0, '#ffdd55');
-        grad.addColorStop(0.5, '#ddaa22');
-        grad.addColorStop(1, '#aa7711');
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
+    function drawPear(x: number, y: number, r: number) {
+        // A pear in a round footprint: a body plus a narrower top lobe.
+        const body = () => {
+            ctx.beginPath();
+            ctx.arc(x, y + r * 0.12, r * 0.88, 0, Math.PI * 2);
+            ctx.moveTo(x + r * 0.55, y - r * 0.45);
+            ctx.arc(x, y - r * 0.45, r * 0.55, 0, Math.PI * 2);
+        };
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.2, r * 0.08, x, y + r * 0.1, r);
+        g.addColorStop(0, '#f6ff9e');
+        g.addColorStop(0.45, '#c4d63a');
+        g.addColorStop(1, '#6f8a12');
+        body();
+        ctx.fillStyle = g;
         ctx.fill();
-        // Diamond crosshatch pattern
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+        body();
         ctx.clip();
-        ctx.strokeStyle = 'rgba(150,90,10,0.3)';
-        ctx.lineWidth = 1;
-        for (let i = -6; i <= 6; i++) {
+        ctx.fillStyle = 'rgba(110, 80, 10, 0.25)';
+        for (let i = 0; i < 30; i++) {
+            const a = i * 2.39996, d = r * Math.sqrt((i + 0.5) / 30) * 0.85;
             ctx.beginPath();
-            ctx.moveTo(x + i * r * 0.25 - r, y - r);
-            ctx.lineTo(x + i * r * 0.25 + r, y + r * 1.2);
-            ctx.stroke();
-        }
-        for (let i = -6; i <= 6; i++) {
-            ctx.beginPath();
-            ctx.moveTo(x + i * r * 0.25 + r, y - r);
-            ctx.lineTo(x + i * r * 0.25 - r, y + r * 1.2);
-            ctx.stroke();
-        }
-        ctx.restore();
-        // Crown — small green leaves at top, kept inside circle
-        const crownLeaves = 5;
-        for (let i = 0; i < crownLeaves; i++) {
-            const angle = -Math.PI / 2 + (i - (crownLeaves - 1) / 2) * 0.25;
-            const leafLen = r * (0.35 + (i % 2) * 0.1);
-            ctx.beginPath();
-            ctx.moveTo(x + Math.cos(angle + 0.06) * r * 0.1, y - r * 0.85);
-            ctx.quadraticCurveTo(
-                x + Math.cos(angle) * leafLen * 0.5,
-                y - r * 0.85 + Math.sin(angle) * leafLen * 0.5,
-                x + Math.cos(angle) * leafLen,
-                y - r * 0.85 + Math.sin(angle) * leafLen
-            );
-            ctx.quadraticCurveTo(
-                x + Math.cos(angle) * leafLen * 0.4,
-                y - r * 0.85 + Math.sin(angle) * leafLen * 0.4 + r * 0.04,
-                x + Math.cos(angle - 0.06) * r * 0.1,
-                y - r * 0.85
-            );
-            ctx.fillStyle = i % 2 === 0 ? '#33aa33' : '#44bb44';
+            ctx.arc(x + Math.cos(a) * d, y + r * 0.1 + Math.sin(a) * d, r * 0.022, 0, Math.PI * 2);
             ctx.fill();
         }
-        // Highlight
-        ctx.beginPath();
-        ctx.arc(x - r * 0.2, y - r * 0.15, r * 0.15, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fill();
-    }
-
-    function drawWatermelon(x: number, y: number, r: number) {
-        // Watermelon EXTERIOR: dark green base with lighter green stripes
-        // Base — dark green
-        const baseGrad = ctx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
-        baseGrad.addColorStop(0, '#3a8a4a');
-        baseGrad.addColorStop(0.5, '#2a6e35');
-        baseGrad.addColorStop(1, '#1a4a22');
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = baseGrad;
-        ctx.fill();
-        // Lighter green stripes curving from top to bottom
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.strokeStyle = '#4aaa5a';
-        ctx.lineWidth = r * 0.12;
-        ctx.lineCap = 'round';
-        const stripeCount = 8;
-        for (let i = 0; i < stripeCount; i++) {
-            const baseAngle = (Math.PI * 2 / stripeCount) * i;
-            ctx.beginPath();
-            ctx.moveTo(x, y - r * 0.15);
-            // Curve outward from near-top toward bottom
-            const cx1 = x + Math.cos(baseAngle) * r * 0.7;
-            const cy1 = y + Math.sin(baseAngle) * r * 0.7;
-            const ex = x + Math.cos(baseAngle) * r * 1.15;
-            const ey = y + Math.sin(baseAngle) * r * 1.15;
-            ctx.quadraticCurveTo(cx1, cy1, ex, ey);
-            ctx.stroke();
-        }
+        const blush = ctx.createRadialGradient(x + r * 0.5, y + r * 0.3, 0, x + r * 0.5, y + r * 0.3, r * 0.55);
+        blush.addColorStop(0, 'rgba(230, 120, 40, 0.35)');
+        blush.addColorStop(1, 'rgba(230, 120, 40, 0)');
+        ctx.fillStyle = blush;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
         ctx.restore();
-        // Small stem dimple at top
+        ctx.strokeStyle = '#5a3a1a';
+        ctx.lineWidth = Math.max(1.5, r * 0.06);
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(x, y - r * 0.85, r * 0.08, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(90,60,20,0.5)';
-        ctx.fill();
-        // Highlight
+        ctx.moveTo(x, y - r * 0.98);
+        ctx.quadraticCurveTo(x + r * 0.05, y - r * 1.2, x + r * 0.18, y - r * 1.28);
+        ctx.stroke();
+        leaf(x + r * 0.06, y - r * 1.08, r * 0.4, r * 0.13, -0.25);
         ctx.beginPath();
-        ctx.ellipse(x - r * 0.3, y - r * 0.25, r * 0.15, r * 0.22, -0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.ellipse(x - r * 0.38, y + r * 0.0, r * 0.13, r * 0.26, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
         ctx.fill();
     }
 
     function drawPeach(x: number, y: number, r: number) {
-        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-        grad.addColorStop(0, '#ffd6b0');
-        grad.addColorStop(0.45, '#ff9a76');
-        grad.addColorStop(1, '#c4504a');
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        // Crease
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.strokeStyle = 'rgba(150, 50, 40, 0.28)';
-        ctx.lineWidth = Math.max(1.5, r * 0.05);
-        ctx.beginPath();
-        ctx.moveTo(x + r * 0.05, y - r * 0.9);
-        ctx.quadraticCurveTo(x + r * 0.4, y, x + r * 0.05, y + r * 0.95);
-        ctx.stroke();
-        ctx.restore();
-        // Leaf
-        ctx.beginPath();
-        ctx.ellipse(x + r * 0.2, y - r * 0.88, r * 0.2, r * 0.08, -0.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#44aa44';
-        ctx.fill();
-        // Highlight
-        ctx.beginPath();
-        ctx.ellipse(x - r * 0.32, y - r * 0.28, r * 0.16, r * 0.24, -0.4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.fill();
+        ball(x, y, r, [[0, '#ffe0c0'], [0.45, '#ff9a76'], [1, '#c4504a']]);
+        clipBall(x, y, r, () => {
+            const g = ctx.createRadialGradient(x + r * 0.4, y + r * 0.3, 0, x + r * 0.4, y + r * 0.3, r * 0.8);
+            g.addColorStop(0, 'rgba(220, 40, 60, 0.35)');
+            g.addColorStop(1, 'rgba(220, 40, 60, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+            ctx.strokeStyle = 'rgba(150, 50, 40, 0.3)';
+            ctx.lineWidth = Math.max(1.5, r * 0.05);
+            ctx.beginPath();
+            ctx.moveTo(x + r * 0.05, y - r * 0.95);
+            ctx.quadraticCurveTo(x + r * 0.42, y, x + r * 0.05, y + r * 0.98);
+            ctx.stroke();
+        });
+        leaf(x + r * 0.05, y - r * 0.88, r * 0.5, r * 0.17, -0.45);
+        shine(x, y, r, 0.22);
     }
 
-    const DRAWERS = [drawCherry, drawStrawberry, drawGrape, drawOrange, drawApple, drawPineapple, drawWatermelon, drawPeach];
+    function drawPineapple(x: number, y: number, r: number) {
+        ball(x, y, r, [[0, '#ffe066'], [0.5, '#e0a820'], [1, '#9a6a0c']], -0.15, -0.1);
+        clipBall(x, y, r, () => {
+            ctx.strokeStyle = 'rgba(130, 75, 5, 0.35)';
+            ctx.lineWidth = Math.max(1, r * 0.025);
+            for (let i = -6; i <= 6; i++) {
+                ctx.beginPath();
+                ctx.moveTo(x + i * r * 0.28 - r, y - r);
+                ctx.lineTo(x + i * r * 0.28 + r, y + r * 1.2);
+                ctx.moveTo(x + i * r * 0.28 + r, y - r);
+                ctx.lineTo(x + i * r * 0.28 - r, y + r * 1.2);
+                ctx.stroke();
+            }
+        });
+        for (let i = 0; i < 7; i++) {
+            const a = -Math.PI / 2 + (i - 3) * 0.28;
+            const len = r * (0.42 + (i % 2) * 0.12 - Math.abs(i - 3) * 0.04);
+            leaf(x + (i - 3) * r * 0.05, y - r * 0.82, len, r * 0.09, a, i % 2 ? '#2f8f36' : '#44b04c');
+        }
+        shine(x, y, r, 0.16);
+    }
+
+    function drawMelon(x: number, y: number, r: number) {
+        // Cantaloupe-style: pale green-gold with a white net.
+        ball(x, y, r, [[0, '#f2f7c8'], [0.5, '#b9d47a'], [1, '#6c8a3a']]);
+        clipBall(x, y, r, () => {
+            ctx.strokeStyle = 'rgba(250, 250, 225, 0.55)';
+            ctx.lineWidth = Math.max(1, r * 0.022);
+            for (let i = 0; i < 9; i++) {
+                const a = (i / 9) * Math.PI;
+                ctx.beginPath();
+                ctx.ellipse(x, y, r * Math.abs(Math.cos(a)) + 0.5, r, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            for (let i = 1; i < 6; i++) {
+                const yy = y - r + (i / 6) * r * 2;
+                ctx.beginPath();
+                ctx.moveTo(x - r, yy + Math.sin(i) * r * 0.06);
+                ctx.quadraticCurveTo(x, yy - r * 0.12, x + r, yy + Math.cos(i) * r * 0.06);
+                ctx.stroke();
+            }
+        });
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.9, r * 0.06, 0, Math.PI * 2);
+        ctx.fillStyle = '#6b5a1a';
+        ctx.fill();
+        stem(x, y, r, '#6b5a1a', 0.18, 0.06);
+        shine(x, y, r, 0.22);
+    }
+
+    function drawWatermelon(x: number, y: number, r: number) {
+        ball(x, y, r, [[0, '#4fae5f'], [0.5, '#2a7a38'], [1, '#164a20']], -0.2, -0.2);
+        clipBall(x, y, r, () => {
+            ctx.strokeStyle = '#123f1a';
+            ctx.lineWidth = r * 0.1;
+            for (let i = -3; i <= 3; i++) {
+                ctx.beginPath();
+                const xx = x + i * r * 0.32;
+                ctx.moveTo(xx, y - r);
+                for (let s = 0; s <= 8; s++) {
+                    const yy = y - r + (s / 8) * r * 2;
+                    ctx.lineTo(xx + Math.sin(s * 1.4 + i) * r * 0.05 + i * Math.cos((yy - y) / r) * r * 0.06, yy);
+                }
+                ctx.stroke();
+            }
+        });
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.9, r * 0.06, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(90,60,20,0.6)';
+        ctx.fill();
+        shine(x, y, r, 0.16);
+    }
+
+    const DRAWERS = [drawCherry, drawStrawberry, drawGrape, drawLemon, drawOrange, drawApple,
+        drawPear, drawPeach, drawPineapple, drawMelon, drawWatermelon];
 
     // ─── Sprite cache ───
-    // Every fruit shape casts a blurred shadow, and blur is by far the most
-    // expensive thing a 2D canvas does. So each fruit, label, the bowl and the
-    // glows are painted once into an offscreen canvas and stamped with
-    // drawImage every frame. Sprites are built at device resolution, and
-    // compositing with source-over is associative, so the result is the same
-    // picture. Only shapes drawn with a varying globalAlpha keep the solid part
+    // Every fruit casts a blurred glow, and blur is by far the most expensive
+    // thing a 2D canvas does. So each fruit, label, the bowl and the glows are
+    // painted once into an offscreen canvas and stamped with drawImage every
+    // frame. Only shapes drawn with a varying globalAlpha keep the solid part
     // live and stamp the glow alone (alpha must hit glow and fill separately).
     interface Sprite { c: HTMLCanvasElement; x: number; y: number; w: number; h: number }
     const fruitSprites = new Map<string, Sprite>();
     const glowSprites = new Map<string, Sprite>();
-    const labelSprites = new Map<string, { sp: Sprite; boxW: number; boxH: number }>();
-    const SHADOW_SHIFT = 4096; // css px: glow-only sprites draw the shape off-canvas
+    const labelSprites = new Map<string, Sprite>();
+    const SHADOW_SHIFT = 4096;
 
     function clearSprites() {
         fruitSprites.clear();
         glowSprites.clear();
         labelSprites.clear();
     }
-    // Labels (and the card) are measured with web fonts; redo once they've arrived.
-    const fontsChanged = () => { labelSprites.clear(); measureCard = true; };
+    const fontsChanged = () => { labelSprites.clear(); wake(); };
     document.fonts?.ready.then(fontsChanged);
     document.fonts?.addEventListener?.('loadingdone', fontsChanged);
 
-    /** Paint into a fresh canvas covering css rect (x, y, w, h), snapped to device pixels. */
     function makeSprite(x: number, y: number, w: number, h: number, paint: () => void): Sprite {
         const dx = Math.floor(x * dpr), dy = Math.floor(y * dpr);
         const c = document.createElement('canvas');
         c.width = Math.max(1, Math.ceil((x + w) * dpr) - dx);
         c.height = Math.max(1, Math.ceil((y + h) * dpr) - dy);
         const g = c.getContext('2d')!;
-        // Same device-pixel grid as the main canvas, so the drawing code is unchanged.
         g.setTransform(dpr, 0, 0, dpr, -dx, -dy);
         const prev = ctx;
         ctx = g;
@@ -1257,24 +1396,20 @@ const strings = {
         return { c, x: dx / dpr, y: dy / dpr, w: c.width / dpr, h: c.height / dpr };
     }
 
-    /** Stamp a sprite built around (0, 0) at (x, y), optionally scaled by k. */
-    function stamp(s: Sprite, x: number, y: number, k = 1) {
-        mainCtx.drawImage(s.c, x + s.x * k, y + s.y * k, s.w * k, s.h * k);
+    function stamp(s: Sprite, x: number, y: number, sc = 1) {
+        mainCtx.drawImage(s.c, x + s.x * sc, y + s.y * sc, s.w * sc, s.h * sc);
     }
 
-    // Shadow blur is in device pixels; this is how far it reaches, in css px.
     const blurReach = (blur: number) => (blur * 1.5) / dpr + 2;
 
-    function fruitSprite(f: Fruit, blur: number): Sprite {
-        const tier = f.skill.tier, r = f.r;
+    function fruitSprite(tier: number, r: number, blur: number): Sprite {
         const key = `${tier}|${r}|${blur}`;
         let s = fruitSprites.get(key);
         if (!s) {
-            // Round body plus glow; stems and crowns poke out to ~1.3 r above.
             const m = blurReach(blur);
-            const side = r + m, top = r * 1.35 + m;
+            const side = r + m, top = r * 1.4 + m;
             s = makeSprite(-side, -top, side * 2, top + side, () => {
-                ctx.shadowColor = data.colors[tier];
+                ctx.shadowColor = COLORS[tier];
                 ctx.shadowBlur = blur;
                 DRAWERS[tier](0, 0, r);
             });
@@ -1283,7 +1418,6 @@ const strings = {
         return s;
     }
 
-    /** The blurred glow of a circle (filled, or stroked with lineWidth), without the circle. */
     function glowSprite(color: string, blur: number, radius: number, lineWidth: number): Sprite {
         const key = `${color}|${blur}|${radius}|${lineWidth}`;
         let s = glowSprites.get(key);
@@ -1292,11 +1426,29 @@ const strings = {
             s = makeSprite(-e, -e, e * 2, e * 2, () => {
                 ctx.shadowColor = color;
                 ctx.shadowBlur = blur;
-                ctx.shadowOffsetX = SHADOW_SHIFT * dpr; // shadow offsets ignore the transform
+                ctx.shadowOffsetX = SHADOW_SHIFT * dpr;
                 ctx.beginPath();
                 ctx.arc(-SHADOW_SHIFT, 0, radius, 0, Math.PI * 2);
                 if (lineWidth) { ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.stroke(); }
                 else { ctx.fillStyle = color; ctx.fill(); }
+            });
+            glowSprites.set(key, s);
+        }
+        return s;
+    }
+
+    function dotSprite(color: string): Sprite {
+        const key = `dot|${color}`;
+        let s = glowSprites.get(key);
+        if (!s) {
+            const e = 4 + blurReach(8);
+            s = makeSprite(-e, -e, e * 2, e * 2, () => {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
             });
             glowSprites.set(key, s);
         }
@@ -1321,127 +1473,97 @@ const strings = {
         ctx.lineTo(x + w, y);
         ctx.stroke();
         ctx.restore();
+        // The danger line: fruit resting above it ends the game.
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.13)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x + 6, bowl.dangerY);
+        ctx.lineTo(x + w - 6, bowl.dangerY);
+        ctx.stroke();
+        ctx.restore();
     }
 
-    // A combo flash widens the glow from 12 to 42 px and fades back. Sprites
-    // exist for a few blur steps; in between, the next one fades in on top.
-    const FLASH_STEP = 10;
+    // A merge or a lit rung flashes the fruit: its sprite plus a fading ring
+    // of glow in its colour. Both are cached per tier and size.
+    const FLASH_BLUR = 26;
 
-    function drawFruitBody(f: Fruit, now: number) {
-        const k = f.scaleAnim; // pop after a grab or combo: scale the stamp
-        const r = f.r * k;
-        if (f.skill.pillar) {
-            // Gold halo: "this is what I sell".
-            const pulse = 0.5 + 0.5 * Math.sin(now / 700 + f.skill.tier);
-            mainCtx.globalAlpha = 0.55 + 0.25 * pulse;
-            stamp(glowSprite(GOLD, 14, f.r + 5 * scale, 2), f.x, f.y, k);
-            mainCtx.beginPath();
-            mainCtx.arc(f.x, f.y, r + 5 * scale, 0, Math.PI * 2);
-            mainCtx.strokeStyle = GOLD;
-            mainCtx.lineWidth = 2;
-            mainCtx.stroke();
-            mainCtx.globalAlpha = 1;
-        }
-        if (f.flash <= 0) { stamp(fruitSprite(f, 12), f.x, f.y, k); return; }
-
-        const blur = 12 + f.flash * 30;
-        const lo = 12 + Math.floor((blur - 12) / FLASH_STEP) * FLASH_STEP;
-        const t = (blur - lo) / FLASH_STEP;
-        stamp(fruitSprite(f, lo), f.x, f.y, k);
-        if (t > 0.02 && lo < 42) {
-            mainCtx.globalAlpha = t;
-            stamp(fruitSprite(f, lo + FLASH_STEP), f.x, f.y, k);
-        }
-        // Gold ring, glowing in the fruit's colour.
+    function drawFruitBody(f: Fruit) {
+        const sc = f.scaleAnim;
+        stamp(fruitSprite(f.tier, f.r, 12), f.x, f.y, sc);
+        if (f.flash <= 0) return;
         mainCtx.globalAlpha = f.flash;
-        stamp(glowSprite(data.colors[f.skill.tier], t < 0.5 ? lo : lo + FLASH_STEP, f.r + 2, 3), f.x, f.y, k);
-        mainCtx.beginPath();
-        mainCtx.arc(f.x, f.y, r + 2, 0, Math.PI * 2);
-        mainCtx.strokeStyle = GOLD;
-        mainCtx.lineWidth = 3;
-        mainCtx.stroke();
+        stamp(glowSprite(COLORS[f.tier], FLASH_BLUR, f.r, 4), f.x, f.y, sc);
         mainCtx.globalAlpha = 1;
     }
 
-    function wrapLabel(text: string, maxW: number): string[] {
-        if (ctx.measureText(text).width <= maxW) return [text];
-        // Prefer breaking after " / " or "-" or a space, whichever balances best.
-        const breaks: number[] = [];
-        for (let i = 1; i < text.length - 1; i++) {
-            if (text[i] === ' ' || text[i - 1] === '-') breaks.push(i);
-        }
-        let best: string[] = [text];
-        let bestW = Infinity;
-        for (const i of breaks) {
-            const a = text.slice(0, i).trimEnd();
-            const b = text.slice(i).trimStart();
-            const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
-            if (w < bestW) { bestW = w; best = [a, b]; }
-        }
-        return best;
+    /**
+     * Build every tier's sprites while the browser is idle, so the first
+     * merge into a big fruit doesn't pay for a large blur mid-game.
+     */
+    let warmGen = 0;
+    function prewarm() {
+        const gen = ++warmGen;
+        const idle = (cb: () => void) =>
+            'requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 1500 }) : window.setTimeout(cb, 60);
+        let tier = 0;
+        const next = () => {
+            if (gen !== warmGen || tier >= TIER_COUNT) return;
+            const r = radiusForTier(tier, bowl.w);
+            fruitSprite(tier, r, 12);
+            glowSprite(COLORS[tier], FLASH_BLUR, r, 4);
+            labelSprite(tier, r);
+            dotSprite(COLORS[tier]);
+            if (tier === TOP_TIER) dotSprite(GOLD);
+            tier++;
+            idle(next);
+        };
+        idle(next);
     }
 
-    /** A fruit's name tag, laid out and painted once. Box top-left at (0, 0). */
-    function labelSprite(f: Fruit, focused: boolean) {
-        const key = `${f.skill.id}|${focused ? 1 : 0}`;
-        const hit = labelSprites.get(key);
-        if (hit) return hit;
-        const s = f.skill;
-        const pill = s.pillar;
-        // Phones: short names ("CI/CD", not "DevOps / CI/CD") so neighbours' tags don't collide.
-        const text = compact ? s.short : s.label;
-        const nameSize = compact ? (pill ? 13 : text.length > 7 ? 10 : 11) : Math.round((pill ? 15 : 12.5) * Math.max(0.86, scale));
-        const nameFont = `${pill ? 700 : 600} ${nameSize}px Inter, system-ui, sans-serif`;
-        const subFont = `500 ${compact ? 9 : 10.5}px "JetBrains Mono", monospace`;
+    /** The skill name inside a fruit, painted once per tier and size. Centred on (0, 0). */
+    function labelSprite(tier: number, r: number): Sprite {
+        const key = `${tier}|${r}|${compact ? 1 : 0}`;
+        let s = labelSprites.get(key);
+        if (s) return s;
+        const rung = data.ladder[tier];
+        const text = compact ? rung.short : rung.label;
+        const maxW = r * 1.62;
+        let size = Math.max(9, Math.min(compact ? 15 : 19, r * 0.4));
+        const font = (px: number) => `700 ${px}px Inter, system-ui, sans-serif`;
+        let lines = [text];
         mainCtx.save();
-        ctx.font = nameFont;
-        const lines = wrapLabel(text, compact ? Math.max(f.r * 1.6, 54) : Math.max(f.r * 1.7, 64));
-        const sub = pill ? '' : `${fmtYears(s.years ?? 0)} ${S.yearsShort}`;
-        const lineH = nameSize * 1.15;
-        const subH = sub ? nameSize * 0.95 : 0;
-        let textW = Math.max(...lines.map((l) => ctx.measureText(l).width));
-        if (sub) { ctx.font = subFont; textW = Math.max(textW, ctx.measureText(sub).width); }
+        mainCtx.font = font(size);
+        if (mainCtx.measureText(text).width > maxW && text.includes(' ')) {
+            const i = text.lastIndexOf(' ', Math.ceil(text.length / 2) + 2);
+            const cut = i > 0 ? i : text.indexOf(' ');
+            lines = [text.slice(0, cut).trim(), text.slice(cut).trim()];
+        }
+        const widest = () => Math.max(...lines.map((l) => mainCtx.measureText(l).width));
+        while (size > 7 && widest() > maxW) { size -= 0.5; mainCtx.font = font(size); }
         mainCtx.restore();
-        const padX = compact ? 4 : 6, padY = 3;
-        const boxW = textW + padX * 2;
-        const boxH = lines.length * lineH + subH + padY * 2;
-        const sp = makeSprite(-2, -2, boxW + 4, boxH + 4, () => {
-            const cx = boxW / 2;
-            ctx.globalAlpha = focused ? 0.95 : 0.78;
-            ctx.fillStyle = '#0a0a0f';
-            ctx.beginPath();
-            ctx.roundRect(0, 0, boxW, boxH, Math.min(7, boxH / 2));
-            ctx.fill();
-            if (focused) {
-                ctx.strokeStyle = pill ? GOLD : data.colors[s.tier];
-                ctx.lineWidth = 1.5;
-                ctx.globalAlpha = 1;
-                ctx.stroke();
-            }
-            ctx.globalAlpha = 1;
+        const lineH = size * 1.12;
+        const boxW = r * 2.4, boxH = lines.length * lineH + 8;
+        s = makeSprite(-boxW / 2, -boxH / 2, boxW, boxH, () => {
+            ctx.font = font(size);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.font = nameFont;
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = Math.max(2.5, size * 0.28);
+            ctx.strokeStyle = 'rgba(10, 8, 16, 0.72)';
             ctx.fillStyle = '#ffffff';
-            lines.forEach((l, i) => ctx.fillText(l, cx, padY + lineH * (i + 0.5)));
-            if (sub) {
-                ctx.font = subFont;
-                ctx.fillStyle = '#b8b8cc';
-                ctx.fillText(sub, cx, padY + lines.length * lineH + subH * 0.5);
-            }
+            const y0 = -((lines.length - 1) * lineH) / 2;
+            lines.forEach((l, i) => ctx.strokeText(l, 0, y0 + i * lineH));
+            lines.forEach((l, i) => ctx.fillText(l, 0, y0 + i * lineH));
         });
-        const entry = { sp, boxW, boxH };
-        labelSprites.set(key, entry);
-        return entry;
+        labelSprites.set(key, s);
+        return s;
     }
 
-    function drawLabel(f: Fruit, focused: boolean) {
-        const { sp, boxW, boxH } = labelSprite(f, focused);
-        // Keep the label on the canvas even when the fruit hugs the edge.
-        const bx = Math.max(2, Math.min(W - boxW - 2, f.x - boxW / 2));
-        const by = f.y - boxH / 2;
-        // Whole device pixels keep the text crisp.
-        stamp(sp, Math.round(bx * dpr) / dpr, Math.round(by * dpr) / dpr);
+    function drawLabel(f: Fruit) {
+        const s = labelSprite(f.tier, f.r);
+        stamp(s, Math.round(f.x * dpr) / dpr, Math.round(f.y * dpr) / dpr);
     }
 
     function drawParticles() {
@@ -1449,244 +1571,262 @@ const strings = {
             const alpha = Math.max(0, p.life);
             const radius = Math.max(0.1, p.size * p.life);
             mainCtx.globalAlpha = alpha;
-            // Glow from a sprite (radius rounded to a quarter pixel), dot live.
-            stamp(glowSprite(p.color, 8, Math.max(0.25, Math.round(radius * 4) / 4), 0), p.x, p.y);
-            mainCtx.fillStyle = p.color;
-            mainCtx.beginPath();
-            mainCtx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-            mainCtx.fill();
+            // One sprite per colour (dot and glow), scaled to the shrinking dot.
+            stamp(dotSprite(p.color), p.x, p.y, radius / 4);
         }
         mainCtx.globalAlpha = 1;
     }
 
+    function drawDropper(now: number) {
+        if (gameOver) return;
+        const r = radiusForTier(current, bowl.w);
+        const x = aimX(dropX);
+        const ready = now >= readyAt;
+        // Aim guide down to the pile.
+        mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        mainCtx.lineWidth = 1;
+        mainCtx.beginPath();
+        mainCtx.moveTo(x, bowl.dropY + (ready ? r + 4 : 0));
+        mainCtx.lineTo(x, bowl.bottom);
+        mainCtx.stroke();
+        if (!ready) return;
+        const y = Math.max(r + 2, bowl.dropY);
+        stamp(fruitSprite(current, r, 12), x, y);
+        drawLabel({ tier: current, r, x, y } as Fruit);
+    }
+
     function draw(now = performance.now()) {
         mainCtx.clearRect(0, 0, W, H);
-        for (const f of fruits) drawFruitBody(f, now);
-        // Labels in a second pass so no fruit ever covers another fruit's name;
-        // the focused one goes last so it's always on top.
-        const focus = cardState?.fruit ?? hoverFruit ?? null;
-        for (const f of fruits) if (f !== focus) drawLabel(f, false);
-        if (focus && fruits.includes(focus)) drawLabel(focus, true);
+        if (overSince !== null && !gameOver) {
+            // The danger line warms up while the bowl is over it.
+            const a = 0.35 + 0.35 * Math.sin(now / 90);
+            mainCtx.strokeStyle = `rgba(255, 90, 90, ${a})`;
+            mainCtx.lineWidth = 2;
+            mainCtx.beginPath();
+            mainCtx.moveTo(bowl.x + 6, bowl.dangerY);
+            mainCtx.lineTo(bowl.x + bowl.w - 6, bowl.dangerY);
+            mainCtx.stroke();
+        }
+        drawDropper(now);
+        for (const f of fruits) drawFruitBody(f);
+        for (const f of fruits) drawLabel(f);
         drawParticles();
     }
 
+    function paintIcon(c: HTMLCanvasElement, tier: number, cssSize: number) {
+        const px = Math.round(cssSize * dpr);
+        if (c.width !== px) { c.width = px; c.height = px; }
+        c.style.width = c.style.height = `${cssSize}px`;
+        const g = c.getContext('2d')!;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, cssSize, cssSize);
+        const prev = ctx;
+        ctx = g;
+        try { DRAWERS[tier](cssSize / 2, cssSize * 0.56, cssSize * 0.4); } finally { ctx = prev; }
+    }
+
+    function paintNext() {
+        paintIcon(nextCanvas, upcoming, compact ? 22 : 28);
+    }
+
+    /** Strip icons grow with the tier, like Suika's circle of evolution. */
+    function paintIcons() {
+        rungEls.forEach((el, i) => {
+            const c = el.querySelector<HTMLCanvasElement>('canvas');
+            if (c) paintIcon(c, i, compact ? 14 + i * 1.1 : 18 + i * 1.8);
+        });
+        paintNext();
+    }
+
+    // ─── Loop ───
+    function wake() {
+        lastActive = performance.now();
+        if (visible && started && animId === null) {
+            prevT = performance.now();
+            animId = requestAnimationFrame(tick);
+        }
+    }
+
+    let prevT = 0;
+    function tick(now: number) {
+        animId = null;
+        let dt = Math.min((now - prevT) / 1000, DT_CAP);
+        prevT = now;
+        // Two half steps when frames are slow, so fast fruit don't tunnel.
+        if (dt > 0.017) { step(dt / 2, now); step(dt / 2, now); } else step(dt, now);
+
+        if (!gameOver) {
+            const d = dangerStep(overSince, fruits, bowl.dangerY, now);
+            overSince = d.overSince;
+            if (d.gameOver) endGame();
+        }
+
+        let moving = particles.length > 0 || shake > 0 || overSince !== null || now < readyAt;
+        if (!moving) {
+            for (const f of fruits) {
+                if (Math.abs(f.vx) + Math.abs(f.vy) > 12 * k || f.flash > 0 || f.scaleAnim > 1) { moving = true; break; }
+            }
+        }
+        if (moving) lastActive = now;
+
+        if (shake > 0) {
+            shake = Math.max(0, shake - dt * 2.5);
+            const m = shake * 6 * k;
+            const tf = shake > 0 ? `translate(${((Math.random() - 0.5) * m).toFixed(1)}px, ${((Math.random() - 0.5) * m).toFixed(1)}px)` : '';
+            canvas.style.transform = bowlCanvas.style.transform = tf;
+        }
+        draw(now);
+        // Park the loop once everything has come to rest; input wakes it.
+        if (visible && now - lastActive < SLEEP_AFTER) animId = requestAnimationFrame(tick);
+    }
+
+    function seed(now: number) {
+        fruits.length = 0;
+        particles.length = 0;
+        settling = true;
+        for (const s of SEED_PILE) {
+            const f = addFruit(s.tier, 0, 0, now - 10_000);
+            f.x = bowl.x + f.r + 4 + (bowl.w - f.r * 2 - 8) * s.x;
+            f.y = bowl.y + f.r;
+            for (let i = 0; i < 60; i++) step(1 / 60, now);
+            reach(s.tier, false);
+        }
+        for (let i = 0; i < 240; i++) step(1 / 60, now);
+        // A twin that still landed touching its pair would merge on the first
+        // frame; take it out so the opening bowl is exactly what was planned.
+        for (let i = fruits.length - 1; i >= 0; i--) {
+            const a = fruits[i];
+            const touching = fruits.some((b, j) => j < i && b.tier === a.tier && Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r + 2);
+            if (touching) fruits.splice(i, 1);
+        }
+        for (const f of fruits) { f.vx = 0; f.vy = 0; f.flash = 0; f.scaleAnim = 1; }
+        settling = false;
+    }
+
+    function newGame() {
+        nextDrop = createDropSequence();
+        current = nextDrop(5);
+        upcoming = nextDrop(5);
+        score = 0;
+        scoreEl.textContent = '0';
+        overSince = null;
+        gameOver = false;
+        readyAt = 0;
+        overEl.hidden = true;
+        seed(performance.now());
+        paintNext();
+        wake();
+    }
+
+    function endGame() {
+        gameOver = true;
+        overSince = null;
+        hideCard();
+        overEl.querySelector('.skills-over-score')!.textContent = fill(S.overScore, { n: score });
+        overEl.hidden = false;
+        liveEl.textContent = `${overEl.querySelector('.skills-over-title')!.textContent} ${fill(S.overScore, { n: score })}`;
+        if (document.activeElement === canvas) overEl.querySelector<HTMLButtonElement>('button')?.focus();
+    }
+
     // ─── Input ───
-    let hoverFruit: Fruit | null = null;
-    let press: {
-        fruit: Fruit | null; x: number; y: number; t: number;
-        offX: number; offY: number; dragging: boolean; touch: boolean; decided: boolean;
-    } | null = null;
-    let lastPX = 0, lastPY = 0, lastPT = 0, velX = 0, velY = 0;
-    let longPressTimer = 0;
+    // The canvas rect is read when a gesture starts, never per frame.
+    let rect = canvas.getBoundingClientRect();
+    const refreshRect = () => { rect = canvas.getBoundingClientRect(); };
+    const local = (e: { clientX: number; clientY: number }) => ({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    const inColumn = (x: number, y: number) =>
+        x >= bowl.x - 12 && x <= bowl.x + bowl.w + 12 && y <= bowl.y + bowl.h + 6;
+    let lastTouch = 0;
 
-    function pos(e: MouseEvent | Touch) {
-        const rect = canvas.getBoundingClientRect();
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
-
-    function hitTest(x: number, y: number, slop = 0): Fruit | null {
-        // Smallest first wins, so a cherry sitting on a pillar is still grabbable.
-        let best: Fruit | null = null;
-        for (const f of fruits) {
-            const d = Math.hypot(x - f.x, y - f.y);
-            if (d <= f.r + slop && (!best || f.r < best.r)) best = f;
-        }
-        return best;
-    }
-
-    const inBowlColumn = (x: number, y: number) =>
-        x >= bowl.x - 10 && x <= bowl.x + bowl.w + 10 && y <= bowl.y + bowl.h + 10;
-
-    function markUser() {
-        userInteracted = true;
-        lastUserAction = performance.now();
-        if (tween) { tween.f.grabbed = false; tween = null; }
-    }
-
-    function startDrag() {
-        if (!press?.fruit || reducedMotion) return;
-        press.dragging = true;
-        press.fruit.grabbed = true;
-        press.fruit.vx = 0; press.fruit.vy = 0;
-        press.fruit.scaleAnim = 1.08;
-        canvas.classList.add('grabbing');
-        markUser();
-    }
-
-    function moveDrag(x: number, y: number) {
-        if (!press?.dragging || !press.fruit) return;
-        const now = performance.now();
-        const dt = Math.max(1, now - lastPT) / 1000;
-        velX = velX * 0.5 + ((x - lastPX) / dt) * 0.5;
-        velY = velY * 0.5 + ((y - lastPY) / dt) * 0.5;
-        lastPX = x; lastPY = y; lastPT = now;
-        const f = press.fruit;
-        f.x = Math.max(bowl.x + f.r, Math.min(bowl.x + bowl.w - f.r, x - press.offX));
-        f.y = Math.max(f.r + 2, Math.min(bowl.bottom - f.r, y - press.offY));
-        if (cardState && !cardState.pinned) hideCard();
-    }
-
-    function endPress(x: number, y: number) {
-        clearTimeout(longPressTimer);
-        if (!press) return;
-        const p = press;
-        press = null;
-        canvas.classList.remove('grabbing');
-        if (p.dragging && p.fruit) {
-            const f = p.fruit;
-            f.grabbed = false;
-            f.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, velX));
-            f.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, velY));
-            f.thrownAt = performance.now();
-            return;
-        }
-        const moved = Math.hypot(x - p.x, y - p.y);
-        if (moved > 10) return;
-        markUser();
-        if (p.fruit) {
-            const same = cardState?.kind === 'skill' && cardState.fruit === p.fruit && cardState.pinned;
-            if (same) hideCard();
-            else showCard({ kind: 'skill', fruit: p.fruit, pinned: true });
-        } else {
-            if (cardState) hideCard();
-            if (inBowlColumn(x, y)) poke(x, y);
-        }
-    }
-
-    function poke(x: number, y: number) {
-        if (reducedMotion) return;
-        const reach = 170 * Math.max(0.8, scale);
-        for (const f of fruits) {
-            const dx = f.x - x, dy = f.y - y;
-            const d = Math.hypot(dx, dy);
-            if (d > reach) continue;
-            const k = 1 - d / reach;
-            f.vx += (d > 0 ? dx / d : 0) * 260 * k;
-            f.vy -= 420 * k;
-        }
-        spawnParticles(x, y, BOWL_STROKE, 6, 120);
-    }
-
-    // Mouse
+    canvas.addEventListener('mouseenter', refreshRect);
+    canvas.addEventListener('mousemove', (e) => {
+        if (performance.now() - lastTouch < 800) return;
+        const p = local(e);
+        const on = inColumn(p.x, p.y);
+        canvas.classList.toggle('aim', on && !gameOver);
+        if (on) setAim(p.x);
+    });
     canvas.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
-        const p = pos(e);
-        const hit = hitTest(p.x, p.y);
-        press = {
-            fruit: hit, x: p.x, y: p.y, t: performance.now(),
-            offX: hit ? p.x - hit.x : 0, offY: hit ? p.y - hit.y : 0,
-            dragging: false, touch: false, decided: true,
-        };
-        lastPX = p.x; lastPY = p.y; lastPT = performance.now(); velX = 0; velY = 0;
-        // Fruit presses belong to the bowl, not to the slider's mouse drag.
-        if (hit) { e.stopPropagation(); e.preventDefault(); }
+        refreshRect();
+        const p = local(e);
+        // Presses in the bowl belong to the game, not to the slider's mouse drag.
+        if (inColumn(p.x, p.y)) { e.stopPropagation(); e.preventDefault(); canvas.focus({ preventScroll: true }); }
+    });
+    canvas.addEventListener('click', (e) => {
+        if (performance.now() - lastTouch < 800) return;
+        const p = local(e);
+        if (!inColumn(p.x, p.y)) return;
+        setAim(p.x);
+        drop();
     });
 
-    window.addEventListener('mousemove', (e) => {
-        if (!running && !reducedMotion) return;
-        const p = pos(e);
-        if (press && !press.touch) {
-            if (!press.dragging && press.fruit && Math.hypot(p.x - press.x, p.y - press.y) > 4) startDrag();
-            if (press.dragging) { moveDrag(p.x, p.y); return; }
-        }
-        if (e.target !== canvas) {
-            if (hoverFruit) { hoverFruit = null; if (cardState && !cardState.pinned) hideCard(); }
-            return;
-        }
-        const hit = hitTest(p.x, p.y);
-        canvas.classList.toggle('grab', !!hit && !reducedMotion);
-        canvas.classList.toggle('poke', !hit && inBowlColumn(p.x, p.y) && !reducedMotion);
-        if (hit !== hoverFruit) {
-            hoverFruit = hit;
-            if (!cardState || !cardState.pinned) {
-                if (hit) showCard({ kind: 'skill', fruit: hit, pinned: false });
-                else if (cardState) hideCard();
-            }
-            if (reducedMotion) draw();
-        }
-    });
-
-    window.addEventListener('mouseup', (e) => {
-        if (!press || press.touch) return;
-        const p = pos(e);
-        endPress(p.x, p.y);
-    });
-
-    // Touch: a vertical swipe always belongs to the slider. A fruit is only
-    // grabbed on a sideways move or a short press-and-hold, so the bowl can
-    // never trap someone trying to scroll past it.
+    // Touch: anything that starts in the bowl is aiming, so a vertical swipe
+    // there never changes slide by accident. Swipes on the copy, the ladder
+    // or the page margins still do.
+    let touching = false;
     canvas.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) { press = null; return; }
-        const p = pos(e.touches[0]);
-        const hit = hitTest(p.x, p.y, 8);
-        press = {
-            fruit: hit, x: p.x, y: p.y, t: performance.now(),
-            offX: hit ? p.x - hit.x : 0, offY: hit ? p.y - hit.y : 0,
-            dragging: false, touch: true, decided: false,
-        };
-        lastPX = p.x; lastPY = p.y; lastPT = performance.now(); velX = 0; velY = 0;
-        clearTimeout(longPressTimer);
-        if (hit && !reducedMotion) {
-            longPressTimer = window.setTimeout(() => {
-                if (press && !press.decided && press.fruit) { press.decided = true; startDrag(); }
-            }, 220);
-        }
+        if (e.touches.length !== 1) { touching = false; return; }
+        refreshRect();
+        const p = local(e.touches[0]);
+        if (!inColumn(p.x, p.y) || gameOver) { touching = false; return; }
+        touching = true;
+        lastTouch = performance.now();
+        e.stopPropagation();
+        setAim(p.x);
     }, { passive: true });
-
     canvas.addEventListener('touchmove', (e) => {
-        if (!press) return;
-        const p = pos(e.touches[0]);
-        if (!press.decided) {
-            const dx = p.x - press.x, dy = p.y - press.y;
-            if (Math.hypot(dx, dy) < 8) return;
-            press.decided = true;
-            clearTimeout(longPressTimer);
-            if (press.fruit && Math.abs(dx) > Math.abs(dy) * 1.2 && !reducedMotion) startDrag();
-            else { press = null; return; } // vertical: hand it to the slider
-        }
-        if (press.dragging) {
-            e.preventDefault();
-            e.stopPropagation();
-            moveDrag(p.x, p.y);
-        }
+        if (!touching) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setAim(local(e.touches[0]).x);
     }, { passive: false });
-
     canvas.addEventListener('touchend', (e) => {
-        if (!press) return;
-        const t = e.changedTouches[0];
-        const p = t ? pos(t) : { x: press.x, y: press.y };
-        const wasTap = !press.dragging && Math.hypot(p.x - press.x, p.y - press.y) <= 10;
-        if (press.dragging) e.stopPropagation();
-        endPress(p.x, p.y);
-        // Stop the emulated mouse events that would re-toggle the card.
-        if (wasTap && e.cancelable) e.preventDefault();
+        if (!touching) return;
+        touching = false;
+        lastTouch = performance.now();
+        e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
+        drop();
     });
+    canvas.addEventListener('touchcancel', () => { touching = false; });
 
-    canvas.addEventListener('touchcancel', () => {
-        clearTimeout(longPressTimer);
-        if (press?.dragging && press.fruit) press.fruit.grabbed = false;
-        press = null;
-        canvas.classList.remove('grabbing');
-    });
-
-    canvas.addEventListener('contextmenu', (e) => {
-        if (hitTest(pos(e).x, pos(e).y)) e.preventDefault();
+    canvas.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            const stepFr = e.shiftKey ? 0.12 : 0.04;
+            dropX = Math.max(0, Math.min(1, dropX + (e.key === 'ArrowLeft' ? -stepFr : stepFr)));
+            // Snap to the reachable range so the next press moves at once.
+            dropX = (aimX(dropX) - bowl.x) / bowl.w;
+            wake();
+        } else if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            drop();
+        }
     });
 
     card.querySelector('.skills-card-close')?.addEventListener('click', () => hideCard());
-    card.addEventListener('mouseleave', () => {
-        if (cardState?.autoHide) hideCard();
+    overEl.querySelector('.skills-over-again')?.addEventListener('click', () => {
+        newGame();
+        canvas.focus({ preventScroll: true });
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && cardState) hideCard();
+        if (e.key === 'Escape' && cardTier !== null) hideCard();
     });
 
-    // Close a pinned card when clicking anywhere else on the slide.
+    // Clicking elsewhere on the slide closes the card (dropping fruit doesn't).
     root.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (!cardState?.pinned || target === canvas || card.contains(target)) return;
+        if (cardTier === null || target === canvas || card.contains(target) || target.closest('.skills-rung')) return;
         hideCard();
+    });
+
+    rungEls.forEach((el, i) => {
+        el.addEventListener('click', () => {
+            if (!reached.has(i)) return;
+            if (cardTier === i) hideCard();
+            else showCard(i, { anchorEl: el });
+        });
     });
 
     // Project links: same route as the timeline. Set the hash, go to the
@@ -1699,161 +1839,63 @@ const strings = {
         document.dispatchEvent(new CustomEvent('slider-goto', { detail: { index: 1 } }));
     });
 
-    // Pillar cards ↔ fruit: hovering a card lights its fruit.
+    // Left column ↔ ladder: hovering a pillar lights its rung (and its fruit, if in the bowl).
     root.querySelectorAll<HTMLElement>('.skills-pillar').forEach((el) => {
-        const fruitFor = () => fruits.find((f) => f.skill.id === el.dataset.skill);
-        el.addEventListener('mouseenter', () => {
-            const f = fruitFor();
-            if (!f) return;
-            f.flash = 1;
-            if (!reducedMotion && !f.grabbed) f.vy -= 260;
-            if (reducedMotion) draw();
-        });
+        const tier = Number(el.dataset.tier);
+        const on = () => { if (cardTier === null) lightTier(tier); };
+        const off = () => { if (cardTier === null && lit === tier) lightTier(null); };
+        el.addEventListener('mouseenter', on);
+        el.addEventListener('mouseleave', off);
+        el.addEventListener('focusin', on);
+        el.addEventListener('focusout', off);
     });
-
-    // ─── Demo: once per visit, throw one pillar into another to show a combo ───
-    function startDemo(now: number) {
-        demoDone = true;
-        const f = fruits.find((x) => x.skill.id === 'ai');
-        const target = fruits.find((x) => x.skill.id === 'tdd');
-        if (!f || !target) return;
-        f.grabbed = true;
-        tween = { f, target, fx: f.x, fy: f.y, t0: now, dur: 1200 };
-    }
-
-    function stepTween(now: number) {
-        if (!tween) return;
-        const { f, target, fx, fy, t0, dur } = tween;
-        const k = Math.min(1, (now - t0) / dur);
-        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-        const side = target.x > fx ? -1 : 1;
-        const tx = target.x + side * (f.r + target.r) * 0.55;
-        const ty = target.y - (f.r + target.r) * 0.8;
-        const lift = Math.sin(Math.PI * k) * Math.min(180, bowl.h * 0.55);
-        const x = fx + (tx - fx) * e;
-        const y = fy + (ty - fy) * e - lift;
-        f.x = Math.max(bowl.x + f.r, Math.min(bowl.x + bowl.w - f.r, x));
-        f.y = Math.max(f.r + 2, y);
-        if (k >= 1) {
-            f.grabbed = false;
-            f.vy = 120;
-            f.thrownAt = now;
-            tween = null;
-        }
-    }
-
-    // ─── Loop ───
-    function start() {
-        if (running) return;
-        running = true;
-        fruits.length = 0;
-        particles.length = 0;
-        fillIdx = 0;
-        lastFill = 0;
-        filledAt = 0;
-        lastHop = 0;
-        tween = null;
-        resize();
-
-        let prev = performance.now();
-        function tick(now: number) {
-            const dt = Math.min((now - prev) / 1000, DT_CAP);
-            prev = now;
-
-            if (fillIdx < dropOrder.length && now - lastFill > FILL_INTERVAL) {
-                spawn(dropOrder[fillIdx], DROP_X[fillIdx % DROP_X.length]);
-                fillIdx++;
-                lastFill = now;
-                if (fillIdx === dropOrder.length) filledAt = now;
-            }
-
-            if (filledAt && !demoDone && !userInteracted && now - filledAt > IDLE_BEFORE_DEMO) startDemo(now);
-            stepTween(now);
-
-            // A little life when nobody's playing: one fruit hops now and then.
-            if (filledAt && !tween && !press && now - lastUserAction > 8000 && now - lastHop > IDLE_HOP_EVERY
-                && now - filledAt > IDLE_BEFORE_DEMO + 3000) {
-                lastHop = now;
-                const tools = fruits.filter((f) => !f.skill.pillar);
-                const f = tools[Math.floor(Math.random() * tools.length)];
-                if (f) { f.vy -= 300; f.vx += (Math.random() - 0.5) * 120; }
-            }
-
-            step(dt, now);
-            draw(now);
-            positionCard();
-            animId = requestAnimationFrame(tick);
-        }
-        animId = requestAnimationFrame(tick);
-    }
-
-    function stop() {
-        if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
-        running = false;
-        fruits.length = 0;
-        particles.length = 0;
-        press = null;
-        tween = null;
-        hoverFruit = null;
-        if (cardState) hideCard();
-        mainCtx.clearRect(0, 0, W, H);
-    }
-
-    /** Reduced motion: settle the bowl off-screen, draw one still frame. */
-    function renderStill() {
-        fruits.length = 0;
-        resize();
-        settling = true;
-        const now = performance.now();
-        dropOrder.forEach((s, i) => {
-            spawn(s, DROP_X[i % DROP_X.length]);
-            for (let k = 0; k < 45; k++) step(1 / 60, now);
-        });
-        for (let k = 0; k < 240; k++) step(1 / 60, now);
-        for (const f of fruits) { f.vx = 0; f.vy = 0; }
-        settling = false;
-        draw(now);
-    }
 
     let resizeTimer = 0;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(() => {
-            if (reducedMotion) { renderStill(); return; }
-            if (running) resize();
-        }, 100);
+        resizeTimer = window.setTimeout(() => { if (started) { resize(); draw(); } }, 100);
     });
 
     // Testing hook (same pattern as window.__numbersGame).
     (window as unknown as { __skillsBowl: unknown }).__skillsBowl = {
-        fruits: () => fruits.map((f) => ({ id: f.skill.id, x: f.x, y: f.y, r: f.r, tier: f.skill.tier })),
+        fruits: () => fruits.map((f) => ({ tier: f.tier, x: f.x, y: f.y, r: f.r })),
         bowl: () => ({ ...bowl }),
-        combos: () => [...foundCombos],
-        throwAt: (a: string, b: string) => {
-            const fa = fruits.find((f) => f.skill.id === a);
-            const fb = fruits.find((f) => f.skill.id === b);
-            if (!fa || !fb) return false;
-            markUser();
-            fa.x = fb.x; fa.y = fb.y - (fa.r + fb.r) * 0.9;
-            tryCombo(fa, fb, performance.now());
-            return true;
+        state: () => ({ score, current, upcoming, gameOver, overSince, reached: [...reached].sort((a, b) => a - b), running: animId !== null }),
+        /** Drop at a fraction of the bowl's width, optionally forcing the tier. Ignores the cooldown. */
+        drop: (xFrac: number, tier?: number) => { dropX = xFrac; readyAt = 0; return drop(performance.now(), tier); },
+        /** Put a fruit straight into the bowl (for scripted merge chains). */
+        place: (tier: number, xFrac: number, yFrac = 0.5) => {
+            const f = addFruit(tier, bowl.x + bowl.w * xFrac, bowl.y + bowl.h * yFrac, performance.now());
+            wake();
+            return f.r;
         },
+        newGame,
     };
 
-    // Start/stop with the slide's reveal state.
-    const reveal = root.querySelector('.reveal');
-    if (reducedMotion) {
-        const ro = new ResizeObserver(() => renderStill());
-        ro.observe(stage);
-        return;
+    // Run while the slide is shown, pause (keeping the game) while it isn't.
+    function show() {
+        visible = true;
+        if (!started) {
+            started = true;
+            resize();
+            newGame();
+        }
+        draw();
+        wake();
     }
+    function hide() {
+        visible = false;
+        if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+        hideCard();
+    }
+    const reveal = root.querySelector('.reveal');
     if (reveal) {
         const mo = new MutationObserver(() => {
-            if (reveal.classList.contains('visible')) { if (!running) start(); }
-            else if (running) stop();
+            if (reveal.classList.contains('visible')) { if (!visible) show(); }
+            else if (visible) hide();
         });
         mo.observe(reveal, { attributes: true, attributeFilter: ['class'] });
-        if (reveal.classList.contains('visible')) start();
+        if (reveal.classList.contains('visible')) show();
     }
 })();
 </script>

@@ -1,48 +1,129 @@
 import { getCvJobs } from "./cv";
 import type { ProjectSlug } from "./projects";
 import type { Lang } from "./ui";
+import { FRUITS, TIER_COUNT, type Fruit } from "../utils/skill-ladder";
 
 /**
- * Skills for the "Stacken" fruit bowl (slide 5).
+ * Skills for the "Stacken" merge game (slide 5).
  *
- * Two kinds of fruit:
- * - Pillars: what William sells. Sized big on purpose and backed by proof
- *   (talks, open source, client results), not by years.
- * - Tools: sized by years on assignments where the tool was in the stack.
- *   Years and employers are COMPUTED from `techStack` + `dateRange` in cv.ts,
- *   so the bowl cannot drift from the CV.
+ * The game is Suika style: two fruit of the same kind merge into the next
+ * kind, and the fruit ladder is William's skill ladder, from the frameworks
+ * you drop into the bowl up to the three things he sells (TDD, mob
+ * programming, AI agents) at the top.
  *
- * "Years" means "years on assignments where the tool was in the stack",
- * not hours of hands-on use. The copy says "years on the job" for that reason.
+ * Each rung's story line reuses a verified fact from cv.ts or projects.ts.
+ * Years and employers are COMPUTED from `techStack` + `dateRange` in cv.ts,
+ * so the cards can't drift from the CV. "Years" means "years on assignments
+ * where the tool was in the stack", not hours of hands-on use; the copy says
+ * "years on the job" for that reason.
  */
 
 type Bi = { sv: string; en: string };
 
 export type SkillId =
-    | "tdd" | "ai" | "coaching"
-    | "typescript" | "react" | "node" | "angular" | "vue" | "next"
-    | "devops" | "cloud" | "csharp" | "microfrontends";
+    | "vue" | "angular" | "node" | "react" | "typescript" | "csharp"
+    | "devops" | "cloud" | "tdd" | "mob" | "ai";
 
-interface SkillDef {
+export type PillarId = "tdd" | "ai" | "coaching";
+
+interface RungDef {
     id: SkillId;
     label: Bi;
-    /** Shorter fruit label for phones, where long names collide with their neighbours. */
+    /** Fruit label for phones, where long names don't fit inside a small fruit. */
     short?: Bi;
-    pillar: boolean;
-    /** cv.ts techStack names that count as this skill (tools only). */
+    /** cv.ts techStack names that count as this skill (years come from these). */
     aliases: string[];
-    /** Plain-language "what it buys you" line for a non-technical reader. */
-    value: Bi;
-    /** Pillars: the proof line, shown in the fruit's card on demand (not in the left column). */
+    /** One plain-language line for a non-technical reader. Source in the comment. */
+    line: Bi;
+    /** Optional second, smaller proof line (the three top rungs only). */
     proof?: Bi;
-    proofSlug?: ProjectSlug;
+    slug?: ProjectSlug;
 }
 
-const defs: SkillDef[] = [
+/** The ladder, smallest fruit first. Index = tier = fruit in FRUITS. */
+const ladder: RungDef[] = [
     {
-        id: "tdd", pillar: true, aliases: ["TDD"],
-        label: { sv: "Testa först", en: "Test first" },
-        value: {
+        // cv.ts KITS bullet ("React, Angular och Vue åt flera klienter") + old value line.
+        id: "vue", aliases: ["Vue"],
+        label: { sv: "Vue", en: "Vue" },
+        line: {
+            sv: "Byggde sajter i React, Angular och Vue åt flera kunder. Jag kör det ni redan har.",
+            en: "Built sites in React, Angular and Vue for several clients. I use what you already have.",
+        },
+    },
+    {
+        // cv.ts NetConsult bullet; NetConsult's stack lists Angular.
+        id: "angular", aliases: ["Angular"],
+        label: { sv: "Angular", en: "Angular" },
+        line: {
+            sv: "Som CTO på NetConsult drev jag tekniken för 7 kundprodukter samtidigt.",
+            en: "As CTO at NetConsult I drove the tech strategy for 7 client products at once.",
+        },
+    },
+    {
+        // Old value line.
+        id: "node", aliases: ["Node.js"],
+        label: { sv: "Node.js", en: "Node.js" },
+        short: { sv: "Node", en: "Node" },
+        line: {
+            sv: "Servern bakom sajten, i samma språk som sajten.",
+            en: "The server behind the site, in the same language as the site.",
+        },
+    },
+    {
+        // cv.ts KITS bullet ("ensam skrev om hela systemet ... till React").
+        id: "react", aliases: ["React"],
+        label: { sv: "React", en: "React" },
+        line: {
+            sv: "Skrev ensam om ett system som inte skalade, till React.",
+            en: "Single-handedly rewrote a system that didn't scale, into React.",
+        },
+    },
+    {
+        // Old value line. Longest-running tool in cv.ts.
+        id: "typescript", aliases: ["TypeScript"],
+        label: { sv: "TypeScript", en: "TypeScript" },
+        short: { sv: "TS", en: "TS" },
+        line: {
+            sv: "Färre fel når användarna, för att koden kollar sig själv.",
+            en: "Fewer bugs reach your users, because the code checks itself.",
+        },
+    },
+    {
+        // cv.ts HPE bullet (stack: C#, TypeScript).
+        id: "csharp", aliases: ["C#"],
+        label: { sv: "C# / .NET", en: "C# / .NET" },
+        short: { sv: "C#", en: "C#" },
+        line: {
+            sv: "På HPE byggde jag 8 interna verktyg. Ett av dem växte till 5 000 aktiva användare.",
+            en: "At HPE I built 8 internal tools. One of them grew to 5,000 active users.",
+        },
+    },
+    {
+        // Old value line.
+        id: "devops", aliases: ["DevOps"],
+        label: { sv: "DevOps / CI/CD", en: "DevOps / CI/CD" },
+        short: { sv: "CI/CD", en: "CI/CD" },
+        line: {
+            sv: "Varje ändring testas och skeppas automatiskt.",
+            en: "Every change gets tested and shipped automatically.",
+        },
+    },
+    {
+        // Old value line.
+        id: "cloud", aliases: ["AWS", "Azure"],
+        label: { sv: "AWS / Azure", en: "AWS / Azure" },
+        short: { sv: "Moln", en: "Cloud" },
+        line: {
+            sv: "Molnet, uppsatt så att det bara funkar.",
+            en: "The cloud, set up so it just works.",
+        },
+    },
+    {
+        // cv.ts Hedin bullet (90 %); proof: projects.ts tdd-command-generator.
+        id: "tdd", aliases: ["TDD"],
+        label: { sv: "TDD", en: "TDD" },
+        line: {
             sv: "Testet före koden. På Hedin körde vi så i 90 % av jobbet, och leveranserna kom utan buggar.",
             en: "Test before code. At Hedin we did that for 90% of the work and shipped without bugs.",
         },
@@ -50,198 +131,79 @@ const defs: SkillDef[] = [
             sv: "Mina TDD-kommandon för AI-agenter fick 100 GitHub-stjärnor på under två dygn.",
             en: "My TDD commands for AI agents got 100 GitHub stars in under two days.",
         },
-        proofSlug: "tdd-command-generator",
+        slug: "tdd-command-generator",
     },
     {
-        id: "ai", pillar: true, aliases: [],
+        // cv.ts Telia bullet (14 teams) + NetConsult bullet (6 hires in 6 months).
+        id: "mob", aliases: [],
+        label: { sv: "Mob programming", en: "Mob programming" },
+        short: { sv: "Mob", en: "Mob" },
+        line: {
+            sv: "Mob programming och coachning. På Telia stöttade jag 14 utvecklingsteam.",
+            en: "Mob programming and coaching. At Telia I supported 14 development teams.",
+        },
+        proof: {
+            sv: "Rekryterade 6 personer på 6 månader som utvecklingschef.",
+            en: "Hired 6 people in 6 months as head of development.",
+        },
+        slug: "telia-se",
+    },
+    {
+        // projects.ts legacy-chess-tool-rewrite (Schack4an, ~500 kids) + old value line.
+        id: "ai", aliases: [],
+        label: { sv: "AI-agenter", en: "AI agents" },
+        short: { sv: "AI", en: "AI" },
+        line: {
+            sv: "Lottningen till en schackturnering för ~500 barn. AI skrev all kod.",
+            en: "The pairing tool for a chess event with ~500 kids. AI wrote all of the code.",
+        },
+        proof: {
+            sv: "AI skriver koden snabbt. Jag lär ditt team att kolla den.",
+            en: "AI writes the code fast. I teach your team to check it.",
+        },
+        slug: "legacy-chess-tool-rewrite",
+    },
+];
+
+/**
+ * The left column: what William sells. Content unchanged from before the
+ * game; each pillar points at its rung on the ladder.
+ */
+interface PillarDef {
+    id: PillarId;
+    rung: SkillId;
+    label: Bi;
+    value: Bi;
+    slug: ProjectSlug;
+}
+
+const pillarDefs: PillarDef[] = [
+    {
+        id: "tdd", rung: "tdd",
+        label: { sv: "Testa först", en: "Test first" },
+        value: {
+            sv: "Testet före koden. På Hedin körde vi så i 90 % av jobbet, och leveranserna kom utan buggar.",
+            en: "Test before code. At Hedin we did that for 90% of the work and shipped without bugs.",
+        },
+        slug: "tdd-command-generator",
+    },
+    {
+        id: "ai", rung: "ai",
         label: { sv: "AI-agenter", en: "AI agents" },
         value: {
             sv: "AI skriver koden snabbt. Jag lär ditt team att kolla den.",
             en: "AI writes the code fast. I teach your team to check it.",
         },
-        proof: {
-            sv: "Lottningen till en schackturnering för ~500 barn. AI skrev all kod.",
-            en: "The pairing tool for a chess event with ~500 kids. AI wrote all of the code.",
-        },
-        proofSlug: "legacy-chess-tool-rewrite",
+        slug: "legacy-chess-tool-rewrite",
     },
     {
-        id: "coaching", pillar: true, aliases: [],
+        id: "coaching", rung: "mob",
         label: { sv: "Coachning", en: "Coaching" },
         value: {
             sv: "Mob programming och coachning, tills teamet klarar sig utan mig.",
             en: "Mob programming and coaching, until the team doesn't need me.",
         },
-        proof: {
-            sv: "Stöttade 14 utvecklingsteam på Telia. Rekryterade 6 personer på 6 månader.",
-            en: "Supported 14 development teams at Telia. Hired 6 people in 6 months.",
-        },
-        proofSlug: "sembo-se-startpage",
-    },
-    {
-        id: "typescript", pillar: false, aliases: ["TypeScript"],
-        label: { sv: "TypeScript", en: "TypeScript" },
-        value: {
-            sv: "Färre fel når användarna, för att koden kollar sig själv.",
-            en: "Fewer bugs reach your users, because the code checks itself.",
-        },
-    },
-    {
-        id: "react", pillar: false, aliases: ["React"],
-        label: { sv: "React", en: "React" },
-        value: {
-            sv: "Det mesta du klickar i på webben i dag är byggt med det här.",
-            en: "Most of what you click on the web today is built with this.",
-        },
-    },
-    {
-        id: "node", pillar: false, aliases: ["Node.js"],
-        label: { sv: "Node.js", en: "Node.js" },
-        value: {
-            sv: "Servern bakom sajten, i samma språk som sajten.",
-            en: "The server behind the site, in the same language as the site.",
-        },
-    },
-    {
-        id: "angular", pillar: false, aliases: ["Angular"],
-        label: { sv: "Angular", en: "Angular" },
-        value: {
-            sv: "Storbolagens favorit. Finns den redan hos er så jobbar jag i den.",
-            en: "A big-company favourite. If you already have it, I work in it.",
-        },
-    },
-    {
-        id: "vue", pillar: false, aliases: ["Vue"],
-        label: { sv: "Vue", en: "Vue" },
-        value: {
-            sv: "Ett ramverk till. Jag kör det ni redan har.",
-            en: "One more framework. I use what you already have.",
-        },
-    },
-    {
-        id: "next", pillar: false, aliases: ["Next.js"],
-        label: { sv: "Next.js", en: "Next.js" },
-        value: {
-            sv: "Snabba sidor som Google hittar.",
-            en: "Fast pages that Google can find.",
-        },
-    },
-    {
-        id: "devops", pillar: false, aliases: ["DevOps"],
-        label: { sv: "DevOps / CI/CD", en: "DevOps / CI/CD" },
-        short: { sv: "CI/CD", en: "CI/CD" },
-        value: {
-            sv: "Varje ändring testas och skeppas automatiskt.",
-            en: "Every change gets tested and shipped automatically.",
-        },
-    },
-    {
-        id: "cloud", pillar: false, aliases: ["AWS", "Azure"],
-        label: { sv: "AWS / Azure", en: "AWS / Azure" },
-        short: { sv: "AWS/Azure", en: "AWS/Azure" },
-        value: {
-            sv: "Molnet, uppsatt så att det bara funkar.",
-            en: "The cloud, set up so it just works.",
-        },
-    },
-    {
-        id: "csharp", pillar: false, aliases: ["C#"],
-        label: { sv: "C# / .NET", en: "C# / .NET" },
-        value: {
-            sv: "Windows-system som fortfarande drar in pengar.",
-            en: "Windows systems that still make money.",
-        },
-    },
-    {
-        id: "microfrontends", pillar: false, aliases: ["Single-SPA"],
-        label: { sv: "Micro-frontends", en: "Micro-frontends" },
-        short: { sv: "Micro-FE", en: "Micro-FE" },
-        value: {
-            sv: "Många team kan bygga samma sajt utan att trampa varandra på tårna.",
-            en: "Many teams can ship one website without stepping on each other's toes.",
-        },
-    },
-];
-
-/**
- * Combos: two skills that met in one real piece of work. Throwing one fruit
- * into its partner reveals the story. Every fact is from cv.ts or projects.ts.
- */
-interface ComboDef {
-    pair: [SkillId, SkillId];
-    title: Bi;
-    body: Bi;
-    slug?: ProjectSlug;
-}
-
-const comboDefs: ComboDef[] = [
-    {
-        pair: ["tdd", "ai"],
-        title: { sv: "TDD för AI-agenter", en: "TDD for AI agents" },
-        body: {
-            sv: "Färdiga kommandon som får AI-agenter att skriva testet först. Open source, 100 GitHub-stjärnor på under två dygn.",
-            en: "Ready-made commands that make AI agents write the test first. Open source, 100 GitHub stars in under two days.",
-        },
-        slug: "tdd-command-generator",
-    },
-    {
-        pair: ["tdd", "csharp"],
-        title: { sv: "Hedin: buggfritt", en: "Hedin: bug-free" },
-        body: {
-            sv: "Backend i C# där testdriven utveckling i 90% av arbetet gav buggfria leveranser.",
-            en: "A C# backend where test-driven development in 90% of the work meant bug-free deliveries.",
-        },
-    },
-    {
-        pair: ["ai", "coaching"],
-        title: { sv: "Lära ut AI", en: "Teaching AI" },
-        body: {
-            sv: "En presentation om testdriven utveckling med AI-agenter, byggd helt med Claude Code och redo att köras.",
-            en: "A talk on test-driven development with AI coding agents, built entirely with Claude Code and ready to run.",
-        },
-        slug: "tdd-command-generator",
-    },
-    {
-        pair: ["microfrontends", "coaching"],
-        title: { sv: "Telia: 6 team, en sajt", en: "Telia: 6 teams, one site" },
-        body: {
-            sv: "Ledde frontend-omställningen för B2B på telia.se, totalt 6 utvecklingsteam. Designade en micro-frontend-arkitektur för Telias blandning av ramverk.",
-            en: "Led the frontend transformation for B2B on telia.se, 6 development teams in total. Designed a micro-frontend architecture for Telia's mix of frameworks.",
-        },
-        slug: "telia-se",
-    },
-    {
-        pair: ["react", "coaching"],
-        title: { sv: "Sembo: startsidan", en: "Sembo: the startpage" },
-        body: {
-            sv: "Ledde omdesignen av Sembo.se:s startsida genom att coacha teamet. Utvecklarna tog mer ägarskap och ställde rätt frågor.",
-            en: "Led the Sembo.se startpage redesign by coaching the team. The developers took more ownership and asked the right questions.",
-        },
         slug: "sembo-se-startpage",
-    },
-    {
-        pair: ["typescript", "csharp"],
-        title: { sv: "HPE: 5 000 användare", en: "HPE: 5,000 users" },
-        body: {
-            sv: "Byggde 8 interna verktyg. Ett av dem växte till 5 000 aktiva användare och nominerades till ett internt företagspris.",
-            en: "Built 8 internal tools. One of them grew to 5,000 active users and was nominated for an internal company award.",
-        },
-    },
-    {
-        pair: ["angular", "next"],
-        title: { sv: "NetConsult: 7 produkter", en: "NetConsult: 7 products" },
-        body: {
-            sv: "Som CTO drev jag den tekniska strategin för 7 klientprodukter samtidigt, från underhåll till MVP-lanseringar.",
-            en: "As CTO I drove the technical strategy for 7 client products at once, from maintenance to MVP launches.",
-        },
-    },
-    {
-        pair: ["react", "vue"],
-        title: { sv: "KITS: legacy-räddning", en: "KITS: legacy rescue" },
-        body: {
-            sv: "Byggde frontends i React, Angular och Vue åt flera kunder, och skrev ensam om ett system som inte skalade till React.",
-            en: "Built frontends in React, Angular and Vue for several clients, and single-handedly rewrote a system that didn't scale into React.",
-        },
     },
 ];
 
@@ -272,68 +234,64 @@ export function unionMonths(ranges: [number, number][]): number {
     return total;
 }
 
-/** Fruit tier for tools: cherry < 2 y, strawberry 2–4, grape 4–6, orange 6–8, apple 8+. */
-export function tierForYears(years: number): number {
-    if (years >= 8) return 4;
-    if (years >= 6) return 3;
-    if (years >= 4) return 2;
-    if (years >= 2) return 1;
-    return 0;
-}
-
-/** Pillar fruits, one per pillar, above every tool tier. */
-const PILLAR_TIER: Partial<Record<SkillId, number>> = { tdd: 6, ai: 5, coaching: 7 };
-
-export interface SkillProfile {
+export interface SkillRung {
     id: SkillId;
+    tier: number;
+    fruit: Fruit;
     label: string;
     /** Phone-sized fruit label (falls back to `label`). */
     short: string;
-    pillar: boolean;
-    tier: number;
-    /** Years on assignments with this tool in the stack (tools only), 1 decimal. */
+    /** Years on assignments with this tool in the stack, 1 decimal. Null for the method rungs. */
     years: number | null;
     /** Employers (timeline names, most recent first) whose stack lists the tool. */
     employers: string[];
-    value: string;
+    line: string;
     proof: string | null;
-    proofSlug: ProjectSlug | null;
-}
-
-export interface SkillCombo {
-    pair: [SkillId, SkillId];
-    title: string;
-    body: string;
     slug: ProjectSlug | null;
+    /** The left-column pillar that points here, if any. */
+    pillar: PillarId | null;
 }
 
-export function getSkillProfiles(lang: Lang, now: Date = new Date()): SkillProfile[] {
+export interface SkillPillar {
+    id: PillarId;
+    rung: SkillId;
+    label: string;
+    value: string;
+    slug: ProjectSlug;
+}
+
+export function getSkillLadder(lang: Lang, now: Date = new Date()): SkillRung[] {
+    if (ladder.length !== TIER_COUNT) throw new Error("skills ladder and fruit list differ in length");
     const jobs = getCvJobs("en");
-    return defs.map((d) => {
+    return ladder.map((d, tier) => {
         const hits = jobs.filter((j) => j.techStack.some((t) => d.aliases.includes(t)));
         const employers = [...new Set(hits.map((j) => j.timelineCompany))];
         const months = unionMonths(hits.map((j) => parseDateRange(j.dateRange, now)));
-        const years = d.pillar ? null : Math.round((months / 12) * 10) / 10;
+        // TDD is only listed at Hedin (0.4 y): a years badge would undersell
+        // it, so the method rungs show proof instead of years.
+        const method = d.proof !== undefined;
         return {
             id: d.id,
+            tier,
+            fruit: FRUITS[tier],
             label: d.label[lang],
             short: (d.short ?? d.label)[lang],
-            pillar: d.pillar,
-            tier: d.pillar ? PILLAR_TIER[d.id]! : tierForYears(years ?? 0),
-            years,
-            employers,
-            value: d.value[lang],
+            years: method || !d.aliases.length ? null : Math.round((months / 12) * 10) / 10,
+            employers: method ? [] : employers,
+            line: d.line[lang],
             proof: d.proof?.[lang] ?? null,
-            proofSlug: d.proofSlug ?? null,
+            slug: d.slug ?? null,
+            pillar: pillarDefs.find((p) => p.rung === d.id)?.id ?? null,
         };
     });
 }
 
-export function getSkillCombos(lang: Lang): SkillCombo[] {
-    return comboDefs.map((c) => ({
-        pair: c.pair,
-        title: c.title[lang],
-        body: c.body[lang],
-        slug: c.slug ?? null,
+export function getSkillPillars(lang: Lang): SkillPillar[] {
+    return pillarDefs.map((p) => ({
+        id: p.id,
+        rung: p.rung,
+        label: p.label[lang],
+        value: p.value[lang],
+        slug: p.slug,
     }));
 }
