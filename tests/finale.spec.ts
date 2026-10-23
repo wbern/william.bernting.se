@@ -86,10 +86,10 @@ for (const locale of LOCALES) {
       expect(inert).toEqual([true, true, true, true, true, false]);
     });
 
-    test("location is localised", async ({ page }) => {
+    test("Slay founder role is localised", async ({ page }) => {
       await openFinale(page, locale.prefix);
       const sign = await page.locator(".proof-where").textContent();
-      expect(sign).toContain(locale.label === "sv" ? "Göteborg" : "Gothenburg");
+      expect(sign).toContain(locale.label === "sv" ? "Grundare & CTO" : "Founder & CTO");
     });
   });
 }

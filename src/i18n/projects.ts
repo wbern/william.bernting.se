@@ -62,13 +62,96 @@ const gh = (repo: string): ProjectLink => ({
   label: `github.com/wbern/${repo}`,
 });
 
-/**
- * Display order is a pitch arc: rescue → AI for a real business → a product
- * people used → big-company work → leadership → open source with traction →
- * experiments → back to a client-value card (ADRian, born in a team at Akka),
- * so "next project" never ends on a personal side quest.
- */
+/** Current projects first, followed by client work and earlier case stories. */
 const projectEntries = [
+  {
+    slug: "slay-crm",
+    track: "build",
+    flagship: true,
+    sv: {
+      title: "Slay CRM",
+      context: "Egen produkt · Grundare & CTO",
+      hook: "Ett CRM för säljteam i fält. Mer tid för kunderna.",
+      problem: "Säljteam i fält behöver ett CRM som är enkelt att använda när de är på språng.",
+      did: "Jag bygger Slay CRM som grundare och CTO, med fokus på svenska säljteam och deras vardag ute hos kunderna.",
+      outcome: "Slay är under utveckling. <em>Gå med i väntelistan</em> och följ vad vi bygger.",
+      facts: [],
+      nerdy: [
+        "Produktutveckling",
+        "CRM"
+      ],
+      links: [
+        {
+          href: "https://slaycrm.eu/",
+          label: "Upptäck Slay CRM · Väntelista"
+        }
+      ]
+    },
+    en: {
+      title: "Slay CRM",
+      context: "Own product · Founder & CTO",
+      hook: "A CRM for sales teams in the field. More time for customers.",
+      problem: "Sales teams in the field need a CRM that is easy to use on the go.",
+      did: "I’m building Slay CRM as founder and CTO, focusing on Swedish sales teams and their everyday work with customers.",
+      outcome: "Slay is in development. <em>Join the waitlist</em> and follow what we’re building.",
+      facts: [],
+      nerdy: [
+        "Product development",
+        "CRM"
+      ],
+      links: [
+        {
+          href: "https://slaycrm.eu/",
+          label: "Discover Slay CRM · Waitlist"
+        }
+      ]
+    }
+  },
+  {
+    slug: "vibe-coding",
+    track: "teach",
+    flagship: true,
+    sv: {
+      title: "Vibe Coding",
+      context: "Eget projekt med Airene AB · Göteborg",
+      hook: "Barn bygger spel, animationer och berättelser med AI. Inga förkunskaper behövs.",
+      problem: "Barn är nyfikna på AI, men behöver en plats där de kan prova att skapa själva med stöd av vuxna.",
+      did: "Tillsammans med Airene AB driver jag Vibe Coding: workshoppar där barn beskriver sina idéer och bygger med AI. Jag utvecklar också plattformen med AI-chatt, förhandsvisning och verktyg för handledarna.",
+      outcome: "Från idé till något att spela och visa upp. <em>Prova det barnen har byggt</em> i galleriet och följ kommande workshoppar.",
+      facts: [],
+      nerdy: [
+        "AI-agenter",
+        "Liveförhandsvisning",
+        "Workshopplattform"
+      ],
+      links: [
+        {
+          href: "https://vibecoding.bernting.se/",
+          label: "Upptäck Vibe Coding"
+        }
+      ]
+    },
+    en: {
+      title: "Vibe Coding",
+      context: "Own project with Airene AB · Gothenburg",
+      hook: "Children build games, animations and stories with AI. No prior experience needed.",
+      problem: "Children are curious about AI, but need a place to try creating for themselves with support from adults.",
+      did: "Together with Airene AB, I run Vibe Coding: workshops where children describe their ideas and build with AI. I also develop the platform with AI chat, live previews and tools for facilitators.",
+      outcome: "From an idea to something to play and share. <em>Try what the children have built</em> in the gallery and follow upcoming workshops.",
+      facts: [],
+      nerdy: [
+        "AI agents",
+        "Live previews",
+        "Workshop platform"
+      ],
+      links: [
+        {
+          href: "https://vibecoding.bernting.se/",
+          label: "Discover Vibe Coding"
+        }
+      ]
+    }
+  },
   {
     slug: "dll-decompilation",
     track: "legacy",

@@ -12,6 +12,8 @@ import type { Lang } from "./ui";
  */
 
 export const CONTACT = {
+  slay: "https://slaycrm.eu/",
+  vibeCoding: "https://vibecoding.bernting.se/",
   email: "william@bernting.se",
   phoneHref: "tel:+46706676047",
   phoneDisplay: "+46 706 67 60 47",

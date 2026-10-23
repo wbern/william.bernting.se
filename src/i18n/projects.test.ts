@@ -10,14 +10,14 @@ import {
 } from "./projects";
 
 describe("projects", () => {
-  it("is a curated list of 11 cases", () => {
-    expect(projectEntries).toHaveLength(11);
-    expect(getProjects("sv")).toHaveLength(11);
-    expect(getProjects("en")).toHaveLength(11);
+  it("is a curated list of 13 cases", () => {
+    expect(projectEntries).toHaveLength(13);
+    expect(getProjects("sv")).toHaveLength(13);
+    expect(getProjects("en")).toHaveLength(13);
   });
 
-  it("opens with the legacy rescue story", () => {
-    expect(getProjectSlugs()[0]).toBe("dll-decompilation");
+  it("opens with current projects", () => {
+    expect(getProjectSlugs().slice(0, 2)).toEqual(["slay-crm", "vibe-coding"]);
   });
 
   it("every entry tells the full story in both languages", () => {

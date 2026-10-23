@@ -214,6 +214,18 @@ const PI_DIORAMA = `<div class="diorama">
 export function getProjectIllustrations(lang: Lang): Record<ProjectSlug, Illustration | null> {
   const sv = lang === "sv";
   return {
+    "slay-crm": {
+      kind: "photo",
+      src: "/projects/slay-crm.jpg",
+      alt: sv ? "Slay CRM:s startsida med produktöversikt och väntelista" : "Slay CRM's homepage with a product overview and waitlist",
+      caption: sv ? "slaycrm.eu, oktober 2026" : "slaycrm.eu, October 2026",
+    },
+    "vibe-coding": {
+      kind: "photo",
+      src: "/projects/vibe-coding.jpg",
+      alt: sv ? "Vibe Codings startsida med bilder från workshopparna" : "Vibe Coding's homepage with photos from the workshops",
+      caption: sv ? "vibecoding.bernting.se, oktober 2026" : "vibecoding.bernting.se, October 2026",
+    },
     "dll-decompilation": { kind: "svg", markup: dllTests(lang) },
     "knowledge-bot": { kind: "svg", markup: knowledgeFlow(lang) },
     "legacy-chess-tool-rewrite": {

@@ -57,6 +57,7 @@ const defaultHref = buildMailto(CONTACT.email);
             <div>
                 <span class="proof-kicker">{t("contact.proof.kicker")} <span class="proof-where">&middot; {t("contact.proof.sign")}</span></span>
                 <p class="proof-own-text">{t("contact.proof.text")}</p>
+                <a class="proof-slay-link" href={CONTACT.slay}>{t("contact.slay.cta")} <span aria-hidden="true">↗</span></a>
             </div>
         </div>
 
@@ -484,6 +485,8 @@ const defaultHref = buildMailto(CONTACT.email);
         text-transform: uppercase;
         color: var(--purple);
     }
+
+    .proof-slay-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--text); text-underline-offset: 4px; }
 
     .proof-where {
         color: var(--text-muted);

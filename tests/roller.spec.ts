@@ -23,8 +23,8 @@ const LOCALES = [
   },
 ];
 
-const PROJECT_COUNT = 11;
-const FLAGSHIPS = ["dll-decompilation", "knowledge-bot", "legacy-chess-tool-rewrite", "telia-se"];
+const PROJECT_COUNT = 13;
+const FLAGSHIPS = ["slay-crm", "vibe-coding", "dll-decompilation", "knowledge-bot", "legacy-chess-tool-rewrite", "telia-se"];
 
 /** Wait until the arrival auto-spin has settled on an item. */
 async function waitForSpinToSettle(page: import("@playwright/test").Page) {
@@ -557,7 +557,7 @@ for (const locale of LOCALES) {
       await goToProjectsSlide(page, locale.prefix);
       await page.locator(".legend-chip[data-track='teach']").click();
       await page.waitForTimeout(600);
-      expect(["tdd-command-generator", "adr-lint"]).toContain(await selectedSlug(page));
+      expect(["vibe-coding", "tdd-command-generator", "adr-lint"]).toContain(await selectedSlug(page));
       await expect(page.locator(".legend-chip[data-track='teach']")).toHaveClass(/is-current/);
     });
 

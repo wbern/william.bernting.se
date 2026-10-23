@@ -11,7 +11,7 @@ for (const locale of LOCALES) {
       await page.goto(locale.prefix + "/");
       await page.waitForSelector(".hero-slide");
       await page.waitForTimeout(1000);
-      for (const sel of ["h1", ".hero-tagline", ".hero-proof", ".hero-email"]) {
+      for (const sel of ["h1", ".hero-tagline", ".hero-slay", ".hero-email"]) {
         const opacity = await page.locator(`.hero-slide ${sel}`).first().evaluate((el) => Number(getComputedStyle(el).opacity));
         expect(opacity, `${sel} opacity`).toBeGreaterThan(0.95);
       }

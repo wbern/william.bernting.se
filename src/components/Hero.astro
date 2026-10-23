@@ -69,11 +69,13 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         </p>
         <span id="hero-verb-jump" class="sr-only">{t("hero.tagline.jump")}</span>
 
-        <ul class="hero-proof">
-            <li>{t("hero.proof.years")}</li>
-            <li>{t("hero.proof.users")}</li>
-            <li>{t("hero.proof.agency")}</li>
-        </ul>
+        <div class="hero-slay">
+            <span>{t("hero.slay.description")}</span>
+            <a href={CONTACT.slay} data-keen-slider-clickable>{t("hero.slay.cta")}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                </svg></a>
+        </div>
 
         <div class="hero-contact">
             <a class="hero-email" href={`mailto:${CONTACT.email}`} aria-label={`${t("hero.email")}: ${CONTACT.email}`}>
@@ -361,27 +363,36 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         border-radius: 4px;
     }
 
-    /* ---------- proof strip ---------- */
-    .hero-proof {
-        list-style: none;
+    .hero-slay {
         display: flex;
         flex-wrap: wrap;
+        align-items: center;
         justify-content: center;
-        gap: 4px 0;
+        gap: 8px 16px;
+        max-width: 100%;
         margin-top: clamp(12px, 2vh, 20px);
         font-family: var(--mono);
         font-size: 13px;
         color: var(--text-dim);
         animation: fadeUp 0.6s ease 0.25s both;
     }
-    .hero-proof li { white-space: nowrap; }
-    .hero-proof li + li::before {
-        content: "·";
-        margin: 0 12px;
-        color: var(--purple);
+    .hero-slay a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid #b57edc;
+        border-radius: 100px;
+        background: color-mix(in srgb, var(--purple) 15%, var(--bg));
+        color: var(--text);
+        text-decoration: none;
     }
+    .hero-slay svg { width: 15px; height: 15px; flex-shrink: 0; transform: translateY(-1px); }
+    .hero-slay a:hover { background: color-mix(in srgb, var(--purple) 30%, var(--bg)); }
+    .hero-slay a:focus-visible { outline: 2px solid #b57edc; outline-offset: 4px; }
 
-    /* ---------- contact: one primary action, the rest secondary ---------- */
+    /* ---------- contact: subtle links below the Slay action ---------- */
     .hero-contact {
         display: flex;
         flex-wrap: wrap;
@@ -412,21 +423,6 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         fill: currentColor;
         flex-shrink: 0;
     }
-
-    .hero-contact .hero-email {
-        padding: 0 22px;
-        border-radius: 100px;
-        border: 1px solid color-mix(in srgb, var(--purple) 55%, var(--border));
-        background: color-mix(in srgb, var(--purple) 10%, var(--bg-card));
-        color: var(--text);
-    }
-    .hero-contact .hero-email:hover,
-    .hero-contact .hero-email:focus-visible {
-        border-color: var(--purple);
-        background: color-mix(in srgb, var(--purple) 22%, var(--bg-card));
-        transform: translateY(-2px);
-    }
-    .hero-contact .hero-email svg { color: #b57edc; }
 
     .hero-contact-secondary {
         display: flex;
@@ -541,8 +537,8 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         h1 { letter-spacing: -1.5px; }
         .hero-tagline { font-size: 18px; }
         .hero-verb { font-weight: 700; }
-        .hero-proof { font-size: 12px; flex-direction: column; gap: 2px; }
-        .hero-proof li + li::before { content: none; }
+        .hero-slay { font-size: 12px; flex-direction: column; gap: 2px; }
+
         .hero-contact { gap: 6px; flex-direction: column; font-size: 13px; }
         .hero-contact-secondary { gap: 0 14px; font-size: 12px; }
         .hero-marquee-wrap { width: calc(100% + 32px); }
@@ -553,7 +549,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
 
     @media (max-height: 700px) and (min-width: 601px) {
         .hero-greeting { display: none; }
-        .hero-proof { margin-top: 8px; }
+        .hero-slay { margin-top: 8px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -586,7 +582,7 @@ const kendevHost = new URL(CONTACT.kendev).hostname.replace(/^www\./, "");
         .hero-marquee-wrap,
         .hero-scroll-hint,
         .hero-trait-tip,
-        .hero-proof,
+        .hero-slay,
         .hero-contact,
         .hero-face-outline,
         .hero-face-hint,
