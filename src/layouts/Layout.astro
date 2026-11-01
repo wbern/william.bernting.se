@@ -49,6 +49,48 @@ const ogImage = new URL("/og-image.jpg", Astro.site).href;
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
 
+        <!-- Person Schema -->
+        <script
+            type="application/ld+json"
+            is:inline
+            set:html={JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Person",
+                name: "William Bernting",
+                url: "https://william.bernting.se",
+                jobTitle: "Founder & CTO",
+                worksFor: [
+                    {
+                        "@type": "Organization",
+                        name: "KenDev AB",
+                        url: "https://kendev.se",
+                        identifier: "556428-6663",
+                    },
+                    {
+                        "@type": "Organization",
+                        name: "Slay CRM",
+                        url: "https://slaycrm.eu",
+                    },
+                ],
+                knowsAbout: [
+                    "Software Architecture",
+                    "B2B CRM",
+                    "AI Assisted Development",
+                    "Web Development",
+                    "Fullstack Engineering",
+                ],
+                sameAs: [
+                    "https://kendev.se",
+                    "https://slaycrm.eu",
+                    "https://vibecoding.bernting.se",
+                    "https://enmansbyra.se",
+                    "https://lotta.bernting.se",
+                    "https://www.linkedin.com/in/williambernting",
+                    "https://github.com/wbern",
+                ],
+            })}
+        />
+
         <!-- Mask theme: apply the persisted mask before first paint so sv/en navigation never flashes -->
         <script is:inline>
             try {
