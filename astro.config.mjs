@@ -12,6 +12,7 @@ export default defineConfig({
   site: "https://william.bernting.se",
   integrations: [
     sitemap({
+      filter: (page) => !page.includes('/cv'),
       i18n: {
         defaultLocale: "sv",
         locales: {

@@ -1,4 +1,8 @@
 User-agent: *
+Disallow: /cv/
+Disallow: /cv
+Disallow: /en/cv/
+Disallow: /en/cv
 Allow: /
 
 Sitemap: https://william.bernting.se/sitemap-index.xml
