@@ -133,8 +133,12 @@ const cv: Record<Lang, CvData> = {
         company: "Akka",
         dateRange: "08/2025 – 04/2026",
         location: "Göteborg, Sverige",
-        techStack: ["React", "TanStack"],
-        bullets: [],
+        techStack: ["React", "TypeScript", "TanStack", "OpenTelemetry"],
+        bullets: [
+          "<strong>Distribuerad spårning & visualisering.</strong> Byggde interaktiva tidslinjer och vyer baserade på OpenTelemetry, vilket lät utvecklare visuellt följa komplexa mikrotjänstanrop, asynkrona händelseflöden och flaskhalsar i realtid.",
+          "<strong>Lokal observability för SDK:t.</strong> Utvecklade en fristående lokal konsol som ger utvecklare samma djupa insyn direkt på den egna maskinen vid utveckling mot Akka SDK, helt utan molnberoenden.",
+          "<strong>Interaktiv testbänk & AI-stöd.</strong> Skapade ett verktyg för att testköra API:er med automatisk historik och replay direkt i konsolen, samt integrerade Model Context Protocol (MCP) för att låta AI-agenter inspektera och anropa tjänsterna.",
+        ],
       },
       {
         title: "Backendutvecklare (C#)",
@@ -268,8 +272,12 @@ const cv: Record<Lang, CvData> = {
         company: "Akka",
         dateRange: "08/2025 – 04/2026",
         location: "Gothenburg, Sweden",
-        techStack: ["React", "TanStack"],
-        bullets: [],
+        techStack: ["React", "TypeScript", "TanStack", "OpenTelemetry"],
+        bullets: [
+          "<strong>Distributed tracing & visualization.</strong> Built interactive OpenTelemetry timelines and views, allowing developers to visually inspect complex microservice calls, asynchronous event streams, and latencies in real time.",
+          "<strong>Local observability for the SDK.</strong> Engineered a standalone developer console that brings rich runtime inspection and fast feedback loops directly to developer laptops, free of cloud dependencies.",
+          "<strong>Interactive testing workbench & AI tooling.</strong> Created an in-console API testing workbench with persistent history and replay, alongside Model Context Protocol (MCP) integration enabling AI coding agents to discover and introspect services.",
+        ],
       },
       {
         title: "Backend Developer (C#)",

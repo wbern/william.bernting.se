@@ -45,7 +45,7 @@ describe("skills: the ladder", () => {
         ["angular", 6.2],
         ["node", 7.0],
         ["react", 7.7],
-        ["typescript", 9.1],
+        ["typescript", 9.8],
         ["csharp", 1.5],
         ["devops", 3.3],
         ["cloud", 3.1],
